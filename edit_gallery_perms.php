@@ -16,7 +16,7 @@ use Bitweaver\KernelTools;
 global $gBitSystem, $stockPermNameMap;
 
 // Make sure an gallery has been specified
-if (empty($_REQUEST['gallery_id'])) {
+if (empty($_REQUEST['assembly_id'])) {
 	$gBitSmarty->assign('msg', KernelTools::tra("No gallery specified") );
 	$gBitSystem->display( "error.tpl" , null, [ 'display_mode' => 'edit' ] );
 	die;

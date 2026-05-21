@@ -47,7 +47,7 @@ if( !empty($_REQUEST['edit'])){
 
 if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] ) ) {
 
-	if (empty($_REQUEST['gallery_id']) && empty($_REQUEST['image_id'])) {
+	if (empty($_REQUEST['assembly_id']) && empty($_REQUEST['component_id'])) {
 		// We have no way to know what gallery to add an image to or what image to edit!
 		$gBitSmarty->assign( 'msg', KernelTools::tra( "No gallery or image was specified" ) );
 		$gBitSystem->display( "error.tpl" , null, [ 'display_mode' => 'edit' ]);
@@ -84,11 +84,11 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 		}
 		if( !empty( $_REQUEST['ajax'] ) ) {
 			// we need to refresh the images in the page after saving - not working yet - xing
-			header( 'Location: '.STOCK_PKG_URL."image_order.php?refresh=1&gallery_id=".$_REQUEST['gallery_id'] );
+			header( 'Location: '.STOCK_PKG_URL."image_order.php?refresh=1&assembly_id=".$_REQUEST['assembly_id'] );
 			die;
 		}
 		if( !empty( $_REQUEST['gallery_additions'] ) ) {
-			$gContent->addToGalleries( $_REQUEST['gallery_additions'] );
+			$gContent->addToAssemblies( $_REQUEST['gallery_additions'] );
 		}
 		if( !empty( $_REQUEST['generate_thumbnails'] ) ) {
 			$gContent->generateThumbnails();
@@ -110,7 +110,7 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 		// user cancelled - just continue on, doing nothing
 	} elseif( empty( $_REQUEST['confirm'] ) ) {
 		$formHash['delete'] = true;
-		$formHash['image_id'] = $gContent->mImageId;
+		$formHash['component_id'] = $gContent->mComponentId;
 		$gBitSystem->confirmDialog( $formHash,
 			[
 				// 'label'=> $gContent->mInfo['title'],
@@ -130,7 +130,7 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 $errors = $gContent->mErrors;
 $gBitSmarty->assign('errors', $errors);
 
-$gContent->loadParentGalleries();
+$gContent->loadParentAssemblies();
 
 // Get a list of all existing galleries
 $gStockAssembly = new StockAssembly();
@@ -146,10 +146,10 @@ if( $gBitSystem->isFeatureActive( 'stock_show_all_to_admins' ) && $gBitUser->has
 } elseif( $gBitSystem->isFeatureActive( 'stock_show_public_on_upload' ) ) {
 //	$getHash['show_public'] = true;
 }
-$galleryTree = $gStockAssembly->generateList( $getHash,  [ 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle' ], 'radio_checkbox' => true, ], true );
+$galleryTree = $gStockAssembly->generateList( $getHash,  [ 'name' => "assembly_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle' ], 'radio_checkbox' => true, ], true );
 $gBitSmarty->assign( 'galleryTree', $galleryTree );
 
-$gBitSmarty->assign('requested_gallery', !empty($_REQUEST['gallery_id']) ? $_REQUEST['gallery_id'] : null);
+$gBitSmarty->assign('requested_gallery', !empty($_REQUEST['assembly_id']) ? $_REQUEST['assembly_id'] : null);
 
 $gContent->invokeServices( 'content_edit_function' );
 

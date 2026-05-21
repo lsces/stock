@@ -12,8 +12,8 @@ $gStockAssembly = new StockAssembly();
 $listHash['root_only'] = true;
 $listHash['get_thumbnails'] = true;
 /*	Not supported in StockAssembly::getList
-if( !empty( $module_params['gallery_id'] ) && is_numeric( $module_params['gallery_id'] ) ) {
-	$listHash['gallery_id'] = $module_params['gallery_id'];
+if( !empty( $module_params['assembly_id'] ) && is_numeric( $module_params['assembly_id'] ) ) {
+	$listHash['assembly_id'] = $module_params['assembly_id'];
 }*/
 if ($gQueryUserId) {
 	$listHash['user_id'] = $gQueryUserId;

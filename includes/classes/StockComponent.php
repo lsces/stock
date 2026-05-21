@@ -21,12 +21,12 @@ define('STOCKCOMPONENT_CONTENT_TYPE_GUID', 'stockcomponent');
  * @package stock
  */
 class StockComponent extends StockBase {
-	public $mImageId;
+	public $mComponentId;
 	public $mExif;
 
-	public function __construct($pImageId = null, $pContentId = null) {
+	public function __construct($pComponentId = null, $pContentId = null) {
 		parent::__construct();
-		$this->mImageId = (int)$pImageId;
+		$this->mComponentId = (int)$pComponentId;
 		$this->mContentId = (int)$pContentId;
 
 		$this->registerContentType(
@@ -46,7 +46,7 @@ class StockComponent extends StockBase {
 	}
 
 	public function __sleep() {
-		$ret = array_merge( parent::__sleep(), [ 'mImageId' ] );
+		$ret = array_merge( parent::__sleep(), [ 'mComponentId' ] );
 		return $ret;
 	}
 
@@ -55,8 +55,8 @@ class StockComponent extends StockBase {
 		$ret = null;
 
 		$lookupContentId = null;
-		if (!empty($pLookupHash['image_id']) && is_numeric($pLookupHash['image_id'])) {
-			if( $lookup = $gBitDb->getRow( "SELECT lc.`content_id`, lc.`content_type_guid` FROM `".BIT_DB_PREFIX."stock_image` fi INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=fi.`content_id`) WHERE `image_id`=?", [ $pLookupHash['image_id'] ] ) ) {
+		if (!empty($pLookupHash['component_id']) && is_numeric($pLookupHash['component_id'])) {
+			if( $lookup = $gBitDb->getRow( "SELECT lc.`content_id`, lc.`content_type_guid` FROM `".BIT_DB_PREFIX."stock_component` fi INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=fi.`content_id`) WHERE `component_id`=?", [ $pLookupHash['component_id'] ] ) ) {
 				$lookupContentId = $lookup['content_id'];
 				$lookupContentGuid = $lookup['content_type_guid'];
 			}
@@ -79,9 +79,9 @@ class StockComponent extends StockBase {
 			$selectSql = $joinSql = $whereSql = '';
 			$bindVars = [];
 
-			if ( @$this->verifyId( $this->mImageId ) ) {
-				$whereSql = " WHERE fi.`image_id` = ?";
-				$bindVars[] = $this->mImageId;
+			if ( @$this->verifyId( $this->mComponentId ) ) {
+				$whereSql = " WHERE fi.`component_id` = ?";
+				$bindVars[] = $this->mComponentId;
 			} elseif ( @$this->verifyId( $this->mContentId ) ) {
 				$whereSql = " WHERE fi.`content_id` = ?";
 				$bindVars[] = $this->mContentId;
@@ -93,7 +93,7 @@ class StockComponent extends StockBase {
 						, uue.`login` AS `modifier_user`, uue.`real_name` AS `modifier_real_name`
 						, uuc.`login` AS `creator_user`, uuc.`real_name` AS `creator_real_name`, ufm.`favorite_content_id` AS `is_favorite`
 						, lch.`hits`
-					FROM `".BIT_DB_PREFIX."stock_image` fi
+					FROM `".BIT_DB_PREFIX."stock_component` fi
 						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id` = fi.`content_id`)
 						LEFT JOIN `".BIT_DB_PREFIX."users_users` uue ON (uue.`user_id` = lc.`modifier_user_id`)
 						LEFT JOIN `".BIT_DB_PREFIX."users_users` uuc ON (uuc.`user_id` = lc.`user_id`)
@@ -101,7 +101,7 @@ class StockComponent extends StockBase {
 						LEFT OUTER JOIN `".BIT_DB_PREFIX."liberty_content_hits` lch ON ( lch.`content_id` = lc.`content_id` ) $joinSql
 					$whereSql";
 			if( $this->mInfo = $this->mDb->getRow( $sql, $bindVars ) ) {
-				$this->mImageId = $this->mInfo['image_id'];
+				$this->mComponentId = $this->mInfo['component_id'];
 				$this->mContentId = $this->mInfo['content_id'];
 
 				$this->mInfo['creator'] = $this->mInfo['creator_real_name'] ?? $this->mInfo['creator_user'];
@@ -110,8 +110,8 @@ class StockComponent extends StockBase {
 				if( $gBitSystem->isPackageActive( 'gatekeeper' ) && !@$this->verifyId( $this->mInfo['security_id'] ) ) {
 					// check to see if this image is in a protected gallery
 					// this burns an extra select but avoids an big and gnarly LEFT JOIN sequence that may be hard to optimize on all DB's
-					$query = "SELECT ls.* FROM `".BIT_DB_PREFIX."stock_gallery_image_map` fgim
-								INNER JOIN `".BIT_DB_PREFIX."gatekeeper_security_map` tsm ON(fgim.`gallery_content_id`=tsm.`content_id` )
+					$query = "SELECT ls.* FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
+								INNER JOIN `".BIT_DB_PREFIX."gatekeeper_security_map` tsm ON(fgim.`assembly_content_id`=tsm.`content_id` )
 								INNER JOIN `".BIT_DB_PREFIX."gatekeeper_security` ls ON(tsm.`security_id`=ls.`security_id` )
 							  WHERE fgim.`item_content_id`=?";
 					$grs = $this->mDb->getAssoc($query, [ $this->mContentId ] );
@@ -143,13 +143,13 @@ class StockComponent extends StockBase {
 					if( !empty($details) AND $details['width'] > 0 AND $details['width'] < 9999 AND $details['height'] > 0 AND $details['height'] < 9999 ) {
 						$this->mInfo['width'] = $details['width'];
 						$this->mInfo['height'] = $details['height'];
-						$this->mDb->getOne( "UPDATE `".BIT_DB_PREFIX."stock_image` SET `width`=?, `height`=? WHERE `content_id`=?", [ $this->mInfo['width'], $this->mInfo['height'], $this->mContentId ] );
+						$this->mDb->getOne( "UPDATE `".BIT_DB_PREFIX."stock_component` SET `width`=?, `height`=? WHERE `content_id`=?", [ $this->mInfo['width'], $this->mInfo['height'], $this->mContentId ] );
 					}
 				}
 			}
 			$ret = count($this->mInfo);
 		} else {
-			// We don't have an image_id or a content_id so there is no way to know what to load
+			// We don't have an component_id or a content_id so there is no way to know what to load
 			$ret = null;
 		}
 
@@ -159,7 +159,7 @@ class StockComponent extends StockBase {
 	public function storeDimensions( $pDetails ) {
 		if( $this->isValid() && $this->mInfo['width'] != $pDetails['width'] || $this->mInfo['height'] != $pDetails['height']  ) {
 			// if our data got out of sync with the database, force an update
-			$query = "UPDATE `".BIT_DB_PREFIX."stock_image` SET `width`=?, `height`=? WHERE `content_id`=?";
+			$query = "UPDATE `".BIT_DB_PREFIX."stock_component` SET `width`=?, `height`=? WHERE `content_id`=?";
 			$this->mDb->getOne( $query, [ $pDetails['width'], $pDetails['height'], $this->mContentId ] );
 			$this->mInfo['width'] = $pDetails['width'];
 			$this->mInfo['height'] = $pDetails['height'];
@@ -304,15 +304,15 @@ class StockComponent extends StockBase {
 				}
 
 				if ($this->imageExistsInDatabase()) {
-					$sql = "UPDATE `".BIT_DB_PREFIX."stock_image`
+					$sql = "UPDATE `".BIT_DB_PREFIX."stock_component`
 							SET `content_id` = ?, `width` = ?, `height` = ?
-							WHERE `image_id` = ?";
-					$bindVars = [ $this->mContentId, $imageDetails['width'], $imageDetails['height'], $this->mImageId ];
+							WHERE `component_id` = ?";
+					$bindVars = [ $this->mContentId, $imageDetails['width'], $imageDetails['height'], $this->mComponentId ];
 				} else {
-					$this->mImageId = defined( 'LINKED_ATTACHMENTS' ) ? $this->mContentId : $this->mDb->GenID('stock_image_id_seq');
-					$this->mInfo['image_id'] = $this->mImageId;
-					$sql = "INSERT INTO `".BIT_DB_PREFIX."stock_image` (`image_id`, `content_id`, `width`, `height`) VALUES (?,?,?,?)";
-					$bindVars = [ $this->mImageId, $this->mContentId, $imageDetails['width'], $imageDetails['height'] ];
+					$this->mComponentId = defined( 'LINKED_ATTACHMENTS' ) ? $this->mContentId : $this->mDb->GenID('stock_component_id_seq');
+					$this->mInfo['component_id'] = $this->mComponentId;
+					$sql = "INSERT INTO `".BIT_DB_PREFIX."stock_component` (`component_id`, `content_id`, `width`, `height`) VALUES (?,?,?,?)";
+					$bindVars = [ $this->mComponentId, $this->mContentId, $imageDetails['width'], $imageDetails['height'] ];
 				}
 
 				$rs = $this->mDb->getOne($sql, $bindVars);
@@ -401,7 +401,7 @@ class StockComponent extends StockBase {
 
 				if( ($rotateFunc = \Bitweaver\Liberty\liberty_get_function( 'rotate' )) && $rotateFunc( $fileHash ) ) {
 					\Bitweaver\Liberty\liberty_clear_thumbnails( $fileHash );
-					$this->mDb->getOne( "UPDATE `".BIT_DB_PREFIX."stock_image` SET `width`=`height`, `height`=`width` WHERE `content_id`=?", [ $this->mContentId ] );
+					$this->mDb->getOne( "UPDATE `".BIT_DB_PREFIX."stock_component` SET `width`=`height`, `height`=`width` WHERE `content_id`=?", [ $this->mContentId ] );
 					$this->clearFromCache();
 					$this->generateThumbnails( false, $pImmediateRender );
 				} else {
@@ -477,7 +477,7 @@ class StockComponent extends StockBase {
 				$this->mDb->associateUpdate( BIT_DB_PREFIX."liberty_files", $storeHash, [ 'file_id' => $this->mInfo['file_id'] ] );
 				//$query = "UPDATE `".BIT_DB_PREFIX."liberty_files` SET `file_size`=? WHERE `file_id`=?";
 				//$this->mDb->query( $query, [ $details['size'], $this->mInfo['file_id'] ] );
-				$query = "UPDATE `".BIT_DB_PREFIX."stock_image` SET `width`=?, `height`=? WHERE `content_id`=?";
+				$query = "UPDATE `".BIT_DB_PREFIX."stock_component` SET `width`=?, `height`=? WHERE `content_id`=?";
 				$this->mDb->getOne( $query, [ $details['width'], $details['height'], $this->mContentId ] );
 				// if we've come this far, we can try removing the original if it's different to the resized image
 				// make absolutely certain that we have 2 image files and that they are different, then remove the original
@@ -617,9 +617,9 @@ class StockComponent extends StockBase {
 		$size = (!empty( $pParamHash['size'] ) && is_string( $pParamHash['size'] ) && isset( $pParamHash['thumbnail_url'][$pParamHash['size']] ) ) ? $pParamHash['size'] : null ;
 
 		global $gBitSystem;
-		if( BitBase::verifyId( $pParamHash['image_id'] ?? 0 ) ) {
+		if( BitBase::verifyId( $pParamHash['component_id'] ?? 0 ) ) {
 			if( $gBitSystem->isFeatureActive( 'pretty_urls' ) ) {
-				$ret = STOCK_PKG_URL.'image/'.$pParamHash['image_id'];
+				$ret = STOCK_PKG_URL.'image/'.$pParamHash['component_id'];
 				if( !empty( $pParamHash['gallery_path'] ) ) {
 					$ret .= $pParamHash['gallery_path'];
 				}
@@ -627,7 +627,7 @@ class StockComponent extends StockBase {
 					$ret .= '/'.$size;
 				}
 			} else {
-				$ret = STOCK_PKG_URL.'view_image.php?image_id='.$pParamHash['image_id'];
+				$ret = STOCK_PKG_URL.'view_image.php?component_id='.$pParamHash['component_id'];
 				if( !empty( $pParamHash['gallery_path'] ) ) {
 					$ret .= '&gallery_path='.$pParamHash['gallery_path'];
 				}
@@ -647,19 +647,19 @@ class StockComponent extends StockBase {
 	*/
 	public function getDisplayUrl() {
 		$info = &$this->mInfo;
-		$info['image_id'] = $this->mImageId;
-		$info['gallery_path'] = $this->mGalleryPath;
+		$info['component_id'] = $this->mComponentId;
+		$info['gallery_path'] = $this->mAssemblyPath;
 		return StockComponent::getDisplayUrlFromHash( $info );
 	}
 
 	/**
 	* Function that returns link to display an image
 	* Used to display thumbnails for navigation bar
-	* @param integer pImageId id of image to link
+	* @param integer pComponentId id of image to link
 	* @return string the url to display the image.
 	*/
-	public function getImageUrl( $pImageId ) {
-		$info = [ 'image_id' => $pImageId ];
+	public function getComponentUrl( $pComponentId ) {
+		$info = [ 'component_id' => $pComponentId ];
 		return StockComponent::getDisplayUrlFromHash( $info );
 	}
 
@@ -697,8 +697,8 @@ class StockComponent extends StockBase {
 				} else {
 					global $gLibertySystem;
 					$ret = $gLibertySystem->getContentTypeName( $pHash['content_type_guid'] ?? 'empty' );
-					if( !empty( $pHash['image_id'] ) ) {
-						$ret .= " ".$pHash['image_id'];
+					if( !empty( $pHash['component_id'] ) ) {
+						$ret .= " ".$pHash['component_id'];
 					}
 				}
 			}
@@ -738,15 +738,15 @@ class StockComponent extends StockBase {
 	public function expunge(): bool {
 		if( $this->isValid() ) {
 			$this->StartTrans();
-			$query = "DELETE FROM `".BIT_DB_PREFIX."stock_gallery_image_map` WHERE `item_content_id` = ?";
+			$query = "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `item_content_id` = ?";
 			$rs = $this->mDb->getOne($query, [ $this->mContentId ] );
-			$query = "UPDATE `".BIT_DB_PREFIX."stock_gallery` SET `preview_content_id`=null WHERE `preview_content_id` = ?";
+			$query = "UPDATE `".BIT_DB_PREFIX."stock_assembly` SET `preview_content_id`=null WHERE `preview_content_id` = ?";
 			$rs = $this->mDb->getOne($query, [ $this->mContentId ] );
-			$query = "DELETE FROM `".BIT_DB_PREFIX."stock_image` WHERE `content_id` = ?";
+			$query = "DELETE FROM `".BIT_DB_PREFIX."stock_component` WHERE `content_id` = ?";
 			$rs = $this->mDb->getOne($query, [ $this->mContentId ] );
 			if( LibertyMime::expunge() ) {
 				$this->CompleteTrans();
-				$this->mImageId = null;
+				$this->mComponentId = null;
 				$this->mContentId = null;
 			} else {
 				$this->mDb->RollbackTrans();
@@ -765,12 +765,12 @@ class StockComponent extends StockBase {
 	}
 
 	public function isValid() {
-		return @$this->verifyId( $this->mImageId ) || @$this->verifyId( $this->mContentId );
+		return @$this->verifyId( $this->mComponentId ) || @$this->verifyId( $this->mContentId );
 	}
 
 	public function isLocked(): bool {
 		$ret = false;
-		if( $this->verifyId( $this->mImageId ) ) {
+		if( $this->verifyId( $this->mComponentId ) ) {
 			if( empty( $this->mInfo ) ) {
 				$this->load();
 			}
@@ -781,12 +781,12 @@ class StockComponent extends StockBase {
 
 	public function imageExistsInDatabase() {
 		$ret = false;
-		if( $this->isValid() && $this->mImageId ) {
-			$query = "SELECT COUNT(`image_id`)
-					FROM `".BIT_DB_PREFIX."stock_image`
-					WHERE `image_id` = ?";
+		if( $this->isValid() && $this->mComponentId ) {
+			$query = "SELECT COUNT(`component_id`)
+					FROM `".BIT_DB_PREFIX."stock_component`
+					WHERE `component_id` = ?";
 
-			$bindVars = [ $this->mImageId ];
+			$bindVars = [ $this->mComponentId ];
 
 			if($this->mDb->getOne($query, $bindVars) > 0){
 				$ret = true;
@@ -814,9 +814,9 @@ class StockComponent extends StockBase {
 			$pListHash['sort_mode'] = 'uu.user_id_desc';
 		}
 
-		if( @$this->verifyId( $pListHash['gallery_id'] ?? 0 ) ) {
-			$whereSql .= " AND fg.`gallery_id` = ? ";
-			$bindVars[] = $pListHash['gallery_id'];
+		if( @$this->verifyId( $pListHash['assembly_id'] ?? 0 ) ) {
+			$whereSql .= " AND fg.`assembly_id` = ? ";
+			$bindVars[] = $pListHash['assembly_id'];
 		}
 
 		if( !empty( $pListHash['search'] ) ) {
@@ -849,22 +849,22 @@ class StockComponent extends StockBase {
 
 		$thumbSize = !empty( $pListHash['size'] ) ? $pListHash['size'] : 'avatar';
 
-		$query = "SELECT $distinct fi.`image_id` AS `hash_key`, fi.*, lf.*, la.attachment_id, lc.*, fg.`gallery_id`, uu.`login`, uu.`real_name` $select $selectSql
-				FROM `".BIT_DB_PREFIX."stock_image` fi
+		$query = "SELECT $distinct fi.`component_id` AS `hash_key`, fi.*, lf.*, la.attachment_id, lc.*, fg.`assembly_id`, uu.`login`, uu.`real_name` $select $selectSql
+				FROM `".BIT_DB_PREFIX."stock_component` fi
 					INNER JOIN `".BIT_DB_PREFIX."liberty_attachments` la ON(la.`content_id`=fi.`content_id`)
 					INNER JOIN `".BIT_DB_PREFIX."liberty_files` lf ON(la.`foreign_id`=lf.`file_id`)
 					INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(fi.`content_id` = lc.`content_id`)
 					INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON(uu.`user_id` = lc.`user_id`) $joinSql
-					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_gallery_image_map` tfgim2 ON(tfgim2.`item_content_id`=lc.`content_id`)
-					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_gallery` fg ON(fg.`content_id`=tfgim2.`gallery_content_id`)
+					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim2 ON(tfgim2.`item_content_id`=lc.`content_id`)
+					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly` fg ON(fg.`content_id`=tfgim2.`assembly_content_id`)
 				$whereSql $orderby";
 		if( $rows = $this->mDb->query( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'], $pListHash['query_cache_time'] ) ) {
 			foreach( $rows as $row ) {
 				// legacy table data was named storage_path and included a partial path. strip out any path just in case
-				$row['hash_key'] = $row['image_id'];
+				$row['hash_key'] = $row['component_id'];
 				$row['file_name'] = basename( $row['file_name'] );
 				$ret[$row['hash_key']] = $row;
-				$imageId = $row['image_id'];
+				$imageId = $row['component_id'];
 				if( empty( $pListHash['no_thumbnails'] ) ) {
 					$ret[$imageId]['display_url']      = static::getDisplayUrlFromHash( $row );
 //					$ret[$imageId]['has_machine_name'] = $this->isMachineName( $ret[$imageId]['title'] );
@@ -896,9 +896,9 @@ class StockComponent extends StockBase {
 		}
 
 		$ret = false;
-		if( $parents = $this->getParentGalleries() ) {
+		if( $parents = $this->getParentAssemblies() ) {
 			// @TODO: No idea how to work out if you can add a comment to this image
-			// for now we'll take the mGalleryPath and use that gallery
+			// for now we'll take the mAssemblyPath and use that gallery
 			$gal = current( $parents );
 			$query = "SELECT `pref_value` FROM `".BIT_DB_PREFIX."liberty_content_prefs` WHERE `content_id` = ? AND `pref_name` = ?";
 			$ret = $this->mDb->getOne( $query, [ $gal['content_id'], 'allow_comments' ] ) == 'y';

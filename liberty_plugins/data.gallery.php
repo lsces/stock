@@ -81,7 +81,7 @@ function data_gallery( $pData, $pParams ) {
 		$gallery = new StockComponent();
 			$listHash = $pParams;
 			$listHash['size'] = 'small';
-			$listHash['gallery_id'] = $pParams['id'];
+			$listHash['assembly_id'] = $pParams['id'];
 			$listHash['max_records'] = 3;
 			$listHash['sort_mode'] = 'random';
 			$images = $gallery->getList( $listHash );

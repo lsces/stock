@@ -191,7 +191,7 @@ class StockRemote {
 			$pResponse['album.parent.' . $this->mSubGalIdx] = $gallery['content']['level'] != 0
 				// Stock allows directories to below to multiple parents - not in gallery. This confuses some clients
 				// We pad with a random number for uniqueness
-				? $gallery['content']['cb_gallery_content_id'].$pParentRandom
+				? $gallery['content']['cb_assembly_content_id'].$pParentRandom
 				// the lightroom client is dumb, and can only handle one 0 level parent
 				: ( stripos( $_SERVER['HTTP_USER_AGENT'], 'lightroom' ) !== false ? 1 : 0);
 
@@ -223,7 +223,7 @@ class StockRemote {
 		if( $gBitUser->isRegistered() ) {
 			$treeGallery = new StockAssembly();
 			$listHash['user_id'] = $gBitUser->mUserId;
-			if( $galleryList = $treeGallery->getTree( [ $listHash, 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle' ] ] ) ) {
+			if( $galleryList = $treeGallery->getTree( [ $listHash, 'name' => "assembly_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle' ] ] ) ) {
 				$galResponse = [];
 				$galleryCount = $this->traverseGalleries( $galleryList, $galResponse );
 				$galResponse['album_count'] = $galleryCount;
@@ -258,7 +258,7 @@ class StockRemote {
 			$parentGallery = new StockAssembly();
 			if( $parentGallery = $parentGallery->lookup([ 'content_id' => $pParamHash['set_albumName'] ] ) ) {
 				$parentGallery->load();
-				$storeHash['gallery_additions'] = [ $parentGallery->mGalleryId ];
+				$storeHash['gallery_additions'] = [ $parentGallery->mAssemblyId ];
 			}
 			$response = $errors = stock_store_upload( $uploadFile , $storeHash )
 				? $response = $this->createResponse( FEG2REMOTE_UPLOAD_PHOTO_FAIL, 'Export Failed' )
@@ -285,7 +285,7 @@ class StockRemote {
 			$parentGallery = new StockAssembly();
 			if( $parentGallery = $parentGallery->lookup(['content_id' => $pParamHash['set_albumName'] ] ) ) {
 				$parentGallery->load();
-				$gallery->addToGalleries([ $parentGallery->mGalleryId ] );
+				$gallery->addToAssemblies([ $parentGallery->mAssemblyId ] );
 			}
 		}
 

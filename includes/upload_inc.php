@@ -98,7 +98,7 @@ function stock_get_default_gallery_id( $pUserId, $pNewName ) {
 	} else {
 		$galleryHash = [ 'title' => $pNewName ];
 		if( $gal->store( $galleryHash ) ) {
-			$ret = $gal->mGalleryId;
+			$ret = $gal->mAssemblyId;
 		}
 	}
 
@@ -131,7 +131,7 @@ function stock_store_upload( &$pFileHash, $pImageData = [], $pAutoRotate=true ) 
 			$ret = $image->mErrors;
 		} else {
 			$pFileHash['content_id'] = $image->getField( 'content_id' );
-			$pFileHash['image_id'] = $image->getField( 'image_id' );
+			$pFileHash['component_id'] = $image->getField( 'component_id' );
 			$image->load();
 			// play with image some more if user has requested it
 			if( $pAutoRotate ) {
@@ -141,7 +141,7 @@ function stock_store_upload( &$pFileHash, $pImageData = [], $pAutoRotate=true ) 
 				global $gBitUser;
 				$galleryAdditions = [ stock_get_default_gallery_id( $gBitUser->mUserId, $gBitUser->getDisplayName()."'s Gallery" ) ];
 			}
-			$image->addToGalleries( $galleryAdditions );
+			$image->addToAssemblies( $galleryAdditions );
 			$gStockUploads[] = $image;
 		}
 
@@ -170,7 +170,7 @@ function stock_process_archive( &$pFileHash, &$pParentGallery, $pRoot=false ) {
 		}
 
 		if( !empty( $pParentGallery ) ) {
-			$pFileHash['gallery_id'] = $pParentGallery->getField( 'gallery_id' );
+			$pFileHash['assembly_id'] = $pParentGallery->getField( 'assembly_id' );
 		}
 		stock_process_directory( $destDir, $pParentGallery, $pRoot );
 	} else {
@@ -231,7 +231,7 @@ function stock_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=fal
 						$galleryHash = [ 'title' => str_replace( '_', ' ', $fileName ) ];
 						if( $newGallery->store( $galleryHash ) ) {
 							if( $pRoot ) {
-								$newGallery->addToGalleries( $_REQUEST['gallery_additions'] );
+								$newGallery->addToAssemblies( $_REQUEST['gallery_additions'] );
 							}
 							if( is_object( $pParentGallery ) ) {
 								$pParentGallery->addItem( $newGallery->mContentId, $order );
@@ -250,7 +250,7 @@ function stock_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=fal
 					$imageHash = [ '_files_override' => [ $scanFile ] ];
 					if( $newImage->store( $imageHash ) ) {
 						if( $pRoot ) {
-							$newImage->addToGalleries( $_REQUEST['gallery_additions'] );
+							$newImage->addToAssemblies( $_REQUEST['gallery_additions'] );
 						}
 						if( !is_object( $pParentGallery ) ) {
 							global $gBitUser;
@@ -308,7 +308,7 @@ function stock_process_ftp_directory( $pProcessDir ) {
 					$dirGallery = new StockAssembly();
 					$galleryHash = [ 'title' => str_replace( '_', ' ', $fileName ) ];
 					if( $dirGallery->store( $galleryHash ) ) {
-						$dirGallery->addToGalleries( $_REQUEST['gallery_additions'] );
+						$dirGallery->addToAssemblies( $_REQUEST['gallery_additions'] );
 						$errors = array_merge( $errors, stock_process_directory( $pProcessDir.'/'.$fileName, $dirGallery ) );
 					} else {
 						$errors = array_merge( $errors, array_values( $dirGallery->mErrors ) );
@@ -320,12 +320,12 @@ function stock_process_ftp_directory( $pProcessDir ) {
 						$newImage = new StockComponent();
 						$imageHash = [ 'upload' => $scanFile ];
 						if( $newImage->store( $imageHash ) ) {
-							$newImage->addToGalleries( $_REQUEST['gallery_additions'] );
+							$newImage->addToAssemblies( $_REQUEST['gallery_additions'] );
 
 							// if we have a gallery to add these images to, load one of them
 							if( !empty( $_REQUEST['gallery_additions'][0] ) && @!is_object( $imageGallery ) ) {
 								$imageGallery = new StockAssembly();
-								$imageGallery->mGalleryId = $_REQUEST['gallery_additions'][0];
+								$imageGallery->mAssemblyId = $_REQUEST['gallery_additions'][0];
 								$imageGallery->load();
 							}
 

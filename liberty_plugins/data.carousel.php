@@ -80,7 +80,7 @@ function data_carousel( $pData, $pParams ) {
 		$gallery = new StockComponent();
 		$listHash = $pParams;
 		$listHash['size'] = 'large';
-		$listHash['gallery_id'] = $pParams['id'];
+		$listHash['assembly_id'] = $pParams['id'];
 		$listHash['max_records'] = 10;
 		$listHash['sort_mode'] = 'item_position_asc';
 		$images = $gallery->getList( $listHash );

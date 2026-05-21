@@ -27,7 +27,7 @@ global $gHideModules;
 $gHideModules = $gBitSystem->isFeatureActive( 'stock_gallery_hide_modules' );
 
 if ( !$gContent->isValid() ) {
-	if ( !empty( $_REQUEST['gallery_id'] ) ) {
+	if ( !empty( $_REQUEST['assembly_id'] ) ) {
 		$gBitSystem->fatalError( KernelTools::tra('No gallery exists with the given ID'), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 	}
 	// No gallery was indicated so we will redirect to the browse galleries page
@@ -40,7 +40,7 @@ if( $gContent->isCommentable() ) {
 	$comments_vars = [ 'stockassembly' ];
 	$comments_prefix_var='stockassembly:';
 	$comments_object_var='stockassembly';
-	$comments_return_url = $_SERVER['SCRIPT_NAME']."?gallery_id=".$gContent->mGalleryId;
+	$comments_return_url = $_SERVER['SCRIPT_NAME']."?assembly_id=".$gContent->mAssemblyId;
 	include_once LIBERTY_PKG_INCLUDE_PATH.'comments_inc.php';
 }
 

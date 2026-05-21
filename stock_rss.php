@@ -32,17 +32,17 @@ if( !$gBitUser->hasPermission( 'p_stock_view' ) ) {
 	$listHash = [
 		'max_records' => $gBitSystem->getConfig( 'stock_rss_max_records', 10 ),
 		'sort_mode'   => 'last_modified_desc',
-		'gallery_id'  => !empty( $_REQUEST['gallery_id'] ) ? $_REQUEST['gallery_id'] : null,
+		'assembly_id'  => !empty( $_REQUEST['assembly_id'] ) ? $_REQUEST['assembly_id'] : null,
 		'user_id'     => !empty( $_REQUEST['user_id'] ) ? $_REQUEST['user_id'] : null,
 	];
 
 	// check if we want to use the cache file
-	$cacheFile = TEMP_PKG_PATH.RSS_PKG_NAME.'/'.STOCK_PKG_NAME.'/'."g{$listHash['gallery_id']}u{$listHash['user_id']}".$cacheFileTail;
+	$cacheFile = TEMP_PKG_PATH.RSS_PKG_NAME.'/'.STOCK_PKG_NAME.'/'."g{$listHash['assembly_id']}u{$listHash['user_id']}".$cacheFileTail;
 	$rss->useCached( $rss_version_name, $cacheFile, $gBitSystem->getConfig( 'rssfeed_cache_time' ));
 
 	// if we have a gallery we can work with - load it
-	if( BitBase::verifyId( $_REQUEST['gallery_id'] ?? 0 ) ) {
-		$gallery = new StockAssembly( $_REQUEST['gallery_id'] );
+	if( BitBase::verifyId( $_REQUEST['assembly_id'] ?? 0 ) ) {
+		$gallery = new StockAssembly( $_REQUEST['assembly_id'] );
 		$gallery->load();
 		$rss->title .= " - {$gallery->getTitle()}";
 	}

@@ -52,7 +52,7 @@ if( $gBitSystem->isFeatureActive( 'stock_show_all_to_admins' ) && $gBitUser->has
 //	$getHash['show_public'] = true; THis should be handled with a content_status, disabled for now
 }
 
-$galleryTree = $gContent->generateList( $getHash,  [ 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle' ], 'radio_checkbox' => true, ], true );
+$galleryTree = $gContent->generateList( $getHash,  [ 'name' => "assembly_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle' ], 'radio_checkbox' => true, ], true );
 
 $gBitSmarty->assign( 'galleryTree', $galleryTree );
 

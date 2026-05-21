@@ -11,7 +11,7 @@ $lookup = [];
 
 if( !$gContent = StockAssembly::lookup( $_REQUEST ) ) {
 	$gContent = new StockAssembly();
-	$galleryId = null;
+	$assemblyId = null;
 }
 
 if( !empty( $_REQUEST['gallery_path'] ) ) {
@@ -19,5 +19,5 @@ if( !empty( $_REQUEST['gallery_path'] ) ) {
 }
 
 $gBitSmarty->assign('gContent', $gContent);
-$gBitSmarty->assign('galleryId', $gContent->mGalleryId);
+$gBitSmarty->assign('assemblyId', $gContent->mAssemblyId);
 

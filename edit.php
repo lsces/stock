@@ -34,14 +34,14 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 	if( $gContent->store( $_REQUEST ) ) {
 		$gContent->storePreference( 'is_public', !empty( $_REQUEST['is_public'] ) ? $_REQUEST['is_public'] : null );
 		$gContent->storePreference( 'allow_comments', !empty( $_REQUEST['allow_comments'] ) ? $_REQUEST['allow_comments'] : null );
-		$gContent->storePreference( 'gallery_pagination', !empty( $_REQUEST['gallery_pagination'] ) ? $_REQUEST['gallery_pagination'] : null );
+		$gContent->storePreference( 'assembly_pagination', !empty( $_REQUEST['assembly_pagination'] ) ? $_REQUEST['assembly_pagination'] : null );
 		$gContent->storePreference( 'link_original_images', !empty( $_REQUEST['link_original_images'] ) ? $_REQUEST['link_original_images'] : null );
 		$gContent->storePreference( 'total_per_page', !empty( $_REQUEST['total_per_page'] ) ? (int)$_REQUEST['total_per_page'] : null );
 		$gContent->storePreference( 'galleriffic_num_thumbs', !empty( $_REQUEST['galleriffic_num_thumbs'] ) ? (int)$_REQUEST['galleriffic_num_thumbs'] : null );
 		// make sure var is fully stuffed with current data
 		$gContent->load();
 		// set the mappings, or if nothing checked, nuke them all
-		$gContent->addToGalleries( !empty( $_REQUEST['gallery_additions'] ) ? $_REQUEST['gallery_additions'] : null );
+		$gContent->addToAssemblies( !empty( $_REQUEST['gallery_additions'] ) ? $_REQUEST['gallery_additions'] : null );
 
 		if( !empty( $_REQUEST['generate_thumbnails'] ) ) {
 			$gContent->generateThumbnails();
@@ -56,7 +56,7 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 		// user cancelled - just continue on, doing nothing
 	} elseif( empty( $_REQUEST['confirm'] ) ) {
 		$formHash['delete'] = true;
-		$formHash['gallery_id'] = $gContent->mGalleryId;
+		$formHash['assembly_id'] = $gContent->mAssemblyId;
 		$formHash['input'] = [
 			'<label><input name="recurse" value="" type="radio" checked="checked" /> '.KernelTools::tra( 'Delete only images in this gallery. Sub-galleries will not be removed.' ).'</label>',
 			'<label><input name="recurse" value="all" type="radio" /> '.KernelTools::tra( 'Permanently delete all contents, even if they appear in other galleries.' ).'</label>',
@@ -88,7 +88,7 @@ $gBitSmarty->assign('errors', $errors);
 
 $gBitSystem->setOnloadScript( 'updateGalleryPagination();' );
 
-$gallery = $gContent->getParentGalleries();
+$gallery = $gContent->getParentAssemblies();
 $gBitSmarty->assign( 'parentGalleries', $gallery );
 $getHash = [
 	'user_id'       => $gBitUser->mUserId,
@@ -106,7 +106,7 @@ if( $gBitSystem->isFeatureActive( 'stock_show_all_to_admins' ) && $gBitUser->has
 } elseif( $gBitSystem->isFeatureActive( 'stock_show_public_on_upload' ) ) {
 //	$getHash['show_public'] = true;
 }
-$galleryTree = $gContent->generateList( $getHash,  [ 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle'], 'radio_checkbox' => true, ] );
+$galleryTree = $gContent->generateList( $getHash,  [ 'name' => "assembly_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle'], 'radio_checkbox' => true, ] );
 $gBitSmarty->assign( 'galleryTree', $galleryTree );
 
 $gContent->invokeServices( 'content_edit_function' );

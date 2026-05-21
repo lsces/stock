@@ -21,7 +21,7 @@ $image = new StockComponent();
 $display = true;
 
 $listHash = $module_params;
-$listHash['gallery_id'] = 3;
+$listHash['assembly_id'] = 3;
 
 if( $display ) {
 	$listHash['size'] = 'medium';

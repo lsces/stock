@@ -21,27 +21,27 @@ if( !empty( $_REQUEST['gallery_path'] ) ) {
 	$gContent->setGalleryPath( $_REQUEST['gallery_path'] );
 	$matches = [];
 	$tail = strrpos( $_REQUEST['gallery_path'], '/' );
-	$_REQUEST['gallery_id'] = substr( $_REQUEST['gallery_path'], $tail + 1 );
+	$_REQUEST['assembly_id'] = substr( $_REQUEST['gallery_path'], $tail + 1 );
 }
-if( empty( $_REQUEST['gallery_id'] ) ) {
-	if( $parents = $gContent->getParentGalleries() ) {
+if( empty( $_REQUEST['assembly_id'] ) ) {
+	if( $parents = $gContent->getParentAssemblies() ) {
 		$gal = current( $parents );
-		$gContent->setGalleryPath( '/'.$gal['gallery_id'] );
-		$_REQUEST['gallery_id'] = $gal['gallery_id'];
+		$gContent->setGalleryPath( '/'.$gal['assembly_id'] );
+		$_REQUEST['assembly_id'] = $gal['assembly_id'];
 	}
 }
 // the image is considered the primary content, however the gallery is useful
-if( !empty($_REQUEST['gallery_id']) && is_numeric($_REQUEST['gallery_id']) ) {
+if( !empty($_REQUEST['assembly_id']) && is_numeric($_REQUEST['assembly_id']) ) {
 	$gGallery = StockAssembly::lookup( $_REQUEST );
 	if( is_object( $gGallery ) && $gGallery->isValid() ) {
-		$gGallery->loadCurrentImage( $gContent->mImageId );
+		$gGallery->loadCurrentComponent( $gContent->mComponentId );
 	}
 	$gBitSmarty->assign('gGallery', $gGallery);
-	$gBitSmarty->assign('galleryId', $_REQUEST['gallery_id']);
+	$gBitSmarty->assign('assemblyId', $_REQUEST['assembly_id']);
 }
 
 // This user does not own this gallery and they have not been granted the permission to edit this gallery
 $gContent->verifyViewPermission();
 
 $gBitSmarty->assign('gContent', $gContent);
-$gBitSmarty->assign('imageId', $gContent->mImageId );
+$gBitSmarty->assign('imageId', $gContent->mComponentId );

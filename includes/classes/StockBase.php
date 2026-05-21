@@ -20,17 +20,17 @@ define('STOCKASSEMBLY_CONTENT_TYPE_GUID', 'stockassembly' );
 abstract class StockBase extends LibertyMime
 {
 	// Path of gallery images to get breadcrumbs
-	public $mGalleryPath;
-	public $mGalleryId;
+	public $mAssemblyPath;
+	public $mAssemblyId;
 
 	abstract public static function getServiceKey();
 
 	public function __sleep() {
-		return array_merge( parent::__sleep(), [ 'mGalleryPath' ] );
+		return array_merge( parent::__sleep(), [ 'mAssemblyPath' ] );
 	}
 
 	public function __construct() {
-		$this->mGalleryPath = '';
+		$this->mAssemblyPath = '';
 		parent::__construct();
 	}
 
@@ -44,55 +44,55 @@ abstract class StockBase extends LibertyMime
 	}
 
 	// Gets a list of galleries which this item is attached to
-	public function getParentGalleries( $pContentId=null ) {
+	public function getParentAssemblies( $pContentId=null ) {
 		if( !$this->verifyId( $pContentId ) ) {
 			$pContentId = $this->mContentId;
 		}
 		$ret = null;
 
 		if( is_numeric( $pContentId ) ) {
-			$sql = "SELECT fg.`gallery_id` AS `hash_key`, fg.*, lc.`title`
-					FROM `".BIT_DB_PREFIX."stock_gallery` fg, `".BIT_DB_PREFIX."liberty_content` lc, `".BIT_DB_PREFIX."stock_gallery_image_map` fgim
-					WHERE fgim.`item_content_id` = ? AND fgim.`gallery_content_id`=fg.`content_id` AND fg.`content_id`=lc.`content_id`";
+			$sql = "SELECT fg.`assembly_id` AS `hash_key`, fg.*, lc.`title`
+					FROM `".BIT_DB_PREFIX."stock_assembly` fg, `".BIT_DB_PREFIX."liberty_content` lc, `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
+					WHERE fgim.`item_content_id` = ? AND fgim.`assembly_content_id`=fg.`content_id` AND fg.`content_id`=lc.`content_id`";
 			$ret = $this->mDb->getAssoc( $sql, [ $pContentId  ] );
 		}
 		if ( $ret ) {
 			$parents = current( $ret );
 			$sql = "WITH TREE AS
-				( SELECT fgim.`item_content_id` AS gallery_content_id,
+				( SELECT fgim.`item_content_id` AS assembly_content_id,
 				LAG( fgim.`item_content_id`) OVER (ORDER BY fgim.`item_position`) AS PREVIOUS,
 				LEAD( fgim.`item_content_id` ) OVER (ORDER BY fgim.`item_position`) AS NEXT
-				FROM `".BIT_DB_PREFIX."stock_gallery_image_map` fgim
-				WHERE fgim.`gallery_content_id` = ?
+				FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
+				WHERE fgim.`assembly_content_id` = ?
 				order by fgim.`item_position` )
 				SELECT pr.PREVIOUS, prec.`content_type_guid` AS PRE_T, pr.NEXT, posc.`content_type_guid` AS NEXT_T FROM TREE pr
 				LEFT JOIN `".BIT_DB_PREFIX."liberty_content` prec ON prec.`content_id` = pr.PREVIOUS
 				LEFT JOIN `".BIT_DB_PREFIX."liberty_content` posc ON posc.`content_id` = pr.NEXT
-				WHERE pr.`gallery_content_id` = ?";
+				WHERE pr.`assembly_content_id` = ?";
 			if( $parents = $this->mDb->getRow($sql, [ $parents['content_id'], $pContentId ] ) ) {
 				if ( $parents['pre_t'] == STOCKASSEMBLY_CONTENT_TYPE_GUID ) {
 					$ret['previous_gallery_id'] = $parents['previous'];
 				} else {
-					$ret['previous_image_id'] = $parents['previous'];
+					$ret['previous_component_id'] = $parents['previous'];
 				}
 				if ( $parents['next_t'] == STOCKASSEMBLY_CONTENT_TYPE_GUID ) {
 					$ret['next_gallery_id'] = $parents['next'];
 				}else {
-					$ret['next_image_id'] = $parents['previous'];
+					$ret['next_component_id'] = $parents['previous'];
 				}
 			}
 		}
 		return $ret;
 	}
 
-	public function loadParentGalleries() {
+	public function loadParentAssemblies() {
 		if( $this->isValid() ) {
-			$this->mInfo['parent_galleries'] = $this->getParentGalleries();
+			$this->mInfo['parent_galleries'] = $this->getParentAssemblies();
 		}
 	}
 
-	public function updatePosition($pGalleryContentId, $newPosition = null) {
-		if( $pGalleryContentId && $newPosition && $this->verifyId($this->mContentId) ) {
+	public function updatePosition($pAssemblyContentId, $newPosition = null) {
+		if( $pAssemblyContentId && $newPosition && $this->verifyId($this->mContentId) ) {
 			// SQL optimization to prevent stupid updates of identical data
 			if( $radixPosition = strpos( $newPosition, '.' ) ) {
 				// clean out newPosition to be a valid float, and nuke all extra . or extra crap
@@ -101,9 +101,9 @@ abstract class StockBase extends LibertyMime
 				$newPosition = $significand.'.'.$mantissa;
 			}
 			$cleanPosition = preg_replace( '/\./', '', $newPosition );
-			$sql = "UPDATE `".BIT_DB_PREFIX."stock_gallery_image_map` SET `item_position` = ?
-					WHERE `item_content_id` = ? AND `gallery_content_id` = ? AND (`item_position` IS null OR `item_position`!=?)";
-			$rs = $this->mDb->getOne($sql, [ $newPosition, $this->mContentId, $pGalleryContentId, $newPosition ] );
+			$sql = "UPDATE `".BIT_DB_PREFIX."stock_assembly_component_map` SET `item_position` = ?
+					WHERE `item_content_id` = ? AND `assembly_content_id` = ? AND (`item_position` IS null OR `item_position`!=?)";
+			$rs = $this->mDb->getOne($sql, [ $newPosition, $this->mContentId, $pAssemblyContentId, $newPosition ] );
 		}
 	}
 
@@ -140,9 +140,9 @@ not ready for primetime
 				$joinSql = '';
 				$whereSql = '';
 
-				$query = "SELECT fg.gallery_id, branch
-						  FROM connectby('`".BIT_DB_PREFIX."stock_gallery_image_map`', '`gallery_content_id`', '`item_content_id`', ?, 0, '/') AS t(cb_item_content_id int,cb_gallery_content_id int, level int, branch text)
-							INNER JOIN `".BIT_DB_PREFIX."stock_gallery` fg ON (fg.`content_id`=cb_item_content_id)
+				$query = "SELECT fg.assembly_id, branch
+						  FROM connectby('`".BIT_DB_PREFIX."stock_assembly_component_map`', '`assembly_content_id`', '`item_content_id`', ?, 0, '/') AS t(cb_item_content_id int,cb_assembly_content_id int, level int, branch text)
+							INNER JOIN `".BIT_DB_PREFIX."stock_assembly` fg ON (fg.`content_id`=cb_item_content_id)
 							INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=fg.`content_id`)
 						  ORDER BY level DESC, branch, lc.`title`";
 				if( $ret = $gBitDb->GetAssoc( $query, [ $this->mContentId  ] ) ) {
@@ -163,10 +163,10 @@ not ready for primetime
 				$currentContentId = $this->mContentId;
 				for( $depth = 0; $depth < 10; $depth++ ) {
 					$parent = $this->mDb->getRow(
-						"SELECT fg.gallery_id AS gid, fg.content_id AS cid, lc.title AS gtitle
-						 FROM ".BIT_DB_PREFIX."stock_gallery fg
+						"SELECT fg.assembly_id AS gid, fg.content_id AS cid, lc.title AS gtitle
+						 FROM ".BIT_DB_PREFIX."stock_assembly fg
 						 INNER JOIN ".BIT_DB_PREFIX."liberty_content lc ON (lc.content_id=fg.content_id)
-						 INNER JOIN ".BIT_DB_PREFIX."stock_gallery_image_map fgim ON (fgim.gallery_content_id=fg.content_id)
+						 INNER JOIN ".BIT_DB_PREFIX."stock_assembly_component_map fgim ON (fgim.assembly_content_id=fg.content_id)
 						 WHERE fgim.item_content_id=?",
 						[$currentContentId]
 					);
@@ -188,94 +188,94 @@ not ready for primetime
 			$p = 0;
 			$c = 1;
 			$joinSql = '';
-			$selectSql = '';//AS title$g, fg$g.gallery_id AS gallery_id$g";
+			$selectSql = '';//AS title$g, fg$g.assembly_id AS assembly_id$g";
 			$whereSql = '';
 			$bindVars = [];
 			// We need to get min_content_status_id
 			$pListHash = [];
 			LibertyContent::prepGetList($pListHash);
-			foreach( $path as $galleryId ) {
-				if( $galleryId ) {
+			foreach( $path as $assemblyId ) {
+				if( $assemblyId ) {
 					$p++; $c++;
-					$selectSql .= " lc$p.`title` AS `title$p`, fg$p.`gallery_id` AS `gallery_id$p`,";
-					$joinSql .= " `".BIT_DB_PREFIX."stock_gallery_image_map` fgim$p
-						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc$p ON(fgim$p.`gallery_content_id`=lc$p.`content_id`)
-						INNER JOIN `".BIT_DB_PREFIX."stock_gallery` fg$p ON(fg$p.`content_id`=lc$p.`content_id`),";
-					$whereSql .= " fg$p.`gallery_id`=? AND fgim$p.`item_content_id`=lc$c.`content_id` AND lc$p.`content_status_id` > ? AND";
-					array_push( $bindVars, $galleryId );
+					$selectSql .= " lc$p.`title` AS `title$p`, fg$p.`assembly_id` AS `assembly_id$p`,";
+					$joinSql .= " `".BIT_DB_PREFIX."stock_assembly_component_map` fgim$p
+						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc$p ON(fgim$p.`assembly_content_id`=lc$p.`content_id`)
+						INNER JOIN `".BIT_DB_PREFIX."stock_assembly` fg$p ON(fg$p.`content_id`=lc$p.`content_id`),";
+					$whereSql .= " fg$p.`assembly_id`=? AND fgim$p.`item_content_id`=lc$c.`content_id` AND lc$p.`content_status_id` > ? AND";
+					array_push( $bindVars, $assemblyId );
 					array_push( $bindVars, $pListHash['min_content_status_id']);
 				}
 			}
-//			$selectSql .= " lc$c.title AS title$c ";//AS title$g, fg$g.gallery_id AS gallery_id$g";
-			$joinSql .= " `".BIT_DB_PREFIX."stock_gallery_image_map` fgim$c
+//			$selectSql .= " lc$c.title AS title$c ";//AS title$g, fg$g.assembly_id AS assembly_id$g";
+			$joinSql .= " `".BIT_DB_PREFIX."stock_assembly_component_map` fgim$c
 				INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc$c ON(fgim$c.`item_content_id`=lc$c.`content_id`) ";
-			$whereSql .= " lc$c.`content_id`=?  AND fgim$c.`gallery_content_id`=lc$p.`content_id` ";
+			$whereSql .= " lc$c.`content_id`=?  AND fgim$c.`assembly_content_id`=lc$p.`content_id` ";
 			array_push( $bindVars, $this->mContentId );
 			$rs = $this->mDb->getRow( "SELECT ".rtrim( $selectSql, ',')." FROM ".rtrim( $joinSql, ',')." WHERE $whereSql", $bindVars );
 			if( !empty( $rs ) ) {
 				for( $i = 1; $i <= (count( $rs ) / 2); $i++ ) {
-					$ret[$rs['gallery_id'.$i]] = $rs['title'.$i];
+					$ret[$rs['assembly_id'.$i]] = $rs['title'.$i];
 				}
 			}
 		}
 
 		if( $this->isValid() && $pIncludeSelf && is_a( $this, '\Bitweaver\Stock\StockAssembly' ) ) {
-			$ret[$this->mGalleryId] = $this->getTitle();
+			$ret[$this->mAssemblyId] = $this->getTitle();
 		}
 
 		return $ret;
 	}
 
-	public function addToGalleries( $pGalleryArray ) {
+	public function addToAssemblies( $pAssemblyArray ) {
 		global $gBitSystem;
 		if( $this->isValid() ) {
-			$inGalleries = $this->mDb->getAssoc( "SELECT `gallery_id`,`gallery_content_id` FROM `".BIT_DB_PREFIX."stock_gallery_image_map` fgim INNER JOIN `".BIT_DB_PREFIX."stock_gallery` fg ON (fgim.`gallery_content_id`=fg.`content_id`) WHERE `item_content_id` = ?", [ $this->mContentId  ] );
+			$inGalleries = $this->mDb->getAssoc( "SELECT `assembly_id`,`assembly_content_id` FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim INNER JOIN `".BIT_DB_PREFIX."stock_assembly` fg ON (fgim.`assembly_content_id`=fg.`content_id`) WHERE `item_content_id` = ?", [ $this->mContentId  ] );
 			$galleries = [];
-			if( is_array( $pGalleryArray ) && count( $pGalleryArray ) ) {
-				foreach( $pGalleryArray as $galleryId ) {
+			if( is_array( $pAssemblyArray ) && count( $pAssemblyArray ) ) {
+				foreach( $pAssemblyArray as $assemblyId ) {
 					// image has been requested to be put in a new gallery
-					if( !is_numeric( $galleryId ) ) {
-						switch( $galleryId ) {
+					if( !is_numeric( $assemblyId ) ) {
+						switch( $assemblyId ) {
 							case 'newest':
-								$galleryId = $this->mDb->getAssoc( "SELECT `gallery_id` FROM `".BIT_DB_PREFIX."stock_gallery` fg INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (fg.`content_id`=lg.`content_id`) WHERE `user_id` = ? ORDER BY gallery_id DESC", [ $this->getField( 'user_id' ) ] );
+								$assemblyId = $this->mDb->getAssoc( "SELECT `assembly_id` FROM `".BIT_DB_PREFIX."stock_assembly` fg INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (fg.`content_id`=lg.`content_id`) WHERE `user_id` = ? ORDER BY assembly_id DESC", [ $this->getField( 'user_id' ) ] );
 								break;
 
 						}
 					}
-					if( empty( $inGalleries[$galleryId] ) ) {
-						if( empty( $galleries[$galleryId] ) ) {
-							if( $galleries[$galleryId] = StockAssembly::lookup( [ 'gallery_id' => $galleryId ] ) ) {
-								$galleries[$galleryId]->load();
+					if( empty( $inGalleries[$assemblyId] ) ) {
+						if( empty( $galleries[$assemblyId] ) ) {
+							if( $galleries[$assemblyId] = StockAssembly::lookup( [ 'assembly_id' => $assemblyId ] ) ) {
+								$galleries[$assemblyId]->load();
 							}
 						}
-						if( $galleries[$galleryId] && $galleries[$galleryId]->isValid() ) {
-							if( $galleries[$galleryId]->hasUserPermission( 'p_stock_upload', true, false ) || $galleries[$galleryId]->isPublic() ) {
+						if( $galleries[$assemblyId] && $galleries[$assemblyId]->isValid() ) {
+							if( $galleries[$assemblyId]->hasUserPermission( 'p_stock_upload', true, false ) || $galleries[$assemblyId]->isPublic() ) {
 								if( $gBitSystem->isFeatureActive( 'stock_gallery_default_sort_mode' ) ) {
 									$pos = null;
 								} else {
 									$query = "SELECT MAX(`item_position`)
-											  FROM `".BIT_DB_PREFIX."stock_gallery_image_map` fgim
-												INNER JOIN `".BIT_DB_PREFIX."stock_gallery` fg ON(fgim.`gallery_content_id`=fg.`content_id`)
-											  WHERE fg.`gallery_id`=?";
-									$pos = $this->mDb->getOne( $query, [ $galleryId ] ) + 10;
+											  FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
+												INNER JOIN `".BIT_DB_PREFIX."stock_assembly` fg ON(fgim.`assembly_content_id`=fg.`content_id`)
+											  WHERE fg.`assembly_id`=?";
+									$pos = $this->mDb->getOne( $query, [ $assemblyId ] ) + 10;
 								}
 
-								$galleries[$galleryId]->addItem( $this->mContentId, $pos );
+								$galleries[$assemblyId]->addItem( $this->mContentId, $pos );
 							} else {
-								$this->mErrors[] = "You do not have permission to attach ".$this->getTitle()." to ".$galleries[$galleryId]->getTitle();
+								$this->mErrors[] = "You do not have permission to attach ".$this->getTitle()." to ".$galleries[$assemblyId]->getTitle();
 							}
 						}
 					} else {
 						// image already in an existing gallery.
-						unset( $inGalleries[$galleryId] );
+						unset( $inGalleries[$assemblyId] );
 					}
 				}
 			}
 			if( count( $inGalleries ) ) {
 				// if we have any left over in the inGalleries array, we should delete them. these were the "unchecked" boxes
-				foreach( $inGalleries as $galleryId ) {
-					$sql = "DELETE FROM `".BIT_DB_PREFIX."stock_gallery_image_map` WHERE `gallery_content_id` = ? AND `item_content_id` = ?";
-					$rs = $this->mDb->getOne($sql, [ $galleryId, $this->mContentId ] );
+				foreach( $inGalleries as $assemblyId ) {
+					$sql = "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `assembly_content_id` = ? AND `item_content_id` = ?";
+					$rs = $this->mDb->getOne($sql, [ $assemblyId, $this->mContentId ] );
 				}
 			}
 		}
@@ -288,31 +288,31 @@ not ready for primetime
 		return false;
 	}
 
-	public function isInGallery( $pGalleryContentId, $pItemContentId = null) {
+	public function isInAssembly( $pAssemblyContentId, $pItemContentId = null) {
 		if( !$this->verifyId( $pItemContentId ) ) {
 			$pItemContentId = $this->mContentId;
 		}
 		$ret = false;
-		if ( is_numeric( $this->mGalleryId ) && is_numeric( $pGalleryContentId ) ) {
+		if ( is_numeric( $this->mAssemblyId ) && is_numeric( $pAssemblyContentId ) ) {
 
 			if( $this->mDb->isAdvancedPostgresEnabled() ) {
 				global $gBitDb, $gBitSmarty;
 				// This code pulls all branches for the current node and determines if there is a path from this content to the root
 				// without hitting a security_id. If there is clear path it returns true. If there is a security_id, then
 				// it determines if the current user has permission
-				$query = "SELECT branch,level,cb_item_content_id,cb_gallery_content_id
-						  FROM connectby('`".BIT_DB_PREFIX."stock_gallery_image_map`', '`gallery_content_id`', '`item_content_id`', ?, 0, '/') AS t(`cb_gallery_content_id` int,`cb_item_content_id` int, `level` int, `branch` text)
-						  WHERE `cb_gallery_content_id`=?
+				$query = "SELECT branch,level,cb_item_content_id,cb_assembly_content_id
+						  FROM connectby('`".BIT_DB_PREFIX."stock_assembly_component_map`', '`assembly_content_id`', '`item_content_id`', ?, 0, '/') AS t(`cb_assembly_content_id` int,`cb_item_content_id` int, `level` int, `branch` text)
+						  WHERE `cb_assembly_content_id`=?
 						  ORDER BY branch
 						";
-				if ( $this->mDb->getOne($query, [  $pItemContentId, $pGalleryContentId ] ) ) {
+				if ( $this->mDb->getOne($query, [  $pItemContentId, $pAssemblyContentId ] ) ) {
 					$ret = true;
 				}
 			} else {
 				$sql = "SELECT count(`item_content_id`) as `item_count`
-						FROM `".BIT_DB_PREFIX."stock_gallery_image_map`
-						WHERE `gallery_content_id` = ? AND `item_content_id` = ?";
-				$rs = $this->mDb->getRow($sql, [ $pGalleryContentId, $pItemContentId ] );
+						FROM `".BIT_DB_PREFIX."stock_assembly_component_map`
+						WHERE `assembly_content_id` = ? AND `item_content_id` = ?";
+				$rs = $this->mDb->getRow($sql, [ $pAssemblyContentId, $pItemContentId ] );
 				if ($rs['item_count'] > 0) {
 					$ret = true;
 				}

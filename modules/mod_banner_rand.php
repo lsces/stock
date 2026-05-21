@@ -17,7 +17,7 @@ if ( !empty($gBitSmarty->tpl_vars) ) {
 	$tpls = $gBitSmarty->tpl_vars;
 	$module_params = $tpls['moduleParams'];
 	$listHash = $module_params->value;
-	$listHash['gallery_id'] = $module_params->value['module_rows'];
+	$listHash['assembly_id'] = $module_params->value['module_rows'];
 }
 $image = new StockComponent();
 

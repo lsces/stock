@@ -45,7 +45,7 @@ if (!empty($_REQUEST['cancel'])) {
 		$favoriteCon[key($favoriteCon)]++;
 	}
 
-	$gContent->loadImages();
+	$gContent->loadComponents();
 
 	$feedback = null;
 
@@ -108,7 +108,7 @@ if (!empty($_REQUEST['cancel'])) {
 							$galleryItem = null;
 							break;
 						case 'remove':
-							$parents = $galleryItem->getParentGalleries();
+							$parents = $galleryItem->getParentAssemblies();
 							if( $galleryItem->isContentType( STOCKASSEMBLY_CONTENT_TYPE_GUID ) || count( $parents ) > 1 ) {
 								$gContent->removeItem( $contentId );
 							} else {
@@ -191,7 +191,7 @@ if (!empty($_REQUEST['cancel'])) {
 	$_SESSION['image_order_feedback'] = $feedback;
 
 	// Redirect so reload does not cause double-batch processing
-	KernelTools::bit_redirect( STOCK_PKG_URL.'image_order.php?gallery_id='.$gContent->getField( 'gallery_id' ) );
+	KernelTools::bit_redirect( STOCK_PKG_URL.'image_order.php?assembly_id='.$gContent->getField( 'assembly_id' ) );
 }
 
 if( !empty( $_SESSION['image_order_feedback'] ) ) {
@@ -217,7 +217,7 @@ if( $gBitSystem->isFeatureActive( 'stock_show_all_to_admins' ) && $gBitUser->has
 }
 $galleryList = $gContent->getList( $listHash );
 $gBitSmarty->assign( 'galleryList', $galleryList );
-$gContent->loadImages( $listHash );
+$gContent->loadComponents( $listHash );
 if ( !empty( $feedback ) ) {
 	$gBitSmarty->assign('formfeedback', $feedback);
 }

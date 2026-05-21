@@ -25,7 +25,7 @@ $listHash = $moduleParams->value;
 if( !empty( $gContent ) && $gContent->getField( 'content_type_guid' ) == STOCKASSEMBLY_CONTENT_TYPE_GUID ) {
 	$displayCount = empty( $gContent->mItems ) ? 0 : count( $gContent->mItems );
 	$thumbCount = $gContent->mInfo['rows_per_page'] * $gContent->mInfo["cols_per_page"];
-	$listHash['gallery_id'] = $gContent->mGalleryId;
+	$listHash['assembly_id'] = $gContent->mAssemblyId;
 	$display = $displayCount >= $thumbCount;
 }
 

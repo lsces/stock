@@ -31,8 +31,8 @@ switch( $gContent->getLayout() ) {
 		break;
 }
 
-$gContent->loadImages( $listHash );
-$gContent->loadParentGalleries();
+$gContent->loadComponents( $listHash );
+$gContent->loadParentAssemblies();
 $gContent->addHit();
 
 $gBitSmarty->assign( 'listInfo', $listHash['listInfo'] );
