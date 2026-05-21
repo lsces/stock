@@ -1,0 +1,160 @@
+<?php
+/**
+ * @package stock
+ * @subpackage functions
+ */
+
+/**
+ * required setup
+ */
+namespace Bitweaver\Stock;
+
+use Bitweaver\KernelTools;
+
+require_once '../kernel/includes/setup_inc.php';
+
+global $gBitSystem;
+
+include_once STOCK_PKG_INCLUDE_PATH.'image_lookup_inc.php';
+
+if( $gContent->isValid() ) {
+	$gContent->verifyUpdatePermission();
+} else {
+	KernelTools::bit_redirect( STOCK_PKG_URL.'?user_id='.$gBitUser->mUserId );
+}
+
+//Utility function, maybe should be moved for use elsewhere. Seems like it has a multitude of possible hook points
+function convertSmartQuotes($string)
+{
+//UTF-8
+$search = ["\xe2\x80\x98", "\xe2\x80\x99", "\xe2\x80\x9c", "\xe2\x80\x9d", "\xe2\x80\x93", "\xe2\x80\x94", "\xe2\x80\xa6" ];
+$replace= ["'", "'", '"', '"', '-', '--', '...' ];
+
+$string = str_replace($search, $replace, $string);
+
+//Windows
+$search = [chr(145), chr(146), chr(147), chr(148), chr(150), chr(151), chr(133) ];
+$replace=  ["'", "'", '"', '"', '-', '--', '...' ];
+
+$string = str_replace($search, $replace, $string);
+
+return $string;
+}
+if( !empty($_REQUEST['edit'])){
+	global $gBitContent;
+	$_REQUEST['edit'] = convertSmartQuotes($_REQUEST['edit']);
+}
+
+if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] ) ) {
+
+	if (empty($_REQUEST['gallery_id']) && empty($_REQUEST['image_id'])) {
+		// We have no way to know what gallery to add an image to or what image to edit!
+		$gBitSmarty->assign( 'msg', KernelTools::tra( "No gallery or image was specified" ) );
+		$gBitSystem->display( "error.tpl" , null, [ 'display_mode' => 'edit' ]);
+		die;
+	}
+
+	// Store/Update the image
+	if (isset($_FILES['imageFile']) && is_uploaded_file($_FILES['imageFile']['tmp_name'])) {
+		$_REQUEST['_files_override'] = [ $_FILES['imageFile'] ];
+		$_REQUEST['_files_override']['process_storage'] = STORAGE_IMAGE;
+		$replaceOriginal=$gContent->getSourceFile();
+		if( file_exists( dirname( $replaceOriginal ).'/original.jpg' ) ) {
+			unlink( dirname( $replaceOriginal ).'/original.jpg' );
+		}
+	}
+
+	$_REQUEST['purge_from_galleries'] = true;
+	if( $gContent->store($_REQUEST) ) {
+		// refresh all hashes
+		$gContent->load();
+
+		// if user uploaded a file with a different name, delete the previous original file
+		if( !empty( $replaceOriginal ) && $replaceOriginal != $gContent->getSourceFile() && file_exists( $replaceOriginal ) ) {
+			unlink( $replaceOriginal );
+		}
+
+		// maybe we need to resize the original and generate thumbnails
+		if( !empty( $_REQUEST['resize'] ) ) {
+			$gContent->resizeOriginal( $_REQUEST['resize'] );
+		}
+		// This needs to happen after the store, else the image width/hieght are screwed for people using the background thumbnailer
+		if( !empty( $_REQUEST['rotate_image'] ) ) {
+			$gContent->rotateImage( $_REQUEST['rotate_image'] );
+		}
+		if( !empty( $_REQUEST['ajax'] ) ) {
+			// we need to refresh the images in the page after saving - not working yet - xing
+			header( 'Location: '.STOCK_PKG_URL."image_order.php?refresh=1&gallery_id=".$_REQUEST['gallery_id'] );
+			die;
+		}
+		if( !empty( $_REQUEST['gallery_additions'] ) ) {
+			$gContent->addToGalleries( $_REQUEST['gallery_additions'] );
+		}
+		if( !empty( $_REQUEST['generate_thumbnails'] ) ) {
+			$gContent->generateThumbnails();
+		}
+		if( empty( $gContent->mErrors ) ) {
+			// add a refresh parameter to the URL so the thumbnails will properly refresh first go reload
+			header( 'Location: '.$gContent->getDisplayUrl().($gBitSystem->isFeatureActive( 'pretty_urls' ) ? '?' : '&' ).'refresh=1' );
+			die;
+		}
+	}
+} elseif( !empty($_REQUEST['ajax_edit']) ) {
+	if( !empty( $_REQUEST['rotate_image'] ) ) {
+		$gContent->rotateImage( $_REQUEST['rotate_image'], true );
+	}
+} elseif( !empty($_REQUEST['delete']) ) {
+	$gContent->verifyUserPermission( KernelTools::tra( "You do not have permission to delete this image." ) );
+
+	if( !empty( $_REQUEST['cancel'] ) ) {
+		// user cancelled - just continue on, doing nothing
+	} elseif( empty( $_REQUEST['confirm'] ) ) {
+		$formHash['delete'] = true;
+		$formHash['image_id'] = $gContent->mImageId;
+		$gBitSystem->confirmDialog( $formHash,
+			[
+				// 'label'=> $gContent->mInfo['title'],
+				'confirm_item'=> $gContent->mInfo['file_name'],
+				'warning' => KernelTools::tra('Are you sure you want to delete this image?') . ' (' . $gContent->getTitle() . ') ' . KernelTools::tra('It will be removed from all galleries to which it belongs.'),
+				'error' => KernelTools::tra('This cannot be undone!'),
+			],
+		);
+	} else {
+		if( $gContent->expunge() ) {
+			$url = '/'; //  is_object( $gGallery ) ? $gGallery->getDisplayUrl() : STOCK_PKG_URL;
+			header( "Location: $url" );
+		}
+	}
+}
+
+$errors = $gContent->mErrors;
+$gBitSmarty->assign('errors', $errors);
+
+$gContent->loadParentGalleries();
+
+// Get a list of all existing galleries
+$gStockAssembly = new StockAssembly();
+$getHash = [
+	'user_id'       => $gBitUser->mUserId,
+];
+if( $gContent->mContentId ) {
+	$getHash['contain_item'] = $gContent->mContentId;
+}
+// modify listHash according to global preferences
+if( $gBitSystem->isFeatureActive( 'stock_show_all_to_admins' ) && $gBitUser->hasPermission( 'p_stock_admin' ) ) {
+	unset( $getHash['user_id'] );
+} elseif( $gBitSystem->isFeatureActive( 'stock_show_public_on_upload' ) ) {
+//	$getHash['show_public'] = true;
+}
+$galleryTree = $gStockAssembly->generateList( $getHash,  [ 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle' ], 'radio_checkbox' => true, ], true );
+$gBitSmarty->assign( 'galleryTree', $galleryTree );
+
+$gBitSmarty->assign('requested_gallery', !empty($_REQUEST['gallery_id']) ? $_REQUEST['gallery_id'] : null);
+
+$gContent->invokeServices( 'content_edit_function' );
+
+if( !empty( $_REQUEST['ajax'] ) ) {
+	echo $gBitSmarty->fetch( 'bitpackage:stock/edit_image_inc.tpl', KernelTools::tra('Edit Image: ').$gContent->getTitle() );
+} else {
+	$gBitSystem->display( 'bitpackage:stock/edit_image.tpl', KernelTools::tra('Edit Image: ').$gContent->getTitle() , [ 'display_mode' => 'edit' ]);
+}

@@ -1,0 +1,57 @@
+<?php
+global $gQueryUser;
+if( !empty( $moduleParams ) ) {
+	extract( $moduleParams );
+}
+use Bitweaver\Stock\StockAssembly;
+use Bitweaver\BitBase;
+
+$gStockAssembly = new StockAssembly();
+
+/* Get a list of galleries which matches the imput paramters (default is to list every gallery in the system) */
+$listHash['root_only'] = true;
+$listHash['get_thumbnails'] = true;
+/*	Not supported in StockAssembly::getList
+if( !empty( $module_params['gallery_id'] ) && is_numeric( $module_params['gallery_id'] ) ) {
+	$listHash['gallery_id'] = $module_params['gallery_id'];
+}*/
+if ($gQueryUserId) {
+	$listHash['user_id'] = $gQueryUserId;
+} elseif( !empty( $module_params['user_id'] ) && BitBase::verifyId( $module_params['user_id'] ) ) {
+	$listHash['user_id'] = $module_params['user_id'];
+}
+if( !empty( $module_params['contain_item'] ) && BitBase::verifyId( $module_params['contain_item'] ) ) {
+	$listHash['contain_item'] = $module_params['contain_item'];
+}
+$listHash['sort_mode'] = !empty( $module_params['sort_mode'] )
+	? $module_params['sort_mode']
+	: 'created_desc';
+if( !empty( $module_params['nav_bar'] ) ){
+	$gBitSmarty->assign('navBar', $module_params['nav_bar']);
+}else{
+	$gBitSmarty->assign('navBar',true);
+}
+if( !empty( $module_params['max_records'] ) ){
+	$listHash['max_records'] = $module_params['max_records'];
+}
+
+$galleryList = $gStockAssembly->getList( $listHash );
+// support for div/ul/li listing of galleries
+$gBitSmarty->assign( 'galleryList', $galleryList );
+
+/* Process the input parameters this page accepts */
+if (!empty($gQueryUser) && $gQueryUser->isRegistered()) {
+	$gBitSmarty->assign('gQueryUserId', $gQueryUser->mUserId);
+	$template = 'user_galleries.tpl';
+} else {
+	$template = 'list_galleries.tpl';
+}
+if (!empty($_REQUEST['offset']) && is_numeric($_REQUEST['offset'])) {
+	$gBitSmarty->assign('iMaxRows', $iMaxRows);
+}
+if (!empty($_REQUEST['sort_mode'])) {
+	$gBitSmarty->assign('iSortMode', $_REQUEST['sort_mode']);
+}
+if (!empty($_REQUEST['search'])) {
+	$gBitSmarty->assign('iSearchString', $iSearchtring);
+}

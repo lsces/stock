@@ -1,0 +1,912 @@
+<?php
+/**
+ * @package stock
+ */
+
+/**
+ * required setup
+ */
+namespace Bitweaver\Stock;
+
+use Bitweaver\Liberty\LibertyContent;
+use Bitweaver\Liberty\LibertyMime;
+use Bitweaver\BitBase;
+
+// Needed for getting event_time and possible image title and data
+require_once LIBERTY_PKG_PATH.'plugins/mime.image.php';
+
+define('STOCKCOMPONENT_CONTENT_TYPE_GUID', 'stockcomponent');
+
+/**
+ * @package stock
+ */
+class StockComponent extends StockBase {
+	public $mImageId;
+	public $mExif;
+
+	public function __construct($pImageId = null, $pContentId = null) {
+		parent::__construct();
+		$this->mImageId = (int)$pImageId;
+		$this->mContentId = (int)$pContentId;
+
+		$this->registerContentType(
+			STOCKCOMPONENT_CONTENT_TYPE_GUID, [
+				'content_type_guid' => STOCKCOMPONENT_CONTENT_TYPE_GUID,
+				'content_name' => 'Image',
+				'handler_class' => 'StockComponent',
+				'handler_package' => 'stock',
+				'handler_file' => 'StockComponent.php',
+				'maintainer_url' => 'https://www.bitweaver.org',
+		], );
+
+		// Permission setup
+		$this->mViewContentPerm  = 'p_stock_view';
+		$this->mUpdateContentPerm  = 'p_stock_update';
+		$this->mAdminContentPerm = 'p_stock_admin';
+	}
+
+	public function __sleep() {
+		$ret = array_merge( parent::__sleep(), [ 'mImageId' ] );
+		return $ret;
+	}
+
+	public static function lookup( $pLookupHash ) {
+		global $gBitDb;
+		$ret = null;
+
+		$lookupContentId = null;
+		if (!empty($pLookupHash['image_id']) && is_numeric($pLookupHash['image_id'])) {
+			if( $lookup = $gBitDb->getRow( "SELECT lc.`content_id`, lc.`content_type_guid` FROM `".BIT_DB_PREFIX."stock_image` fi INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=fi.`content_id`) WHERE `image_id`=?", [ $pLookupHash['image_id'] ] ) ) {
+				$lookupContentId = $lookup['content_id'];
+				$lookupContentGuid = $lookup['content_type_guid'];
+			}
+		} elseif (!empty($pLookupHash['content_id']) && is_numeric($pLookupHash['content_id'])) {
+			$lookupContentId = $pLookupHash['content_id'];
+			$lookupContentGuid = null;
+		}
+
+		if( static::verifyId( $lookupContentId ) ) {
+			$ret = static::getLibertyObject( $lookupContentId, $lookupContentGuid );
+		}
+
+		return $ret;
+	}
+
+	public function load() {
+		if( $this->isValid() ) {
+			global $gBitSystem;
+			$gateSql = null;
+			$selectSql = $joinSql = $whereSql = '';
+			$bindVars = [];
+
+			if ( @$this->verifyId( $this->mImageId ) ) {
+				$whereSql = " WHERE fi.`image_id` = ?";
+				$bindVars[] = $this->mImageId;
+			} elseif ( @$this->verifyId( $this->mContentId ) ) {
+				$whereSql = " WHERE fi.`content_id` = ?";
+				$bindVars[] = $this->mContentId;
+			}
+
+			$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
+
+			$sql = "SELECT fi.*, lc.* $gateSql $selectSql
+						, uue.`login` AS `modifier_user`, uue.`real_name` AS `modifier_real_name`
+						, uuc.`login` AS `creator_user`, uuc.`real_name` AS `creator_real_name`, ufm.`favorite_content_id` AS `is_favorite`
+						, lch.`hits`
+					FROM `".BIT_DB_PREFIX."stock_image` fi
+						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id` = fi.`content_id`)
+						LEFT JOIN `".BIT_DB_PREFIX."users_users` uue ON (uue.`user_id` = lc.`modifier_user_id`)
+						LEFT JOIN `".BIT_DB_PREFIX."users_users` uuc ON (uuc.`user_id` = lc.`user_id`)
+						LEFT JOIN `".BIT_DB_PREFIX."users_favorites_map` ufm ON (ufm.`favorite_content_id`=lc.`content_id` AND ufm.`user_id`=uuc.`user_id`)
+						LEFT OUTER JOIN `".BIT_DB_PREFIX."liberty_content_hits` lch ON ( lch.`content_id` = lc.`content_id` ) $joinSql
+					$whereSql";
+			if( $this->mInfo = $this->mDb->getRow( $sql, $bindVars ) ) {
+				$this->mImageId = $this->mInfo['image_id'];
+				$this->mContentId = $this->mInfo['content_id'];
+
+				$this->mInfo['creator'] = $this->mInfo['creator_real_name'] ?? $this->mInfo['creator_user'];
+				$this->mInfo['editor'] = $this->mInfo['modifier_real_name'] ?? $this->mInfo['modifier_user'];
+
+				if( $gBitSystem->isPackageActive( 'gatekeeper' ) && !@$this->verifyId( $this->mInfo['security_id'] ) ) {
+					// check to see if this image is in a protected gallery
+					// this burns an extra select but avoids an big and gnarly LEFT JOIN sequence that may be hard to optimize on all DB's
+					$query = "SELECT ls.* FROM `".BIT_DB_PREFIX."stock_gallery_image_map` fgim
+								INNER JOIN `".BIT_DB_PREFIX."gatekeeper_security_map` tsm ON(fgim.`gallery_content_id`=tsm.`content_id` )
+								INNER JOIN `".BIT_DB_PREFIX."gatekeeper_security` ls ON(tsm.`security_id`=ls.`security_id` )
+							  WHERE fgim.`item_content_id`=?";
+					$grs = $this->mDb->getAssoc($query, [ $this->mContentId ] );
+					if( $grs ) {
+						// order matters here
+						$this->mInfo = array_merge( $grs, $this->mInfo );
+					}
+				}
+
+				// LibertyMime will load the attachment details in $this->mStorage
+				parent::load();
+
+				// Copy mStorage to mInfo['image_file'] for easy access
+				if( !empty( $this->mStorage ) && count( $this->mStorage ) > 0 ) {
+					// it seems that this is not necessary and causes confusing copies of the same stuff all over the place
+					$this->mInfo = array_merge( current( $this->mStorage ), $this->mInfo );
+					// copy the image data by reference to reduce memory
+					reset( $this->mStorage );
+					$this->mInfo['image_file'] = current( $this->mStorage );
+					// override original display_url that mime knows where we keep the image
+					$this->mInfo['image_file']['display_url'] = $this->getDisplayUrl();
+				} else {
+					$this->mInfo['image_file'] = null;
+				}
+
+				if( empty( $this->mInfo['width'] ) ||  empty( $this->mInfo['height'] ) ) {
+					$details = $this->getImageDetails();
+					// bounds checking on the width and height - corrupt photos can be ridiculously huge or negative
+					if( !empty($details) AND $details['width'] > 0 AND $details['width'] < 9999 AND $details['height'] > 0 AND $details['height'] < 9999 ) {
+						$this->mInfo['width'] = $details['width'];
+						$this->mInfo['height'] = $details['height'];
+						$this->mDb->getOne( "UPDATE `".BIT_DB_PREFIX."stock_image` SET `width`=?, `height`=? WHERE `content_id`=?", [ $this->mInfo['width'], $this->mInfo['height'], $this->mContentId ] );
+					}
+				}
+			}
+			$ret = count($this->mInfo);
+		} else {
+			// We don't have an image_id or a content_id so there is no way to know what to load
+			$ret = null;
+		}
+
+		return $ret;
+	}
+
+	public function storeDimensions( $pDetails ) {
+		if( $this->isValid() && $this->mInfo['width'] != $pDetails['width'] || $this->mInfo['height'] != $pDetails['height']  ) {
+			// if our data got out of sync with the database, force an update
+			$query = "UPDATE `".BIT_DB_PREFIX."stock_image` SET `width`=?, `height`=? WHERE `content_id`=?";
+			$this->mDb->getOne( $query, [ $pDetails['width'], $pDetails['height'], $this->mContentId ] );
+			$this->mInfo['width'] = $pDetails['width'];
+			$this->mInfo['height'] = $pDetails['height'];
+			$this->clearFromCache();
+		}
+	}
+
+	public function exportHash() {
+		$ret = null;
+		// make sure we have a valid image file.
+		if( ($ret = parent::exportHash()) && ($details = $this->getImageDetails() ) ) {
+			$ret = array_merge( $ret, [
+												'type' => $this->getContentType(),
+												'landscape' => $this->isLandscape(),
+												'has_description' => !empty( $this->mInfo['data'] ),
+												'is_favorite' => $this->getField('is_favorite'),
+											] );
+		}
+		return $ret;
+	}
+
+	public function isLandscape() {
+		return !empty( $this->mInfo['width'] ) && !empty( $this->mInfo['height'] ) && ($this->mInfo['width'] > $this->mInfo['height']);
+	}
+
+	public function verifyImageData(&$pParamHash) {
+		$pParamHash['content_type_guid'] = $this->getContentType();
+
+		if ( empty($pParamHash['purge_from_galleries']) ) {
+			$pParamHash['purge_from_galleries'] = false;
+		}
+
+		if( !empty( $pParamHash['resize'] ) ) {
+			$pParamHash['_files_override'][0]['max_height'] = $pParamHash['_files_override'][0]['max_width'] = $pParamHash['resize'];
+		}
+
+		// Make sure we know what to update
+		if( $this->isValid() ) {
+			// these 2 entries will inform LibertyContent and LibertyMime that this is an update
+			$pParamHash['content_id'] = $this->mContentId;
+			if( !empty(  $this->mInfo['attachment_id'] ) ) {
+				$pParamHash['_files_override'][0]['attachment_id'] = $this->mInfo['attachment_id'];
+			}
+		}
+
+		if( function_exists( '\Bitweaver\Liberty\mime_image_get_exif_data' ) && !empty( $pParamHash['_files_override'][0]['tmp_name'] ) ) {
+			$exifFile['source_file'] = $pParamHash['_files_override'][0]['tmp_name'];
+			$exifFile['type'] =  $pParamHash['_files_override'][0]['type'];
+			$exifHash = \Bitweaver\Liberty\mime_image_get_exif_data( $exifFile );
+
+			// Set some default values based on the Exif data
+			if( !empty( $exifHash['IFD0']['ImageDescription'] ) ) {
+				if( empty( $pParamHash['title'] ) ) {
+					$exifTitle = trim( $exifHash['IFD0']['ImageDescription'] );
+					if( !empty( $exifTitle ) ) {
+						$pParamHash['title'] = $exifTitle;
+					}
+				} elseif( empty( $pParamHash['edit'] ) && !$this->getField( 'data' ) && $pParamHash['title'] != $exifHash['IFD0']['ImageDescription'] ) {
+					$pParamHash['edit'] = $exifHash['IFD0']['ImageDescription'];
+				}
+			}
+
+			// These come from Photoshop
+			if( !empty( $exifHash['headline'] ) ) {
+				if( empty( $pParamHash['title'] ) ) {
+					$pParamHash['title'] = $exifHash['headline'];
+				} elseif( empty( $pParamHash['edit'] ) && !$this->getField( 'data' ) && $pParamHash['title'] != $exifHash['headline'] ) {
+					$pParamHash['edit'] = $exifHash['headline'];
+				}
+			}
+			if( !empty( $exifFile['caption'] ) ) {
+				if( empty( $pParamHash['title'] ) ) {
+					$pParamHash['title'] = $exifFile['caption'];
+				} elseif( empty( $pParamHash['edit'] ) && !$this->getField( 'data' ) && $pParamHash['title'] != $exifFile['caption'] ) {
+					$pParamHash['edit'] = $exifFile['caption'];
+				}
+			}
+
+			if( empty( $pParamHash['event_time'] ) && !$this->getField( 'event_time' ) && !empty( $exifHash['EXIF']['DateTimeOriginal'] ) ) {
+				$pParamHash['event_time'] = strtotime( $exifHash['EXIF']['DateTimeOriginal'] );
+			}
+
+		}
+
+		// let's add a default title if we still don't have one or the user has chosen to use filename over exif data
+		if( (empty( $pParamHash['title'] ) || !empty($_REQUEST['use_filenames'])) && !empty( $pParamHash['_files_override'][0]['name'] ) ) {
+			if( preg_match( '/^[A-Z]:\\\/', $pParamHash['_files_override'][0]['name'] ) ) {
+				// MSIE shit file names if passthrough via gigaupload, etc.
+				// basename will not work - see http://us3.php.net/manual/en/function.basename.php
+				$tmp = preg_split("[\\\]", $pParamHash['_files_override'][0]['name'] );
+				$defaultName = $tmp[count($tmp) - 1];
+				$pParamHash['_files_override'][0]['name'] = $defaultName;
+			} else {
+				$defaultName = $pParamHash['_files_override'][0]['name'];
+			}
+
+			if( strpos( $pParamHash['_files_override'][0]['name'], '.' ) ) {
+				list( $defaultName, $ext ) = explode( '.', $pParamHash['_files_override'][0]['name'] );
+			}
+			$pParamHash['title'] = str_replace( '_', ' ', $defaultName );
+		}
+
+		if( count( $this->mErrors ) > 0 ){
+			parent::verify( $pParamHash );
+		}
+
+		return count($this->mErrors) == 0;
+	}
+
+	public function store( array &$pParamHash): bool {
+		global $gBitSystem, $gLibertySystem;
+
+		if ($this->verifyImageData($pParamHash)) {
+			// Save the current attachment ID for the image attached to this StockComponent so we can
+			// delete it after saving the new one
+			if (!empty($this->mInfo['attachment_id']) && !empty($pParamHash['_files_override'][0])) {
+				$currentImageAttachmentId = $this->mInfo['attachment_id'];
+				$pParamHash['attachment_id'] = $currentImageAttachmentId;
+			} else {
+				$currentImageAttachmentId = null;
+			}
+
+			// we have already done all the permission checking needed for this user to upload an image
+			$pParamHash['no_perm_check'] = true;
+
+			$this->StartTrans();
+			$pParamHash['thumbnail'] = !$gBitSystem->isFeatureActive( 'liberty_offline_thumbnailer' );
+			if( LibertyMime::store( $pParamHash ) ) {
+				if( $currentImageAttachmentId && $currentImageAttachmentId != $this->mInfo['attachment_id'] ) {
+					$this->expungeAttachment($currentImageAttachmentId);
+				}
+				// get storage format back from LibertyMime
+				$this->mContentId = $pParamHash['content_id'];
+				$this->mInfo['content_id'] = $this->mContentId;
+
+				$imageDetails = !empty( $this->mInfo['source_file'] ) && file_exists( $this->getSourceFile() )
+					? $imageDetails = $this->getImageDetails( $this->getSourceFile() ) : null;
+
+				if (!$imageDetails) {
+					$imageDetails['width'] = !empty($this->mInfo['width']) ? $this->mInfo['width'] : null;
+					$imageDetails['height'] = !empty($this->mInfo['height']) ? $this->mInfo['height'] : null;
+				}
+
+				if ($this->imageExistsInDatabase()) {
+					$sql = "UPDATE `".BIT_DB_PREFIX."stock_image`
+							SET `content_id` = ?, `width` = ?, `height` = ?
+							WHERE `image_id` = ?";
+					$bindVars = [ $this->mContentId, $imageDetails['width'], $imageDetails['height'], $this->mImageId ];
+				} else {
+					$this->mImageId = defined( 'LINKED_ATTACHMENTS' ) ? $this->mContentId : $this->mDb->GenID('stock_image_id_seq');
+					$this->mInfo['image_id'] = $this->mImageId;
+					$sql = "INSERT INTO `".BIT_DB_PREFIX."stock_image` (`image_id`, `content_id`, `width`, `height`) VALUES (?,?,?,?)";
+					$bindVars = [ $this->mImageId, $this->mContentId, $imageDetails['width'], $imageDetails['height'] ];
+				}
+
+				$rs = $this->mDb->getOne($sql, $bindVars);
+
+				// check to see if we need offline thumbnailing
+				if( $gBitSystem->isFeatureActive( 'liberty_offline_thumbnailer' ) ) {
+					$resize = !empty( $pParamHash['resize'] ) ? (int)$pParamHash['resize'] : null;
+					$this->generateThumbnails( $resize );
+				} else {
+					if( !empty( $pParamHash['resize'] ) && is_numeric( $pParamHash['resize'] ) ) {
+						$this->resizeOriginal( $pParamHash['resize'] );
+					}
+				}
+				$this->CompleteTrans();
+			} else {
+				$this->mDb->RollbackTrans();
+			}
+			$this->clearFromCache();
+		} else {
+			$this->mErrors[] = "There were errors while attempting to save this gallery image";
+		}
+		return count($this->mErrors) == 0;
+	}
+
+	public function getExifField( $pExifField ) {
+		$ret = null;
+		if( function_exists( '\exif_read_data' ) ) {
+			$pExifField = strtolower( $pExifField );
+			$file = $this->getSourceFile();
+			// only attempt to get exif data from jpg or tiff files - chokes otherwise
+			if( empty( $this->mExif ) && preg_match( "!\.(jpe?g|tif{1,2})$!", $file ) ) {
+				if( $exif = @exif_read_data( $file ) ) {
+					$this->mExif = array_change_key_case( $exif, CASE_LOWER );
+				}
+			}
+			if( !empty( $this->mExif[$pExifField] ) ) {
+				$ret = $this->mExif[$pExifField];
+			}
+		}
+		return $ret;
+	}
+
+	public function rotateImage( $pDegrees, $pImmediateRender = false ) {
+		global $gBitSystem;
+		if( $this->getField( 'file_name' ) || $this->load() ) {
+			$fileHash['source_file'] = $this->getSourceFile();
+			$fileHash['dest_base_name'] = preg_replace('/(.+)\..*$/', '$1', basename( $fileHash['source_file'] ) );
+			$fileHash['type'] = $gBitSystem->verifyMimeType( $fileHash['source_file'] );
+			$fileHash['size'] = filesize( $fileHash['source_file'] );
+			$fileHash['dest_branch'] = dirname( $this->getSourceFile() ).'/';
+			$fileHash['name'] = $this->getField( 'file_name' );
+			if( $pDegrees == 'auto' ) {
+				if( $exifOrientation = $this->getExifField( 'orientation' ) ) {
+					switch( $exifOrientation ) {
+						 case 1: //) transform="";;
+							break;
+						 case 2: //) transform="-flip horizontal";;
+							break;
+						 case 3: //) transform="-rotate 180";;
+							$pDegrees = 180;
+							break;
+						 case 4: //) transform="-flip vertical";;
+							break;
+						 case 5: //) transform="-transpose";;
+							break;
+						 case 6: //) transform="-rotate 90";;
+							// make sure image has not already been rotated
+							if( $this->isLandscape() ) {
+								$pDegrees = 90;
+							}
+							break;
+						 case 7: //) transform="-transverse";;
+							break;
+						 case 8: //) transform="-rotate 270";;
+							// make sure image has not already been rotated
+							if( $this->isLandscape() ) {
+								$pDegrees = 270;
+							}
+							break;
+						 // *) transform="";;
+					}
+				}
+			}
+			if( is_numeric( $pDegrees ) ) {
+				$fileHash['degrees'] = $pDegrees;
+
+				if( ($rotateFunc = \Bitweaver\Liberty\liberty_get_function( 'rotate' )) && $rotateFunc( $fileHash ) ) {
+					\Bitweaver\Liberty\liberty_clear_thumbnails( $fileHash );
+					$this->mDb->getOne( "UPDATE `".BIT_DB_PREFIX."stock_image` SET `width`=`height`, `height`=`width` WHERE `content_id`=?", [ $this->mContentId ] );
+					$this->clearFromCache();
+					$this->generateThumbnails( false, $pImmediateRender );
+				} else {
+					$this->mErrors['rotate'] = $fileHash['error'];
+				}
+			} elseif( $pDegrees == 'auto' ) {
+				$this->mErrors['rotate'] = "Image was not auto-rotated.";
+			}
+		}
+		return count($this->mErrors) == 0;
+	}
+
+	/**
+	 * convertColorspace
+	 *
+	 * @param string $pColorSpace - target color space, only 'grayscale' is currently supported, and only when using the MagickWand image processor
+	 * @access public
+	 * @return bool true on success, false on failure - mErrors will contain reason for failure
+	 */
+	public function convertColorspace( $pColorSpace ) {
+		global $gBitSystem;
+		$ret = false;
+		if( $this->getField( 'file_name' ) || $this->load() ) {
+			$fileHash['source_file'] = $this->getSourceFile();
+			$fileHash['dest_base_name'] = preg_replace('/(.+)\..*$/', '$1', basename( $fileHash['source_file'] ) );
+			$fileHash['type'] = $gBitSystem->verifyMimeType( $fileHash['source_file'] );
+			$fileHash['size'] = filesize( $fileHash['source_file'] );
+			$fileHash['dest_branch'] = dirname( $this->getSourceFile() ).'/';
+			$fileHash['name'] = $this->getField( 'file_name' );
+			if( $convertFunc = \Bitweaver\Liberty\liberty_get_function( 'convert_colorspace' ) ) {
+				if( $ret = $convertFunc( $fileHash, $pColorSpace ) ) {
+					\Bitweaver\Liberty\liberty_clear_thumbnails( $fileHash );
+					$sql = "UPDATE `".BIT_DB_PREFIX."liberty_files SET `file_size`=? WHERE `file_id` = ?";
+					$this->mDb->getOne( $sql, [ filesize( $fileHash['dest_file'] ), $this->mInfo['file_id'] ] );
+					$this->generateThumbnails();
+				}
+			}
+		}
+		return $ret;
+	}
+
+	public function resizeOriginal( $pResizeOriginal ) {
+		global $gBitSystem;
+		if( $this->getField( 'file_name' ) || $this->load() ) {
+			$fileHash['source_file'] = $this->getSourceFile();
+			$fileHash['dest_base_name'] = preg_replace('/(.+)\..*$/', '$1', basename( $fileHash['source_file'] ) );
+			$fileHash['type'] = $gBitSystem->verifyMimeType( $fileHash['source_file'] );
+			$fileHash['size'] = filesize( $fileHash['source_file'] );
+			$fileHash['dest_branch'] = $this->getStorageBranch();
+			$fileHash['name'] = $this->getField( 'file_name' );
+			$fileHash['max_height'] = $fileHash['max_width'] = $pResizeOriginal;
+			// make a copy of the fileHash that we can compare output after processing
+			$preResize = $fileHash;
+			if( ($resizeFunc = \Bitweaver\Liberty\liberty_get_function( 'resize' )) && ($resizeFile = $resizeFunc( $fileHash )) ) {
+				clearstatcache();
+				// Ack this is evil direct bashing of the liberty tables! XOXO spiderr
+				// should be a cleaner way eventually
+
+				// we need to update the souce_file in case it's changed from a non jpg to a jpg
+				if( $fileHash['name'] != $preResize['name'] ) {
+					$fileHash['source_file'] = dirname( $fileHash['source_file'] ).'/'.$fileHash['name'];
+					// make absolutely certain that we have 2 image files and that they are different, then remove the original
+					if( $fileHash['source_file'] != $preResize['source_file'] && is_file( $fileHash['source_file'] ) && is_file( $preResize['source_file'] ) ) {
+						@unlink( $preResize['source_file'] );
+					}
+				}
+				$details = $this->getImageDetails( $resizeFile );
+				// store all the values that might have changed due to the resize
+				$storeHash = [
+					'file_size' => filesize( $resizeFile ),
+					'mime_type' => $details['mime'],
+				];
+				$this->mDb->associateUpdate( BIT_DB_PREFIX."liberty_files", $storeHash, [ 'file_id' => $this->mInfo['file_id'] ] );
+				//$query = "UPDATE `".BIT_DB_PREFIX."liberty_files` SET `file_size`=? WHERE `file_id`=?";
+				//$this->mDb->query( $query, [ $details['size'], $this->mInfo['file_id'] ] );
+				$query = "UPDATE `".BIT_DB_PREFIX."stock_image` SET `width`=?, `height`=? WHERE `content_id`=?";
+				$this->mDb->getOne( $query, [ $details['width'], $details['height'], $this->mContentId ] );
+				// if we've come this far, we can try removing the original if it's different to the resized image
+				// make absolutely certain that we have 2 image files and that they are different, then remove the original
+				if( $fileHash['source_file'] != $preResize['source_file'] && is_file( $fileHash['source_file'] ) && is_file( $preResize['source_file'] ) ) {
+					@unlink( $preResize['source_file'] );
+				}
+			} else {
+				$this->mErrors['resize'] = $fileHash['error'];
+			}
+		}
+		return count($this->mErrors) == 0;
+	}
+
+	public function generateThumbnails( $pResizeOriginal=null, $pImmediateRender=false ) {
+		global $gBitSystem;
+		$ret = false;
+		// LibertyMime will take care of thumbnail generation of the offline thumbnailer is not active
+		if( $gBitSystem->isFeatureActive( 'liberty_offline_thumbnailer' ) && !$pImmediateRender ) {
+			$query = "DELETE FROM `".BIT_DB_PREFIX."liberty_process_queue`
+					  WHERE `content_id`=?";
+			$this->mDb->getOne( $query, [ $this->mContentId ] );
+			$query = "INSERT INTO `".BIT_DB_PREFIX."liberty_process_queue`
+					  (`content_id`, `queue_date`, `processor_parameters`) VALUES (?,?,?)";
+			$this->mDb->getOne( $query, [ $this->mContentId, $gBitSystem->getUTCTime(), serialize( [ 'resize_original' => $pResizeOriginal ] ) ] );
+		} else {
+			$ret = $this->renderThumbnails();
+		}
+		return $ret;
+	}
+
+	public function renderThumbnails( $pThumbSizes=null ) {
+		global $gBitSystem;
+		if( $this->getField( 'file_name' ) || $this->load() ) {
+			$fileHash['source_file'] = $this->getSourceFile();
+			$fileHash['type'] = $gBitSystem->verifyMimeType( $fileHash['source_file'] );
+			$fileHash['size'] = filesize( $fileHash['source_file'] );
+			$fileHash['dest_branch'] = $this->getStorageBranch( $fileHash );
+			$fileHash['name'] = $this->getField( 'file_name' );
+			$fileHash['thumbnail_sizes'] = $pThumbSizes;
+			// just generate thumbnails
+			\Bitweaver\Liberty\liberty_generate_thumbnails( $fileHash );
+			if( !empty( $fileHash['error'] ) ) {
+				$this->mErrors['thumbnail'] = $fileHash['error'];
+			}
+		}
+		return count($this->mErrors) == 0;
+	}
+
+	public function getStorageUrl( $pParamHash = [] ) {
+		$pParamHash['sub_dir'] =  $this->getParameter( $pParamHash, 'sub_dir', \Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( [ 'type'=>$this->getField( 'mime_type' ), 'name'=>$this->getField('file_name') ] ) );
+		$pParamHash['user_id'] = $this->getParameter( $pParamHash, 'user_id', $this->getField('user_id') );
+		return parent::getStorageUrl( $pParamHash ).$this->getParameter( $pParamHash, 'attachment_id', $this->getField('attachment_id') ).'/';
+	}
+
+	public function getStorageBranch( $pParamHash = [] ) {
+		$pParamHash['sub_dir'] = $this->getParameter( $pParamHash, 'sub_dir', \Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( [ 'type'=>$this->getField( 'mime_type' ), 'name'=>$this->getField('file_name') ] ) );
+		$pParamHash['user_id'] = $this->getParameter( $pParamHash, 'user_id', $this->getField('user_id') );
+		return parent::getStorageBranch( $pParamHash ).$this->getParameter( $pParamHash, 'attachment_id', $this->getField('attachment_id') ).'/';
+	}
+
+	public function getStoragePath( $pParamHash, $pRootDir=null ) {
+		$pParamHash['sub_dir'] = \Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( [ 'type'=>BitBase::getParameter( $pParamHash, 'mime_type', $this->getField( 'mime_type' ) ), 'name'=>BitBase::getParameter( $pParamHash, 'file_name', $this->getField('file_name') ) ] );
+		$pParamHash['user_id'] = $this->getParameter( $pParamHash, 'user_id', $this->getField('user_id') );
+		return parent::getStoragePath( $pParamHash ).$this->getParameter( $pParamHash, 'attachment_id', $this->getField('attachment_id') ).'/';
+	}
+
+	public function getPreviewHash() {
+		return $this->mInfo;
+	}
+
+	// Get resolution, etc
+	public function getImageDetails($pFilePath = null) {
+		$info = [];
+		if( file_exists( $pFilePath ?? '' ) ) {
+			$checkFiles = [ $pFilePath, dirname( $pFilePath ).'/original.jpg' ];
+		} else {
+			$sourceFile  = $this->getSourceFile();
+			$checkFiles = [ $sourceFile ];
+			// was an original file created?
+			$originalFile = dirname( $sourceFile ?? '' ).'/original.jpg';
+			if( file_exists( $originalFile ) && !is_link( $originalFile ) ) {
+				$checkFiles[] = $originalFile;
+			}
+		}
+
+		foreach( $checkFiles as $cf ) {
+			if ($cf && file_exists( $cf ) && filesize( $cf ) ) {
+				if( $imageSize = getimagesize( rtrim( $cf ) ) ) {
+					$info = $imageSize;
+					$info['width'] = $info[0];
+					$info['height'] = $info[1];
+					$info['size'] = filesize( $cf );
+					break;
+				}
+			}
+		}
+		return $info;
+	}
+
+	public function getWidth() {
+		if( !isset( $this->mInfo['width'] ) ) {
+			$this->mInfo = array_merge( $this->mInfo, $this->getImageDetails() );
+		}
+		return $this->getField('width');
+	}
+
+	public function getHeight() {
+		if( !isset( $this->mInfo['width'] ) ) {
+			$this->mInfo = array_merge( $this->mInfo, $this->getImageDetails() );
+		}
+		return $this->getField('height');
+	}
+
+	/**
+	* Returns include file that will setup vars for display
+	* @return string the fully specified path to file to be included
+	*/
+	public function getRenderFile() {
+		return STOCK_PKG_INCLUDE_PATH.'display_stock_image_inc.php';
+	}
+
+	/**
+	* Returns template file used for display
+	* @return string the fully specified path to file to be included
+	*/
+	public function getRenderTemplate() {
+		return 'bitpackage:stock/view_image.tpl';
+	}
+
+	/**
+	* Function that returns link to display a piece of content
+	* @param array pParamHash if a string, it is assumed to be the size, if an array, it is assumed to be a mInfo hash
+	* @return string the url to display the gallery.
+	*/
+	public static function getDisplayUrlFromHash( &$pParamHash ) {
+		$ret = '';
+		$size = (!empty( $pParamHash['size'] ) && is_string( $pParamHash['size'] ) && isset( $pParamHash['thumbnail_url'][$pParamHash['size']] ) ) ? $pParamHash['size'] : null ;
+
+		global $gBitSystem;
+		if( BitBase::verifyId( $pParamHash['image_id'] ?? 0 ) ) {
+			if( $gBitSystem->isFeatureActive( 'pretty_urls' ) ) {
+				$ret = STOCK_PKG_URL.'image/'.$pParamHash['image_id'];
+				if( !empty( $pParamHash['gallery_path'] ) ) {
+					$ret .= $pParamHash['gallery_path'];
+				}
+				if( $size ) {
+					$ret .= '/'.$size;
+				}
+			} else {
+				$ret = STOCK_PKG_URL.'view_image.php?image_id='.$pParamHash['image_id'];
+				if( !empty( $pParamHash['gallery_path'] ) ) {
+					$ret .= '&gallery_path='.$pParamHash['gallery_path'];
+				}
+				if( $size ) {
+					$ret .= '&size='.$size;
+				}
+			}
+		} elseif ( BitBase::verifyId( $pParamHash['content_id'] ?? 0 ) ) {
+			$ret = STOCK_PKG_URL.'view_image.php?content_id='.$pParamHash['content_id'];
+		}
+		return $ret;
+	}
+
+	/**
+	* Function that returns link to display an image
+	* @return string the url to display the gallery.
+	*/
+	public function getDisplayUrl() {
+		$info = &$this->mInfo;
+		$info['image_id'] = $this->mImageId;
+		$info['gallery_path'] = $this->mGalleryPath;
+		return StockComponent::getDisplayUrlFromHash( $info );
+	}
+
+	/**
+	* Function that returns link to display an image
+	* Used to display thumbnails for navigation bar
+	* @param integer pImageId id of image to link
+	* @return string the url to display the image.
+	*/
+	public function getImageUrl( $pImageId ) {
+		$info = [ 'image_id' => $pImageId ];
+		return StockComponent::getDisplayUrlFromHash( $info );
+	}
+
+	/**
+	 * Generate a valid display link for the Blog
+	 *
+	 * @param	array	PostId of the item to use
+	 * @param	string	Image Title
+	 * @param	array	Not used
+	 * @return	string	Fully formatted html link for use by Liberty
+	 */
+	public static function getDisplayLinkFromHash( &$pParamHash, $pTitle='', $pAnchor=null ) {
+		global $gBitSystem;
+
+		$pTitle = trim( $pTitle );
+
+		if( empty( $pTitle ) ) {
+			$pTitle = StockComponent::getTitleFromHash( $pParamHash );
+		}
+
+		$ret = $pTitle;
+		if( $gBitSystem->isPackageActive( 'stock' ) ) {
+			$ret = '<a title="'.$pTitle.'" href="'.StockComponent::getDisplayUrlFromHash( $pParamHash ).'">'.$pTitle.'</a>';
+		}
+		return $ret;
+	}
+
+	public static function getTitleFromHash( &$pHash, $pDefault=true ) {
+		if (!empty( $pHash )) {
+			$ret = trim( parent::getTitleFromHash( $pHash, $pDefault ) );
+			if( empty( $ret ) && $pDefault ) {
+				$storage = []; // !empty( $this ) && !empty( $this->mStorage ) ? current( $this->mStorage ) : null;
+				if( !empty( $storage['file_name'] ) ) {
+					$ret = $storage['file_name'];
+				} else {
+					global $gLibertySystem;
+					$ret = $gLibertySystem->getContentTypeName( $pHash['content_type_guid'] ?? 'empty' );
+					if( !empty( $pHash['image_id'] ) ) {
+						$ret .= " ".$pHash['image_id'];
+					}
+				}
+			}
+			return $ret;
+		}
+		return 'empty_file';
+	}
+
+	public function getTitle() {
+		$ret = null;
+		if( $this->isValid() ) {
+			$ret = self::getTitleFromHash( $this->mInfo );
+		}
+		return $ret;
+	}
+
+	public function getThumbnailContentId() {
+		return $this->mContentId;
+	}
+
+	public function getThumbnailUrl( string $pSize = 'small', ?array $pInfoHash = null, ?int $pSecondaryId = null, ?int $pDefault = null ): string|null {
+		$ret = null;
+		if( $this->isValid() && isset( $this->mInfo['thumbnail_url'][$pSize] ) ) {
+			$ret = $this->mInfo['thumbnail_url'][$pSize];
+		}
+		return $ret;
+	}
+
+	public static function getThumbnailUrlFromHash( array &$pParamHash, string $pSize = 'small', ?int $pSecondaryId = -2, ?int $pDefault = -2 ): string {
+		$ret = '';
+		if( isset( $pParamHash['thumbnail_url'][$pSize] ) ) {
+			$ret = $pParamHash['thumbnail_url'][$pSize];
+		}
+		return $ret;
+	}
+
+	public function expunge(): bool {
+		if( $this->isValid() ) {
+			$this->StartTrans();
+			$query = "DELETE FROM `".BIT_DB_PREFIX."stock_gallery_image_map` WHERE `item_content_id` = ?";
+			$rs = $this->mDb->getOne($query, [ $this->mContentId ] );
+			$query = "UPDATE `".BIT_DB_PREFIX."stock_gallery` SET `preview_content_id`=null WHERE `preview_content_id` = ?";
+			$rs = $this->mDb->getOne($query, [ $this->mContentId ] );
+			$query = "DELETE FROM `".BIT_DB_PREFIX."stock_image` WHERE `content_id` = ?";
+			$rs = $this->mDb->getOne($query, [ $this->mContentId ] );
+			if( LibertyMime::expunge() ) {
+				$this->CompleteTrans();
+				$this->mImageId = null;
+				$this->mContentId = null;
+			} else {
+				$this->mDb->RollbackTrans();
+			}
+		}
+		return true;
+	}
+
+	public function expungingAttachment($pAttachmentId, $pContentIdArray) {
+		foreach ($pContentIdArray as $id) {
+			$this->mContentId = $id;
+			// Vital that we call LibertyMime::expunge with false since the attachment is already being deleted.
+			// TODO This needs fixing as LibertyMime does not have that option
+			$this->expunge();
+		}
+	}
+
+	public function isValid() {
+		return @$this->verifyId( $this->mImageId ) || @$this->verifyId( $this->mContentId );
+	}
+
+	public function isLocked(): bool {
+		$ret = false;
+		if( $this->verifyId( $this->mImageId ) ) {
+			if( empty( $this->mInfo ) ) {
+				$this->load();
+			}
+			$ret = $this->getField( 'flag', false );
+		}
+		return $ret;
+	}
+
+	public function imageExistsInDatabase() {
+		$ret = false;
+		if( $this->isValid() && $this->mImageId ) {
+			$query = "SELECT COUNT(`image_id`)
+					FROM `".BIT_DB_PREFIX."stock_image`
+					WHERE `image_id` = ?";
+
+			$bindVars = [ $this->mImageId ];
+
+			if($this->mDb->getOne($query, $bindVars) > 0){
+				$ret = true;
+			}
+
+		}
+		return $ret;
+	}
+
+	public function getList( &$pListHash ) {
+		global $gBitUser,$gBitSystem;
+
+		LibertyContent::prepGetList( $pListHash );
+		$ret = $bindVars = [];
+		$distinct = '';
+		$select = '';
+		$whereSql = '';
+		$joinSql = '';
+
+		if( @$this->verifyId( $pListHash['user_id'] ?? 0 ) ) {
+			$whereSql .= " AND lc.`user_id` = ? ";
+			$bindVars[] = $pListHash['user_id'];
+		} elseif( !empty( $pListHash['recent_users'] )) {
+			$distinct = " DISTINCT ON ( lc.created/86400, uu.`user_id` ) ";
+			$pListHash['sort_mode'] = 'uu.user_id_desc';
+		}
+
+		if( @$this->verifyId( $pListHash['gallery_id'] ?? 0 ) ) {
+			$whereSql .= " AND fg.`gallery_id` = ? ";
+			$bindVars[] = $pListHash['gallery_id'];
+		}
+
+		if( !empty( $pListHash['search'] ) ) {
+			$whereSql .= " AND UPPER(lc.`title`) LIKE ? ";
+			$bindVars[] = '%'.strtoupper( $pListHash['search'] ).'%';
+		}
+
+		if( !empty( $pListHash['max_age'] ) && is_numeric( $pListHash['max_age'] ) ) {
+			$whereSql .= " AND lc.`created` > ? ";
+			$bindVars[] = $pListHash['max_age'];
+		}
+
+		$this->getServicesSql( 'content_user_collection_function', $selectSql, $joinSql, $whereSql, $bindVars, $this, $pListHash );
+
+		$orderby = '';
+		if( !empty( $pListHash['recent_images'] )) {
+			// get images from recent user truncated by day. This is necessary because DISTINCT ON expressions must match initial ORDER BY expressions
+			$distinct = " DISTINCT ON ( lc.`created`/86400, uu.`user_id` ) ";
+			$orderby = " ORDER BY lc.`created`/86400 DESC, uu.`user_id`";
+		} elseif ( !empty( $pListHash['sort_mode'] ) ) {
+			//converted in prepGetList()
+			$orderby = " ORDER BY ".$this->mDb->convertSortmode( $pListHash['sort_mode'] )." ";
+		}
+
+		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
+
+		if( !empty( $whereSql ) ) {
+			$whereSql = substr_replace( $whereSql, ' WHERE ', 0, 4 );
+		}
+
+		$thumbSize = !empty( $pListHash['size'] ) ? $pListHash['size'] : 'avatar';
+
+		$query = "SELECT $distinct fi.`image_id` AS `hash_key`, fi.*, lf.*, la.attachment_id, lc.*, fg.`gallery_id`, uu.`login`, uu.`real_name` $select $selectSql
+				FROM `".BIT_DB_PREFIX."stock_image` fi
+					INNER JOIN `".BIT_DB_PREFIX."liberty_attachments` la ON(la.`content_id`=fi.`content_id`)
+					INNER JOIN `".BIT_DB_PREFIX."liberty_files` lf ON(la.`foreign_id`=lf.`file_id`)
+					INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(fi.`content_id` = lc.`content_id`)
+					INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON(uu.`user_id` = lc.`user_id`) $joinSql
+					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_gallery_image_map` tfgim2 ON(tfgim2.`item_content_id`=lc.`content_id`)
+					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_gallery` fg ON(fg.`content_id`=tfgim2.`gallery_content_id`)
+				$whereSql $orderby";
+		if( $rows = $this->mDb->query( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'], $pListHash['query_cache_time'] ) ) {
+			foreach( $rows as $row ) {
+				// legacy table data was named storage_path and included a partial path. strip out any path just in case
+				$row['hash_key'] = $row['image_id'];
+				$row['file_name'] = basename( $row['file_name'] );
+				$ret[$row['hash_key']] = $row;
+				$imageId = $row['image_id'];
+				if( empty( $pListHash['no_thumbnails'] ) ) {
+					$ret[$imageId]['display_url']      = static::getDisplayUrlFromHash( $row );
+//					$ret[$imageId]['has_machine_name'] = $this->isMachineName( $ret[$imageId]['title'] );
+					$ret[$imageId]['source_url']      = \Bitweaver\Liberty\liberty_mime_get_storage_url( $row ).$row['file_name'];
+					$ret[$imageId]['thumbnail_url']    = \Bitweaver\Liberty\liberty_fetch_thumbnail_url( [
+						'source_file'   => $this->getSourceFile( $row ),
+						'default_image' => STOCK_PKG_URL.'image/generating_thumbnails.png',
+						'size'          => $thumbSize,
+						'type'			=> $row['mime_type'],
+					] );
+				}
+			}
+		}
+		return $ret;
+	}
+
+	/**
+	 * isCommentable
+	 *
+	 * @access public
+	 * @return bool true on success, false on failure
+	 */
+	public function isCommentable() {
+		global $gGallery;
+
+		// if we have a loaded gallery, we just use that to work out if we can add comments to this image
+		if( is_object( $gGallery ) ) {
+			return $gGallery->isCommentable();
+		}
+
+		$ret = false;
+		if( $parents = $this->getParentGalleries() ) {
+			// @TODO: No idea how to work out if you can add a comment to this image
+			// for now we'll take the mGalleryPath and use that gallery
+			$gal = current( $parents );
+			$query = "SELECT `pref_value` FROM `".BIT_DB_PREFIX."liberty_content_prefs` WHERE `content_id` = ? AND `pref_name` = ?";
+			$ret = $this->mDb->getOne( $query, [ $gal['content_id'], 'allow_comments' ] ) == 'y';
+		}
+		return $ret;
+	}
+
+	public static function getServiceKey() {
+		return 'stock';
+	}
+}
