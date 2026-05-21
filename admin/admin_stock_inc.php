@@ -165,7 +165,7 @@ if (!empty($_REQUEST['stockAdminSubmit'])) {
 		simple_set_toggle($item, STOCK_PKG_NAME);
 	}
 
-	foreach( [ 'stock_list_thumbnail_size', 'stock_gallery_default_thumbnail_size', 'default_assembly_pagination', 'rows_per_page', 'cols_per_page', 'total_per_page', 'lines_per_page', 'galleriffic_style', 'stock_gallery_default_sort_mode' ] as $key ) {
+	foreach( [ 'stock_list_thumbnail_size', 'stock_gallery_default_thumbnail_size', 'default_assembly_pagination', 'rows_per_page', 'cols_per_page', 'total_per_page', 'lines_per_page', 'stock_gallery_default_sort_mode' ] as $key ) {
 		$gBitSystem->storeConfig($key, $_REQUEST[$key], STOCK_PKG_NAME);
 	}
 

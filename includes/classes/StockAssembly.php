@@ -15,8 +15,7 @@ define( 'STOCK_PAGINATION_FIXED_GRID', 'fixed_grid' );
 define( 'STOCK_PAGINATION_AUTO_FLOW', 'auto_flow' );
 define( 'STOCK_PAGINATION_POSITION_NUMBER', 'position_number' );
 define( 'STOCK_PAGINATION_SIMPLE_LIST', 'simple_list' );
-define( 'STOCK_PAGINATION_MATTEO', 'matteo' );
-define( 'STOCK_PAGINATION_GALLERIFFIC', 'galleriffic' );
+
 
 /**
  * StockBase extends LibertyMime, which this class doesn't need, but we need a common base class
@@ -148,18 +147,12 @@ class StockAssembly extends StockBase {
 					if (empty($this->mInfo['access_answer'])) {
 						$this->mInfo['access_answer'] = '';
 					}
-					if (  $this->getPreference( 'assembly_pagination' ) == STOCK_PAGINATION_GALLERIFFIC and empty($this->mInfo['galleriffic_style'])) {
-						$this->mInfo['galleriffic_style'] = $this->getPreference('galleriffic_style', 1);
-					}
-
 					$this->mInfo['num_components'] = $this->getComponentCount();
 					if( $this->getPreference( 'assembly_pagination' ) == STOCK_PAGINATION_POSITION_NUMBER ) {
 						$this->mInfo['num_pages'] = $this->mDb->getOne( "SELECT COUNT( distinct( floor(`item_position`) ) ) FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE assembly_content_id=?", [ $this->mContentId ] );
 					} else {
 						$pagination = $this->getPreference( 'assembly_pagination' );
-						if( $pagination == STOCK_PAGINATION_GALLERIFFIC ) {
-							$this->mInfo['images_per_page'] = (int)$this->getPreference( 'galleriffic_num_thumbs', 30 );
-						} elseif( in_array( $pagination, [ STOCK_PAGINATION_AUTO_FLOW, STOCK_PAGINATION_SIMPLE_LIST, STOCK_PAGINATION_MATTEO ] ) ) {
+						if( in_array( $pagination, [ STOCK_PAGINATION_AUTO_FLOW, STOCK_PAGINATION_SIMPLE_LIST ] ) ) {
 							$this->mInfo['images_per_page'] = (int)$this->getPreference( 'total_per_page', $this->mInfo['rows_per_page'] );
 						} else {
 							$this->mInfo['images_per_page'] = $this->mInfo['cols_per_page'] * $this->mInfo['rows_per_page'];
@@ -637,17 +630,15 @@ class StockAssembly extends StockBase {
 	*/
 	public function getLayout() {
 		global $gBitSystem;
-		return $this->getPreference( 'assembly_pagination', $gBitSystem->getConfig( 'default_assembly_pagination', STOCK_PAGINATION_GALLERIFFIC ) );
+		return $this->getPreference( 'assembly_pagination', $gBitSystem->getConfig( 'default_assembly_pagination', STOCK_PAGINATION_FIXED_GRID ) );
 	}
 
 	public static function getAllLayouts() {
 		return [
-			STOCK_PAGINATION_GALLERIFFIC     => 'Galleriffic',
 			STOCK_PAGINATION_FIXED_GRID      => 'Fixed Grid',
-			STOCK_PAGINATION_AUTO_FLOW       => 'Auto-Flow Images',
-			STOCK_PAGINATION_POSITION_NUMBER => 'Image Order Page Number',
+			STOCK_PAGINATION_AUTO_FLOW       => 'Auto-Flow',
+			STOCK_PAGINATION_POSITION_NUMBER => 'Position Number',
 			STOCK_PAGINATION_SIMPLE_LIST     => 'Simple List',
-//			STOCK_PAGINATION_MATTEO		   => 'Matteo',
 		];
 	}
 

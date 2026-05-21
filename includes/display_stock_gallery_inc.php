@@ -16,19 +16,6 @@ switch( $gContent->getLayout() ) {
 	case 'auto_flow':
 		$gBitThemes->loadCss( STOCK_PKG_PATH."css/div_layout.css", true );
 		break;
-	case 'matteo':
-		$gBitThemes->loadCss( STOCK_PKG_PATH."gallery_view/matteo/mb_layout.css", true );
-		$gBitThemes->loadAjax( 'jquery' );
-		$gBitThemes->loadJavascript( STOCK_PKG_PATH.'/gallery_views/matteo/mbGallery.js', false, 500, false );
-		$gBitThemes->loadJavascript( STOCK_PKG_PATH.'/gallery_views/matteo/mbGalleryBox.js', false, 501, false );
-		break;
-	case 'galleriffic':
-		$listHash['max_records'] = -1;
-		// Need to add options for different styles of layout
-		$gBitThemes->loadCss( STOCK_PKG_PATH."/gallery_views/galleriffic/css/galleriffic_style_1.css", true );
-		$gBitThemes->loadJavascript( STOCK_PKG_PATH.'/gallery_views/galleriffic/js/jquery.galleriffic.js', false, 500, false );
-		$gBitThemes->loadJavascript( STOCK_PKG_PATH.'/gallery_views/galleriffic/js/jquery.opacityrollover.js', false, 502, false );
-		break;
 }
 
 $gContent->loadComponents( $listHash );

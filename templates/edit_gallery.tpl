@@ -1,7 +1,7 @@
 {literal}
 <script>//<![CDATA[
 function updateGalleryPagination() {
-	var paginationIds = ['fixed_grid','auto_flow','position_number','simple_list','matteo','galleriffic'];
+	var paginationIds = ['fixed_grid','auto_flow','position_number','simple_list'];
 	paginationIds.forEach(function(id) {
 		var div = document.getElementById(id+'-pagination');
 		div.style.display = 'none';
@@ -91,16 +91,6 @@ document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 									{formhelp note="This option allows a single column display of images with mime details where available."}
 								</div>
 
-								<div id="matteo-pagination">
-									<input type="text" id="gallery-total-per-page-matteo" name="total_per_page" size="3" maxlength="3" value="{$gContent->getPreference('total_per_page', $gContent->mInfo.rows_per_page|default:20)}"/> {tr}Total images per page{/tr}
-									{formhelp note="This option provides an ajax powered scrolling display using the mbGallery jquery library."}
-								</div>
-
-								<div id="galleriffic-pagination">
-									<input type="text" id="galleriffic-num-thumbs" name="galleriffic_num_thumbs" size="3" maxlength="3" value="{$gContent->getPreference('galleriffic_num_thumbs', $gBitSystem->getConfig('stock_gallery_default_galleriffic_num_thumbs', 30))}"/> {tr}Thumbnails per page{/tr}<br/>
-									<input type="text" id="galleriffic-style" name="galleriffic_style" size="2" maxlength="2" value="{$gContent->mInfo.galleriffic_style|default:$gBitSystem->getConfig('stock_gallery_default_galleriffic_style')}"/> {tr}Galleriffic layout style{/tr}
-									{formhelp note="This option provides a javascript powered tabbed thumbnail list display using the galleriffic jquery library."}
-								</div>
 							{/forminput}
 						</div>
 
