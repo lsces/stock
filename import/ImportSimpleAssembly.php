@@ -32,14 +32,11 @@ function stockExpungeAssemblyByTitle( string $title ): bool {
 		return false;
 	}
 
-	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_xref`                WHERE `content_id` = ?",            [ $contentId ] );
-	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `assembly_content_id` = ?",   [ $contentId ] );
-	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `item_content_id` = ?",        [ $contentId ] );
-	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly`               WHERE `content_id` = ?",            [ $contentId ] );
-	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_content_hits`         WHERE `content_id` = ?",            [ $contentId ] );
-	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_content_prefs`        WHERE `content_id` = ?",            [ $contentId ] );
-	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_content_data`         WHERE `content_id` = ?",            [ $contentId ] );
-	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_content`              WHERE `content_id` = ?",            [ $contentId ] );
+	// StockAssembly::expunge() cleans component_map + stock_assembly,
+	// then calls LibertyContent::expunge() which now handles liberty_xref + liberty_content
+	$assembly = new StockAssembly();
+	$assembly->mContentId = (int)$contentId;
+	$assembly->expunge();
 	return true;
 }
 
