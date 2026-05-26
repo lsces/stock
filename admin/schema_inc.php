@@ -177,3 +177,9 @@ $xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_gu
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('REQN','stockmovement','reference','Requisition',1,3,'','text',NULL)";
 
 $gBitInstaller->registerSchemaDefault( STOCK_PKG_NAME, array_merge( $xrefTypes, $xrefItems ) );
+
+// ### Requirements
+$gBitInstaller->registerRequirements( STOCK_PKG_NAME, [
+	'liberty' => [ 'min' => '5.0.1' ],
+	'contact' => [ 'min' => '5.0.2' ]
+] );
