@@ -12,7 +12,8 @@ global $gBitSystem, $gBitSmarty, $gStockAssembly;
 
 $gStockAssembly = new StockAssembly();
 
-$_REQUEST['root_only'] = true;
+$_REQUEST['root_only']   = true;
+$_REQUEST['show_empty']  = true;
 
 if (!empty($_REQUEST['user_id']) && is_numeric($_REQUEST['user_id'])) {
 	if( $_REQUEST['user_id'] == $gBitUser->mUserId ) {

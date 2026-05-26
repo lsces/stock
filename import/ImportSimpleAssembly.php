@@ -49,7 +49,7 @@ function stockImportSimpleAssembly( array $data, int $rowNum ): array {
 	$pHash = [
 		'title'       => $title,
 		'edit'        => $description,
-		'format_guid' => 'plain',
+		'format_guid' => 'bithtml',
 	];
 	if( !$assembly->store( $pHash ) ) {
 		$result['skipped']++;
