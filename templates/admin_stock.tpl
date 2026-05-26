@@ -43,9 +43,9 @@ function updateGalleryPagination() {
 		{/jstab}
 
 		{jstab title="List"}
-			{legend legend="Gallery List Options"}
+			{legend legend="Assembly List Options"}
 				<div class="form-group">
-					{formhelp note="The options below determine what information is shown on the List Galleries page."}
+					{formhelp note="The options below determine what information is shown on the List Assemblies page."}
 				</div>
 
 				{foreach from=$formGalleryListLists key=item item=output}
@@ -56,21 +56,14 @@ function updateGalleryPagination() {
 						{/forminput}
 					</div>
 				{/foreach}
-
-				<div class="form-group">
-					{formlabel label="List Thumbnail Size"}
-					{forminput}
-						{html_options values=$imageSizes options=$imageSizes name="stock_list_thumbnail_size" selected=$gBitSystem->getConfig('stock_list_thumbnail_size')}
-					{/forminput}
-				</div>
 			{/legend}
 		{/jstab}
 
-		{jstab title="Galleries"}
-			{legend legend="Gallery Display Settings"}
+		{jstab title="Assemblies"}
+			{legend legend="Assembly Display Settings"}
 				<input type="hidden" name="page" value="{$page}" />
 				<div class="form-group">
-					{formhelp note="The options below determine what information is shown on a gallery display page."}
+					{formhelp note="The options below determine what information is shown on an assembly display page."}
 				</div>
 
 				{foreach from=$formGalleryLists key=item item=output}
@@ -86,50 +79,40 @@ function updateGalleryPagination() {
 					{formlabel label="Default sort order" for="stock_gallery_default_sort_mode"}
 					{forminput}
 						{html_options values=$sortOptions options=$sortOptions name="stock_gallery_default_sort_mode" id="stock_gallery_default_sort_mode" selected=$gBitSystem->getConfig('stock_gallery_default_sort_mode')}
-						{formhelp note="This is the order of the images if they have not been sorted manually i.e. all the images with the same position value."}
+						{formhelp note="Default component order when no manual position has been assigned."}
 					{/forminput}
 				</div>
 			{/legend}
 
-			{legend legend="Default Gallery Display Settings"}
+			{legend legend="Default Assembly Display Settings"}
 				<div class="form-group">
-					{formhelp note="The settings below determine what the default display options will be set to for new galleries."}
+					{formhelp note="The settings below determine what the default display options will be set to for new assemblies."}
 				</div>
 
 				<div class="form-group">
 					{html_options id="gallery-pagination" name="default_gallery_pagination" id="gallery-pagination" options=$galleryPaginationTypes selected=$gBitSystem->getConfig('default_gallery_pagination',$smarty.const.STOCK_PAGINATION_FIXED_GRID) onchange="updateGalleryPagination();"}
 
 					<div id="fixed_grid-pagination">
-						<input type="text" id="gallery-rows-per-page" name="rows_per_page" size="2" maxlength="2" value="{$gContent->mInfo.rows_per_page|default:$gBitSystem->getConfig('stock_gallery_default_rows_per_page')}"/> {tr}Rows per page{/tr}<br/>
-						<input type="text" id="gallery-cols-per-page" name="cols_per_page" size="2" maxlength="2" value="{$gContent->mInfo.cols_per_page|default:$gBitSystem->getConfig('stock_gallery_default_cols_per_page')}"/> {tr}Columns per page{/tr}
-						{formhelp note="The images will be displayed in a fixed grid. You can specify the number of thumbnails to display per page.<br /><strong>[rows] * [columns] = [number of images]</strong>."}
+						<input type="text" id="gallery-rows-per-page" name="rows_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('stock_gallery_default_rows_per_page')}"/> {tr}Rows per page{/tr}<br/>
+						<input type="text" id="gallery-cols-per-page" name="cols_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('stock_gallery_default_cols_per_page')}"/> {tr}Columns per page{/tr}
 					</div>
 					<div id="auto_flow-pagination">
-						<input type="text" id="gallery-rows-per-page" name="total_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('stock_gallery_default_rows_per_page')}"/> {tr}Total images per page{/tr}
-						{formhelp note="The layout of the images on each gallery page will automatically adjust to the browsers width. You can specify the total number of thumbnails to display per page."}
+						<input type="text" id="gallery-rows-per-page" name="total_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('stock_gallery_default_rows_per_page')}"/> {tr}Total components per page{/tr}
 					</div>
 					<div id="position_number-pagination">
-						{formhelp note="This option allows you to designate each specific image on each page. The image order number entered on the Image Order page will determine the exact location of each image. Fractional numbers indicate PAGE.POSITION and will specifiy variable images per page, such as: 1.1, 1.2, 2.1, 3.1, 3.2, 3.3"}
+						{formhelp note="Components are ordered by package group and position within the package. Use the Component Order page to assign positions."}
 					</div>
 					<div id="simple_list-pagination">
 						<input type="text" id="gallery-rows-per-page" name="lines_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('stock_gallery_default_rows_per_page')}"/> {tr}Total lines per page{/tr}
-						{formhelp note="This option allows a single column display of images with mime details where available."}
 					</div>
-				</div>
-
-				<div class="form-group">
-					{formlabel label="Default Thumbnail Size" for="default_gallery_thumbnail_size"}
-					{forminput}
-						{html_options values=$imageSizes options=$imageSizes name="stock_gallery_default_thumbnail_size" id="default_gallery_thumbnail_size" selected=$gBitSystem->getConfig('stock_gallery_default_thumbnail_size')}
-					{/forminput}
 				</div>
 			{/legend}
 		{/jstab}
 
-		{jstab title="Images"}
-			{legend legend="Image Display Settings"}
+		{jstab title="Components"}
+			{legend legend="Component Display Settings"}
 				<div class="form-group">
-					{formhelp note="The options below determine what information is displayed on the image display page."}
+					{formhelp note="The options below determine what information is displayed on the component display page."}
 				</div>
 
 				{foreach from=$formImageLists key=item item=output}
@@ -140,15 +123,6 @@ function updateGalleryPagination() {
 						{/forminput}
 					</div>
 				{/foreach}
-			{/legend}
-
-			{legend legend="Default Image Display Settings"}
-				<div class="form-group">
-					{formlabel label="Default Thumbnail Size"}
-					{forminput}
-						{html_options values=$imageSizes options=$imageSizes name="default_image_thumbnail_size" selected=$gBitSystem->getConfig('stock_image_default_thumbnail_size')}
-					{/forminput}
-				</div>
 			{/legend}
 		{/jstab}
 	{/jstabs}

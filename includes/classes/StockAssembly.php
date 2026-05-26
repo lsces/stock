@@ -11,6 +11,8 @@ namespace Bitweaver\Stock;
 use Bitweaver\BitBase;
 use Bitweaver\Liberty\LibertyContent;
 
+define('STOCKASSEMBLY_CONTENT_TYPE_GUID', 'stockassembly');
+
 define( 'STOCK_PAGINATION_FIXED_GRID', 'fixed_grid' );
 define( 'STOCK_PAGINATION_AUTO_FLOW', 'auto_flow' );
 define( 'STOCK_PAGINATION_POSITION_NUMBER', 'position_number' );
@@ -18,8 +20,6 @@ define( 'STOCK_PAGINATION_SIMPLE_LIST', 'simple_list' );
 
 
 /**
- * StockBase extends LibertyMime, which this class doesn't need, but we need a common base class
- *
  * @package stock
  */
 #[\AllowDynamicProperties]
@@ -29,9 +29,11 @@ class StockAssembly extends StockBase {
 	public $mPaginationLookup;
 	public $mPreviewImage;
 	public $pRecursiveDelete;
+	protected $mXrefTypeKey = 'stockassembly_types';
 
 	public function __construct($pAssemblyId = null, $pContentId = null) {
 		parent::__construct();
+		$this->mContentTypeGuid = STOCKASSEMBLY_CONTENT_TYPE_GUID;
 		if( $this->verifyId( $pAssemblyId ) ) {
 			$this->mAssemblyId = (int)$pAssemblyId;		// Set member variables according to the parameters we were passed
 		}
@@ -39,15 +41,13 @@ class StockAssembly extends StockBase {
 			$this->mContentId = (int)$pContentId;		// liberty_content.content_id which this gallery references
 		}
 		$this->mItems = [];					// Assume no images (if $pAutoLoad is true we will populate this array later)
-		$this->mAdminContentPerm = 'p_stock_admin';
-
 		// This registers the content type for FishEye galleries
 		// FYI: Any class which uses a table which inherits from liberty_content should create their own content type(s)
 		$this->registerContentType(
 			STOCKASSEMBLY_CONTENT_TYPE_GUID, [
 				'content_type_guid' => STOCKASSEMBLY_CONTENT_TYPE_GUID,
-				'content_name' => 'Image Gallery',
-				'content_name_plural' => 'Image Galleries',
+				'content_name' => 'Assembly',
+				'content_name_plural' => 'Assemblies',
 				'handler_class' => 'StockAssembly',
 				'handler_package' => 'stock',
 				'handler_file' => 'StockAssembly.php',
@@ -124,8 +124,10 @@ class StockAssembly extends StockBase {
 					$rs = $this->mDb->getRow($query, $bindVars);
 			if( !empty($rs) ) {
 				$this->mInfo = $rs;
-				$this->mContentId = $rs['content_id'];
+				$this->mContentId       = $rs['content_id'];
+				$this->mContentTypeGuid = $rs['content_type_guid'];
 				LibertyContent::load();
+				$this->loadXrefList();
 				if( @$this->verifyId($this->mInfo['assembly_id'] ) ) {
 
 					$this->mAssemblyId = $this->mInfo['assembly_id'];
@@ -168,44 +170,6 @@ class StockAssembly extends StockBase {
 		}
 
 		return !empty( $this->mInfo );
-	}
-
-	public function loadCurrentComponent( $pCurrentComponentId ) {
-		if( $this->isValid() && @$this->verifyId( $pCurrentComponentId ) ) {
-			// this code sucks but works - XOXO spiderr
-			$query = "SELECT fgim.*, fi.`component_id`, lf.`file_name`, lf.`user_id`, lf.`mime_type`, la.`attachment_id`
-					FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
-						INNER JOIN `".BIT_DB_PREFIX."stock_component` fi ON ( fi.`content_id`=fgim.`item_content_id` )
-						INNER JOIN `".BIT_DB_PREFIX."liberty_attachments` la ON ( fi.`content_id`=la.`content_id` )
-						INNER JOIN `".BIT_DB_PREFIX."liberty_files` lf ON ( lf.`file_id`=la.`foreign_id` )
-					WHERE fgim.`assembly_content_id` = ?
-					ORDER BY fgim.`item_position`, fi.`content_id` ";
-			if( $rows = $this->mDb->getAll($query, [ $this->mContentId ] ) ) {
-				$tempImage = new StockComponent();
-				for( $i = 0; $i < count( $rows ); $i++ ) {
-					if( $rows[$i]['component_id'] == $pCurrentComponentId ) {
-						if( $i > 0 ) {
-							$this->mInfo['previous_component_id'] = $rows[$i-1]['component_id'];
-							$this->mInfo['previous_component_avatar'] = \Bitweaver\Liberty\liberty_fetch_thumbnail_url( [
-								'file_name' => $rows[$i-1]['file_name'],
-								'source_file'	=> $tempImage->getSourceFile( $rows[$i-1] ),
-								'mime_image'   => true,
-								'size'         => 'avatar',
-							] );
-						}
-						if( $i + 1  < count( $rows ) ) {
-							$this->mInfo['next_component_id'] = $rows[$i+1]['component_id'];
-							$this->mInfo['next_component_avatar'] = \Bitweaver\Liberty\liberty_fetch_thumbnail_url( [
-								'file_name' => $rows[$i+1]['file_name'],
-								'source_file'	=> $tempImage->getSourceFile( $rows[$i+1] ),
-								'mime_image'   => true,
-								'size'         => 'avatar',
-							] );
-						}
-					}
-				}
-			}
-		}
 	}
 
 	public function loadComponents( &$pListHash = [] ) {
@@ -393,15 +357,6 @@ class StockAssembly extends StockBase {
 		return count($this->mErrors) == 0;
 	}
 
-	public function generateGalleryThumbnails(): void {
-		if( $this->isValid() ) {
-			if( $this->loadComponents() ) {
-				foreach( array_keys( $this->mItems ) as $key ) {
-					$this->mItems[$key]->generateThumbnails();
-				}
-			}
-		}
-	}
 
 	public function getThumbnailContentId() {
 		if( !$this->getField( 'thumbnail_content_id' ) ) {
@@ -518,14 +473,14 @@ class StockAssembly extends StockBase {
 				$this->mInfo['content_id'] = $this->mContentId;
 				if ($this->galleryExistsInDatabase()) {
 					$query = "UPDATE `".BIT_DB_PREFIX."stock_assembly`
-							SET `rows_per_page` = ?, `cols_per_page` = ?, `thumbnail_size` = ?
+							SET `rows_per_page` = ?, `cols_per_page` = ?
 							WHERE `assembly_id` = ?";
-					$bindVars = [ $pParamHash['rows_per_page'], $pParamHash['cols_per_page'], $pParamHash['thumbnail_size'], $this->mAssemblyId ];
+					$bindVars = [ $pParamHash['rows_per_page'], $pParamHash['cols_per_page'], $this->mAssemblyId ];
 				} else {
 					$this->mAssemblyId = $this->mDb->GenID('stock_assembly_id_seq');
 					$this->mInfo['assembly_id'] = $this->mAssemblyId;
-					$query = "INSERT INTO `".BIT_DB_PREFIX."stock_assembly` (`assembly_id`, `content_id`, `rows_per_page`, `cols_per_page`, `thumbnail_size`) VALUES (?,?,?,?,?)";
-					$bindVars = [ $this->mAssemblyId, $this->mContentId, $pParamHash['rows_per_page'], $pParamHash['cols_per_page'], $pParamHash['thumbnail_size'] ];
+					$query = "INSERT INTO `".BIT_DB_PREFIX."stock_assembly` (`assembly_id`, `content_id`, `rows_per_page`, `cols_per_page`) VALUES (?,?,?,?)";
+					$bindVars = [ $this->mAssemblyId, $this->mContentId, $pParamHash['rows_per_page'], $pParamHash['cols_per_page'] ];
 				}
 				$rs = $this->mDb->getOne($query, $bindVars);
 				$this->CompleteTrans();
@@ -647,7 +602,7 @@ class StockAssembly extends StockBase {
 	* @return string the fully specified path to file to be included
 	*/
 	public function getRenderFile() {
-		return STOCK_PKG_INCLUDE_PATH.'display_stock_gallery_inc.php';
+		return STOCK_PKG_INCLUDE_PATH.'display_stock_assembly_inc.php';
 	}
 
 	/**
@@ -655,7 +610,7 @@ class StockAssembly extends StockBase {
 	* @return string the fully specified path to file to be included
 	*/
 	public function getRenderTemplate() {
-		return 'bitpackage:stock/view_gallery.tpl';
+		return 'bitpackage:stock/view_assembly.tpl';
 	}
 
 	/**
@@ -1054,64 +1009,11 @@ class StockAssembly extends StockBase {
 		return $data;
 	}
 
-	public function download(){
-		if($this->isValid()){
-			$zip = new \ZipArchive();
-
-			$filename = tempnam(TEMP_PKG_PATH,"galleryzip");
-			chmod($filename, 0666);
-			$path = '/';
-
-			if( $zip->open ($filename, \ZIPARCHIVE::OVERWRITE) !== true ){
-				$this->mErrors['download'] = "Unable to create zip file";
-			}else{
-				addGalleryRecursive( $this->mAssemblyId, $zip, $path);
-			}
-			$zip->close();
-
-			//escape backslashes
-			$outputFileTitle = str_replace("\\",'\\\\',$this->getTitle() ?? '');
-			//escape double quotes
-			$outputFileTitle = str_replace('"','\\"',$outputFileTitle);
-
-			header('Content-Description: File Transfer');
-			header('Content-Type: application/octet-stream');
-			Header ("Content-disposition: attachment; filename=\"".$outputFileTitle.".zip\"");
-			header('Content-Transfer-Encoding: binary');
-			header('Expires: 0');
-			header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-			header('Pragma: public');
-			$filesize = filesize($filename);
-			Header ("Content-Length: ".$filesize );
-			ob_end_flush();
-			readfile($filename);
-			unlink($filename);
-		}
-	}
-
 	public static function getServiceIcon() {
 		return '<i class="fa fal fa-camera"></i>';
 	}
 
 	public static function getServiceKey() {
 		return 'stock';
-	}
-}
-
-function addGalleryRecursive( $pAssemblyId, &$pZip, $pPath = '/' ){
-
-	if( $gallery = StockAssembly::lookup( [ 'assembly_id' => $pAssemblyId ] ) ) {
-		$gallery->load();
-		$gallery->loadComponents();
-		$pPath .= $gallery->getTitle().'/';
-		foreach ( $gallery->mItems as $item ){
-			if( is_a( $item , '\Bitweaver\Stock\StockComponent' ) ){
-				$sourcePath = $item->getSourceFile();
-				$title = $item->getTitle();
-				$pZip->addFile($sourcePath, $pPath.$title.substr($sourcePath,strrpos($sourcePath,'.')) );
-			} elseif ( is_a( $item , '\Bitweaver\Stock\StockAssembly' ) ) {
-				addGalleryRecursive( $item->mAssemblyId, $pZip ,$pPath );
-			}
-		}
 	}
 }

@@ -1,1 +1,1 @@
-{include file="bitpackage:stock/list_galleries2.tpl"}
+{include file="bitpackage:stock/list_assemblies2.tpl"}

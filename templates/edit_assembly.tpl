@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 						{include file="bitpackage:liberty/list_xref.tpl"
 							source=$gContent->mInfo.stockassembly_types[xrefGroup].source
 							source_title=$gContent->mInfo.stockassembly_types[xrefGroup].title
-							xref_type=$gContent->mInfo.stockassembly_types[xrefGroup].sort_order
+							group=$gContent->mInfo.stockassembly_types[xrefGroup].sort_order
 							allow_add=true}
 					{/section}
 				{/jstabs}

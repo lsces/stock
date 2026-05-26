@@ -27,10 +27,10 @@ if( $galleries = $gallery->getList( $listHash ) ) {
 	}
 }
 
-$image = new StockComponent();
+$component = new StockComponent();
 $listHash = [ 'max_records' => -1, 'no_thumbnails' => true ];
-if( $images = $image->getList( $listHash ) ) {
-	foreach( $images as $row ) {
+if( $components = $component->getList( $listHash ) ) {
+	foreach( $components as $row ) {
 		$url = StockComponent::getDisplayUrlFromHash( $row );
 		if( empty( $url ) ) continue;
 		$gSiteMapHash['i'.$row['component_id']] = [

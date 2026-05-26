@@ -33,7 +33,7 @@
 						{include file="bitpackage:liberty/list_xref.tpl"
 							source=$gContent->mInfo.stockcomponent_types[xrefGroup].source
 							source_title=$gContent->mInfo.stockcomponent_types[xrefGroup].title
-							xref_type=$gContent->mInfo.stockcomponent_types[xrefGroup].sort_order
+							group=$gContent->mInfo.stockcomponent_types[xrefGroup].sort_order
 							allow_add=true}
 					{/section}
 				{/jstabs}

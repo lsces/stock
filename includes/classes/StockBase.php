@@ -8,16 +8,13 @@
  */
 namespace Bitweaver\Stock;
 
-use Bitweaver\Liberty\LibertyMime;		// StockAssembly base class
 use Bitweaver\Liberty\LibertyContent;
-
-define('STOCKASSEMBLY_CONTENT_TYPE_GUID', 'stockassembly' );
 
 /**
  * @package stock
  */
 #[\AllowDynamicProperties]
-abstract class StockBase extends LibertyMime
+abstract class StockBase extends LibertyContent
 {
 	// Path of gallery images to get breadcrumbs
 	public $mAssemblyPath;
@@ -70,12 +67,12 @@ abstract class StockBase extends LibertyMime
 				LEFT JOIN `".BIT_DB_PREFIX."liberty_content` posc ON posc.`content_id` = pr.NEXT
 				WHERE pr.`assembly_content_id` = ?";
 			if( $parents = $this->mDb->getRow($sql, [ $parents['content_id'], $pContentId ] ) ) {
-				if ( $parents['pre_t'] == STOCKASSEMBLY_CONTENT_TYPE_GUID ) {
+				if ( $parents['pre_t'] == 'stockassembly' ) {
 					$ret['previous_gallery_id'] = $parents['previous'];
 				} else {
 					$ret['previous_component_id'] = $parents['previous'];
 				}
-				if ( $parents['next_t'] == STOCKASSEMBLY_CONTENT_TYPE_GUID ) {
+				if ( $parents['next_t'] == 'stockassembly' ) {
 					$ret['next_gallery_id'] = $parents['next'];
 				}else {
 					$ret['next_component_id'] = $parents['previous'];

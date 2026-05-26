@@ -2,7 +2,7 @@
 
 <div class="display stock">
 	<div class="header">
-		<h1>{tr}Image Galleries{/tr}</h1>
+		<h1>{tr}Assemblies{/tr}</h1>
 	</div>
 
 	<div class="body">
