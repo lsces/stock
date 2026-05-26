@@ -236,6 +236,10 @@ class StockComponent extends StockBase {
 		return $ret;
 	}
 
+	public function getRenderTemplate() {
+		return 'bitpackage:stock/view_component.tpl';
+	}
+
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		global $gBitSystem;
 		$ret = '';
