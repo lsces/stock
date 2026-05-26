@@ -32,9 +32,8 @@ function stockExpungeAssemblyByTitle( string $title ): bool {
 		return false;
 	}
 
-	$assembly = new StockAssembly();
-	$assembly->load( [ 'content_id' => $contentId ] );
-	if( !$assembly->isValid() ) {
+	$assembly = StockAssembly::lookup( [ 'content_id' => $contentId ] );
+	if( !$assembly || !$assembly->isValid() ) {
 		return false;
 	}
 
