@@ -27,10 +27,9 @@ global $gHideModules;
 $gHideModules = $gBitSystem->isFeatureActive( 'stock_gallery_hide_modules' );
 
 if ( !$gContent->isValid() ) {
-	if ( !empty( $_REQUEST['assembly_id'] ) ) {
-		$gBitSystem->fatalError( KernelTools::tra('No gallery exists with the given ID'), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
+	if ( !empty( $_REQUEST['assembly_id'] ) || !empty( $_REQUEST['content_id'] ) ) {
+		$gBitSystem->fatalError( KernelTools::tra('No assembly exists with the given ID'), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 	}
-	// No gallery was indicated so we will redirect to the browse galleries page
 	KernelTools::bit_redirect( STOCK_PKG_URL."list_assemblies.php", HttpStatusCodes::HTTP_FOUND );
 	die;
 }

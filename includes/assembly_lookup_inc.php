@@ -9,10 +9,11 @@ use \Bitweaver\Stock\StockAssembly;
 
 $lookup = [];
 
-if( !$gContent = StockAssembly::lookup( $_REQUEST ) ) {
-	$gContent = new StockAssembly();
-	$assemblyId = null;
-}
+$gContent = new StockAssembly(
+	!empty( $_REQUEST['assembly_id'] ) ? (int)$_REQUEST['assembly_id'] : null,
+	!empty( $_REQUEST['content_id'] )  ? (int)$_REQUEST['content_id']  : null
+);
+$gContent->load();
 
 if( !empty( $_REQUEST['gallery_path'] ) ) {
 	$gContent->setGalleryPath( $_REQUEST['gallery_path'] );

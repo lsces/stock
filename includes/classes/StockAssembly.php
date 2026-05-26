@@ -621,19 +621,16 @@ class StockAssembly extends StockBase {
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		$path = null;
 		$ret = '';
-		if( BitBase::verifyIdParameter( $pParamHash, 'assembly_id' ) ) {
+		global $gBitSystem;
+		if( BitBase::verifyId( $pParamHash['content_id'] ?? 0 ) ) {
 			$ret = STOCK_PKG_URL;
-			global $gBitSystem;
 			if( $gBitSystem->isFeatureActive( 'pretty_urls' ) ) {
-				$ret .= 'gallery'.$path.'/'.$pParamHash['assembly_id'];
+				$ret .= 'assembly/'.$pParamHash['content_id'];
 			} else {
-				$ret .= 'view.php?assembly_id='.$pParamHash['assembly_id'];
-				if( !empty( $pHash['path'] ) ) {
-					$ret .= '&gallery_path='.$pParamHash['path'];
-				}
+				$ret .= 'view.php?content_id='.$pParamHash['content_id'];
 			}
-		} elseif( BitBase::verifyId( $pParamHash['content_id'] ?? 0 ) ) {
-			$ret = STOCK_PKG_URL.'view.php?content_id='.$pParamHash['content_id'];
+		} elseif( BitBase::verifyIdParameter( $pParamHash, 'assembly_id' ) ) {
+			$ret = STOCK_PKG_URL.'view.php?assembly_id='.$pParamHash['assembly_id'];
 		}
 		return $ret;
 	}
