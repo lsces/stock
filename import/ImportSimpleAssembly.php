@@ -8,13 +8,42 @@
  *   2  KLPR         Kitlocker price (stored in xkey, max 32 chars)
  *   3  KLURL        Kitlocker datasheet URL (stored in xkey_ext, max 250 chars)
  *
- * Existing assemblies (matched by title) are skipped.
+ * Existing assemblies (matched by title) are skipped unless cleared first.
  * KLPR / KLURL xrefs are only inserted when the column is non-empty.
  *
  * @package stock
  */
 
 use Bitweaver\Stock\StockAssembly;
+
+/**
+ * Delete an assembly (and its xrefs) by title. Returns true if deleted, false if not found.
+ */
+function stockExpungeAssemblyByTitle( string $title ): bool {
+	global $gBitDb;
+
+	$contentId = $gBitDb->getOne(
+		"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."stock_assembly` sa
+		 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sa.`content_id`
+		 WHERE lc.`title` = ?",
+		[ $title ]
+	);
+	if( !$contentId ) {
+		return false;
+	}
+
+	$assembly = new StockAssembly();
+	$assembly->load( [ 'content_id' => $contentId ] );
+	if( !$assembly->isValid() ) {
+		return false;
+	}
+
+	// liberty_xref is not handled by LibertyContent::expunge() — delete it first
+	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ?", [ $contentId ] );
+
+	$assembly->expunge();
+	return true;
+}
 
 function stockImportSimpleAssembly( array $data, int $rowNum ): array {
 	global $gBitDb;
