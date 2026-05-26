@@ -17,7 +17,7 @@
 use Bitweaver\Stock\StockAssembly;
 
 /**
- * Delete an assembly (and its xrefs) by title. Returns true if deleted, false if not found.
+ * Delete an assembly (and all related rows) by title. Returns true if deleted, false if not found.
  */
 function stockExpungeAssemblyByTitle( string $title ): bool {
 	global $gBitDb;
@@ -32,15 +32,14 @@ function stockExpungeAssemblyByTitle( string $title ): bool {
 		return false;
 	}
 
-	$assembly = StockAssembly::lookup( [ 'content_id' => $contentId ] );
-	if( !$assembly || !$assembly->isValid() ) {
-		return false;
-	}
-
-	// liberty_xref is not handled by LibertyContent::expunge() — delete it first
-	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ?", [ $contentId ] );
-
-	$assembly->expunge();
+	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_xref`                WHERE `content_id` = ?",            [ $contentId ] );
+	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `assembly_content_id` = ?",   [ $contentId ] );
+	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `item_content_id` = ?",        [ $contentId ] );
+	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly`               WHERE `content_id` = ?",            [ $contentId ] );
+	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_content_hits`         WHERE `content_id` = ?",            [ $contentId ] );
+	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_content_prefs`        WHERE `content_id` = ?",            [ $contentId ] );
+	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_content_data`         WHERE `content_id` = ?",            [ $contentId ] );
+	$gBitDb->query( "DELETE FROM `".BIT_DB_PREFIX."liberty_content`              WHERE `content_id` = ?",            [ $contentId ] );
 	return true;
 }
 
