@@ -8,12 +8,11 @@
 global $gContent, $gGallery;
 use \Bitweaver\Stock\StockComponent;
 use \Bitweaver\Stock\StockAssembly;
-if( $gContent = StockComponent::lookup( $_REQUEST ) ) {
-	// nothing to do. ::lookup will do a full load
-} else {
-	$gContent = new StockComponent();
-	$imageId = null;
-}
+$gContent = new StockComponent(
+	!empty( $_REQUEST['component_id'] ) ? (int)$_REQUEST['component_id'] : null,
+	!empty( $_REQUEST['content_id'] )   ? (int)$_REQUEST['content_id']   : null
+);
+$gContent->load();
 
 if( !empty( $_REQUEST['gallery_path'] ) ) {
 	$_REQUEST['gallery_path'] = rtrim( $_REQUEST['gallery_path'], '/' );
