@@ -22,7 +22,7 @@ if (!empty($_REQUEST['user_id']) && is_numeric($_REQUEST['user_id'])) {
 	$gBitSmarty->assign('gQueryUserId', $_REQUEST['user_id']);
 	$template = 'user_galleries.tpl';
 } else {
-	$template = 'list_assemblies2.tpl';
+	$template = 'list_assemblies_simple.tpl';
 }
 
 $galleryList = $gStockAssembly->getList( $_REQUEST );
