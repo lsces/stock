@@ -12,8 +12,8 @@ $tables = [
 ",
 
 'stock_assembly_component_map' => "
-	assembly_content_id I4 NOTNULL,
-	item_content_id I4 NOTNULL,
+	assembly_content_id I4 PRIMARY,
+	item_content_id I4 PRIMARY,
 	item_position N(10,3),
 	quantity_value N(10,3) DEFAULT 1,
 	quantity_item C(8) DEFAULT 'SGL'
@@ -33,8 +33,8 @@ $tables = [
 ",
 
 'stock_movement_item' => "
-	movement_content_id  I4 NOTNULL,
-	item_content_id      I4 NOTNULL,
+	movement_content_id  I4 PRIMARY,
+	item_content_id      I4 PRIMARY,
 	item_position        N(10,3),
 	quantity_value       N(10,3) DEFAULT 1,
 	quantity_item      C(8) DEFAULT 'SGL'
@@ -51,14 +51,10 @@ foreach( array_keys( $tables ) AS $tableName ) {
 $indices = [
 	'stock_assembly_id_idx'       => [ 'table' => 'stock_assembly',               'cols' => 'assembly_id',   'opts' => null ],
 	'stock_assembly_content_idx'  => [ 'table' => 'stock_assembly',               'cols' => 'content_id',    'opts' => [ 'UNIQUE' ] ],
-	'stock_map_assembly_idx'      => [ 'table' => 'stock_assembly_component_map', 'cols' => 'assembly_content_id', 'opts' => null ],
-	'stock_map_item_idx'          => [ 'table' => 'stock_assembly_component_map', 'cols' => 'item_content_id',     'opts' => null ],
 	'stock_component_id_idx'           => [ 'table' => 'stock_component',      'cols' => 'component_id',          'opts' => null ],
 	'stock_component_content_idx'      => [ 'table' => 'stock_component',      'cols' => 'content_id',            'opts' => [ 'UNIQUE' ] ],
 	'stock_movement_content_idx'       => [ 'table' => 'stock_movement',       'cols' => 'content_id',            'opts' => [ 'UNIQUE' ] ],
 	'stock_movement_parent_idx'        => [ 'table' => 'stock_movement',       'cols' => 'parent_id',             'opts' => null ],
-	'stock_movement_item_movement_idx' => [ 'table' => 'stock_movement_item',  'cols' => 'movement_content_id',   'opts' => null ],
-	'stock_movement_item_item_idx'     => [ 'table' => 'stock_movement_item',  'cols' => 'item_content_id',       'opts' => null ],
 ];
 $gBitInstaller->registerSchemaIndexes( STOCK_PKG_NAME, $indices );
 
