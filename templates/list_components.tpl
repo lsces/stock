@@ -8,25 +8,26 @@
 	</header>
 
 	<section class="body">
-		<ul class="list-inline sortby">
-			<li>{booticon iname="icon-circle-arrow-right" ipackage="icons" iexplain="sort by" iforce="icon"}</li>
-			<li>{smartlink ititle="Name" isort="title"}</li>
-			{if $gBitSystem->isFeatureActive('stock_item_list_creator')}
-				<li>{smartlink ititle="Creator" isort=$gBitSystem->getConfig('users_display_name')}</li>
-			{/if}
-			{if $gBitSystem->isFeatureActive('stock_item_list_date')}
-				<li>{smartlink ititle="Created" isort="created"}</li>
-			{/if}
-			{if $gBitSystem->isFeatureActive('stock_item_list_hits')}
-				<li>{smartlink ititle="Hits" isort="hits"}</li>
-			{/if}
-		</ul>
+		{if $gBitSystem->isFeatureActive('stock_item_list_creator') || $gBitSystem->isFeatureActive('stock_item_list_date') || $gBitSystem->isFeatureActive('stock_item_list_hits')}
+			<ul class="list-inline sortby">
+				<li>{booticon iname="icon-circle-arrow-right" ipackage="icons" iexplain="sort by" iforce="icon"}</li>
+				{if $gBitSystem->isFeatureActive('stock_item_list_creator')}
+					<li>{smartlink ititle="Creator" isort=$gBitSystem->getConfig('users_display_name') icontrol=$listInfo}</li>
+				{/if}
+				{if $gBitSystem->isFeatureActive('stock_item_list_date')}
+					<li>{smartlink ititle="Created" isort="created" icontrol=$listInfo}</li>
+				{/if}
+				{if $gBitSystem->isFeatureActive('stock_item_list_hits')}
+					<li>{smartlink ititle="Hits" isort="hits" icontrol=$listInfo}</li>
+				{/if}
+			</ul>
+		{/if}
 
 		<table class="table table-striped table-hover">
 			<thead>
 				<tr>
-					<th>{tr}Name{/tr}</th>
-					{if $gBitSystem->isFeatureActive('stock_item_list_desc')}<th>{tr}Description{/tr}</th>{/if}
+					<th>{smartlink ititle="Name" isort="title" idefault=1 icontrol=$listInfo}</th>
+					{if $gBitSystem->isFeatureActive('stock_item_list_desc')}<th>{smartlink ititle="Description" isort="data" icontrol=$listInfo}</th>{/if}
 					{if $gBitSystem->isFeatureActive('stock_item_list_date')}<th>{tr}Created{/tr}</th>{/if}
 					{if $gBitSystem->isFeatureActive('stock_item_list_creator')}<th>{tr}Creator{/tr}</th>{/if}
 					{if $gBitSystem->isFeatureActive('stock_item_list_hits')}<th>{tr}Hits{/tr}</th>{/if}

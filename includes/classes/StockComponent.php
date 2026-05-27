@@ -218,6 +218,17 @@ class StockComponent extends StockBase {
 			$whereSql = substr_replace( $whereSql, ' WHERE ', 0, 4 );
 		}
 
+		$pListHash['cant'] = (int)$this->mDb->getOne(
+			"SELECT COUNT(DISTINCT fi.`component_id`)
+			 FROM `".BIT_DB_PREFIX."stock_component` fi
+				INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (fi.`content_id` = lc.`content_id`)
+				INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON (uu.`user_id` = lc.`user_id`) $joinSql
+				LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)
+				LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly` fg ON (fg.`content_id`=tfgim2.`assembly_content_id`)
+			$whereSql",
+			$bindVars
+		);
+
 		$query = "SELECT fi.`component_id` AS `hash_key`, fi.*, lc.*, fg.`assembly_id`, uu.`login`, uu.`real_name` $selectSql
 				FROM `".BIT_DB_PREFIX."stock_component` fi
 					INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (fi.`content_id` = lc.`content_id`)
