@@ -29,7 +29,13 @@
 						{/foreach}
 					</select>
 				</div>
-				<button type="submit" class="btn btn-default btn-sm">{tr}Filter{/tr}</button>
+				<div class="form-group">
+					<label>{tr}Find{/tr}</label>
+					<input type="text" class="form-control input-sm" name="find"
+						placeholder="{tr}title...{/tr}"
+						value="{$smarty.request.find|escape}"/>
+				</div>
+				<button type="submit" class="btn btn-default btn-sm">{tr}Go{/tr}</button>
 			</div>
 		{/form}
 

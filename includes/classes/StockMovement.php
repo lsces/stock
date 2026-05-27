@@ -419,6 +419,11 @@ class StockMovement extends StockBase {
 			$bindVars[] = (int)$pListHash['user_id'];
 		}
 
+		if( !empty( $pListHash['find'] ) ) {
+			$whereSql .= " AND UPPER(lc.`title`) LIKE ?";
+			$bindVars[] = '%'.strtoupper( $pListHash['find'] ).'%';
+		}
+
 		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
 
 		$orderby = !empty( $pListHash['sort_mode'] )
