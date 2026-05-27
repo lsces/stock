@@ -23,8 +23,7 @@ $errors = [];
 
 if( !empty( $_REQUEST['save'] ) ) {
 	if( $gContent->store( $_REQUEST ) ) {
-		$gContent->load();
-		header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?movement_id='.$gContent->mMovementId );
+		header( 'Location: '.STOCK_PKG_URL.'list_movements.php' );
 		die;
 	}
 	$errors = $gContent->mErrors;
