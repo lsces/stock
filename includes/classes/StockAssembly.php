@@ -945,8 +945,10 @@ class StockAssembly extends StockBase {
 		}
 
 		if( !empty( $pListHash['find'] ) ) {
-			$whereSql .= " AND UPPER( lc.`title` ) LIKE ? ";
-			$bindVars[] = '%'.strtoupper( $pListHash['find'] ).'%';
+			$term = '%'.strtoupper( $pListHash['find'] ).'%';
+			$whereSql .= " AND (UPPER(lc.`title`) LIKE ? OR UPPER(lc.`data`) LIKE ?) ";
+			$bindVars[] = $term;
+			$bindVars[] = $term;
 		}
 
 		if( !empty( $pListHash['show_public'] ) ) {
