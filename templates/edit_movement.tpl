@@ -98,7 +98,8 @@
 					<table class="table table-condensed table-striped">
 						<thead>
 							<tr>
-								<th>{tr}Component{/tr}</th>
+								<th>{smartlink ititle="Pos"       isort="item_position" ifile="edit_movement.php" ipackage="stock" idefault=1 movement_id=$gContent->mMovementId}</th>
+								<th>{smartlink ititle="Component" isort="title"         ifile="edit_movement.php" ipackage="stock"            movement_id=$gContent->mMovementId}</th>
 								<th>{tr}Qty{/tr}</th>
 								<th>{tr}Type{/tr}</th>
 								{if !$isComplete}<th></th>{/if}
@@ -107,6 +108,7 @@
 						<tbody>
 							{foreach from=$gContent->mInfo.items key=itemId item=item}
 								<tr>
+									<td>{$item.item_position|escape}</td>
 									<td>{$item.title|escape}</td>
 									<td>{$item.quantity_value|escape}</td>
 									<td>{$item.quantity_item|escape}</td>

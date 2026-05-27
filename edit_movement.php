@@ -42,8 +42,8 @@ if( !empty( $_REQUEST['save'] ) ) {
 
 	if( empty( $componentTitle ) ) {
 		$errors[] = 'Component title is required.';
-	} elseif( $qty <= 0 ) {
-		$errors[] = 'Quantity must be greater than zero.';
+	} elseif( $qty < 0 ) {
+		$errors[] = 'Quantity cannot be negative.';
 	} else {
 		$contentId = $gBitDb->getOne(
 			"SELECT sc.`content_id`
@@ -55,7 +55,10 @@ if( !empty( $_REQUEST['save'] ) ) {
 		if( !$contentId ) {
 			$errors[] = "Component '$componentTitle' not found.";
 		} else {
-			$gContent->addItem( (int)$contentId, $qty, $qtySrc );
+			$existingItems = $gContent->mInfo['items'] ?? [];
+			$nextPos = empty( $existingItems ) ? 1
+				: max( array_map( fn( $i ) => (int)( $i['item_position'] ?? 0 ), $existingItems ) ) + 1;
+			$gContent->addItem( (int)$contentId, $qty, $qtySrc, (float)$nextPos );
 			header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?movement_id='.$gContent->mMovementId );
 			die;
 		}
@@ -74,6 +77,9 @@ if( !empty( $_REQUEST['save'] ) ) {
 			$csvSkipped = 0;
 			$csvErrors  = [];
 			$rowNum     = 0;
+			$existingItems = $gContent->mInfo['items'] ?? [];
+			$nextPos = empty( $existingItems ) ? 1
+				: max( array_map( fn( $i ) => (int)( $i['item_position'] ?? 0 ), $existingItems ) ) + 1;
 			while( ( $data = fgetcsv( $handle, 1000, ',', '"', '' ) ) !== false ) {
 				$rowNum++;
 				$componentTitle = trim( $data[0] ?? '' );
@@ -83,9 +89,9 @@ if( !empty( $_REQUEST['save'] ) ) {
 					$csvSkipped++;
 					continue;
 				}
-				if( $qty === null || $qty <= 0 ) {
+				if( $qty === null || $qty < 0 ) {
 					$csvSkipped++;
-					$csvErrors[] = "Row $rowNum: '$componentTitle' — invalid or zero quantity, skipped.";
+					$csvErrors[] = "Row $rowNum: '$componentTitle' — invalid quantity, skipped.";
 					continue;
 				}
 
@@ -102,7 +108,8 @@ if( !empty( $_REQUEST['save'] ) ) {
 					continue;
 				}
 
-				$gContent->addItem( (int)$contentId, $qty, 'SGL' );
+				$gContent->addItem( (int)$contentId, $qty, 'SGL', (float)$nextPos );
+				$nextPos++;
 				$csvLoaded++;
 			}
 			fclose( $handle );
@@ -156,6 +163,12 @@ if( !empty( $_REQUEST['save'] ) ) {
 
 $isComplete = ( ( $gContent->mInfo['status'] ?? '' ) === 'complete' );
 $isPending  = ( ( $gContent->mInfo['status'] ?? '' ) === 'pending' );
+
+$sortMode = $_REQUEST['sort_mode'] ?? 'item_position_asc';
+if( $gContent->isValid() ) {
+	$gContent->mInfo['items'] = $gContent->loadItems( $sortMode );
+}
+$gBitSmarty->assign( 'sortMode', $sortMode );
 
 $gBitSmarty->assign( 'errors',     $errors );
 $gBitSmarty->assign( 'isComplete', $isComplete );

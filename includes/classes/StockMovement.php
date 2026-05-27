@@ -212,16 +212,23 @@ class StockMovement extends StockBase {
 		return false;
 	}
 
-	// Returns all items for this movement, keyed by item_content_id
-	public function loadItems(): array {
+	// Returns all items for this movement, keyed by item_content_id.
+	// $pSortMode matches smartlink output: 'item_position_asc' (default), 'item_position_desc', 'title_asc', 'title_desc'
+	public function loadItems( string $pSortMode = 'item_position_asc' ): array {
 		$ret = [];
 		if( $this->isValid() && $this->verifyId( $this->mContentId ) ) {
+			$orderby = match( $pSortMode ) {
+				'item_position_desc' => 'smi.`item_position` DESC, smi.`item_content_id` DESC',
+				'title_asc'          => 'lc.`title` ASC',
+				'title_desc'         => 'lc.`title` DESC',
+				default              => 'smi.`item_position` ASC, smi.`item_content_id` ASC',
+			};
 			$rows = $this->mDb->query(
 				"SELECT smi.*, lc.`title`, lc.`content_type_guid`
 				 FROM `".BIT_DB_PREFIX."stock_movement_item` smi
 				 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = smi.`item_content_id`
 				 WHERE smi.`movement_content_id` = ?
-				 ORDER BY smi.`item_position`, smi.`item_content_id`",
+				 ORDER BY $orderby",
 				[ $this->mContentId ]
 			);
 			foreach( $rows as $row ) {
