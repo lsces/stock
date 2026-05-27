@@ -18,6 +18,10 @@ if( !empty( $_REQUEST['user_id'] ) && is_numeric( $_REQUEST['user_id'] ) ) {
 	$gBitSmarty->assign( 'gQueryUserId', $_REQUEST['user_id'] );
 }
 
+if( !empty( $_REQUEST['find'] ) ) {
+	$_REQUEST['search'] = $_REQUEST['find'];
+}
+
 $componentList = $component->getList( $_REQUEST );
 $component->invokeServices( 'content_list_function', $_REQUEST );
 $gBitSmarty->assign( 'listInfo', $_REQUEST['listInfo'] );

@@ -204,8 +204,10 @@ class StockComponent extends StockBase {
 		}
 
 		if( !empty( $pListHash['search'] ) ) {
-			$whereSql .= " AND UPPER(lc.`title`) LIKE ? ";
-			$bindVars[] = '%'.strtoupper( $pListHash['search'] ).'%';
+			$term = '%'.strtoupper( $pListHash['search'] ).'%';
+			$whereSql .= " AND (UPPER(lc.`title`) LIKE ? OR UPPER(lc.`data`) LIKE ?) ";
+			$bindVars[] = $term;
+			$bindVars[] = $term;
 		}
 
 		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
