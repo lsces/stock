@@ -50,6 +50,79 @@
 			</div>
 		{/form}
 
+		{* ── Components section ── *}
+		{if $gContent->isValid()}
+			<hr/>
+			<h3>{tr}Components{/tr}</h3>
+
+			{* CSV upload results *}
+			{if isset($csvLoaded)}
+				<div class="alert alert-info">
+					{tr}Loaded{/tr}: <strong>{$csvLoaded}</strong>
+					{if $csvSkipped} &nbsp; {tr}Skipped (duplicate){/tr}: <strong>{$csvSkipped}</strong>{/if}
+				</div>
+				{if $csvErrors}
+					<ul class="text-warning">
+						{foreach from=$csvErrors item=msg}<li>{$msg|escape}</li>{/foreach}
+					</ul>
+				{/if}
+			{/if}
+
+			{* Components table *}
+			{if $componentMap}
+				{form ipackage="stock" ifile="edit.php"}
+					<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}"/>
+					<table class="table table-condensed table-striped">
+						<thead>
+							<tr>
+								<th>{smartlink ititle="Pos" isort="item_position" ifile="edit.php" ipackage="stock" idefault=1 content_id=$gContent->mContentId}</th>
+								<th>{smartlink ititle="Component" isort="title" ifile="edit.php" ipackage="stock" content_id=$gContent->mContentId}</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody>
+							{foreach from=$componentMap key=contentId item=comp}
+								<tr>
+									<td>{$comp.item_position|escape}</td>
+									<td>{$comp.title|escape}</td>
+									<td>
+										<input type="submit" class="btn btn-xs btn-default"
+											name="remove_component_{$contentId}" value="{tr}Remove{/tr}"/>
+									</td>
+								</tr>
+							{/foreach}
+						</tbody>
+					</table>
+				{/form}
+			{else}
+				<p class="muted">{tr}No components yet.{/tr}</p>
+			{/if}
+
+			{* ── Add single component ── *}
+			<h4>{tr}Add Component{/tr}</h4>
+			{form ipackage="stock" ifile="edit.php"}
+				<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}"/>
+				<div class="form-inline">
+					<div class="form-group">
+						<input type="text" class="form-control" name="component_title"
+							placeholder="{tr}Component title{/tr}" size="40"/>
+					</div>
+					<input type="submit" class="btn btn-default" name="add_component" value="{tr}Add{/tr}"/>
+				</div>
+			{/form}
+
+			{* ── Upload CSV ── *}
+			<h4>{tr}Upload Components CSV{/tr}</h4>
+			<p class="help-block">{tr}One component title per line (or comma-separated with title in first column).{/tr}</p>
+			{form enctype="multipart/form-data" ipackage="stock" ifile="edit.php"}
+				<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}"/>
+				<div class="form-inline">
+					<input type="file" name="csv_file" accept=".csv,text/csv"/>
+					<input type="submit" class="btn btn-default" name="upload_components_csv" value="{tr}Upload{/tr}"/>
+				</div>
+			{/form}
+		{/if}
+
 	</div><!-- end .body -->
 </div><!-- end .stock -->
 {/strip}

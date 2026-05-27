@@ -495,6 +495,31 @@ class StockAssembly extends StockBase {
 		return count($this->mErrors) == 0;
 	}
 
+	public function getComponentMapList( string $pSortMode = 'item_position_asc' ): array {
+		$ret = [];
+		if( $this->verifyId( $this->mContentId ) ) {
+			$orderby = match( $pSortMode ) {
+				'title_asc'          => 'lc.`title` ASC',
+				'title_desc'         => 'lc.`title` DESC',
+				'item_position_desc' => 'fgim.`item_position` DESC, fgim.`item_content_id` DESC',
+				default              => 'fgim.`item_position` ASC, fgim.`item_content_id` ASC',
+			};
+			if( $rows = $this->mDb->query(
+				"SELECT fgim.`item_content_id`, fgim.`item_position`, lc.`title`
+				 FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
+				 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id` = fgim.`item_content_id`)
+				 WHERE fgim.`assembly_content_id` = ?
+				 ORDER BY $orderby",
+				[ $this->mContentId ]
+			) ) {
+				foreach( $rows as $row ) {
+					$ret[$row['item_content_id']] = $row;
+				}
+			}
+		}
+		return $ret;
+	}
+
 	public function removeItem( $pContentId ) {
 		$ret = false;
 		if( $this->isValid() && @$this->verifyId( $pContentId ) ) {
