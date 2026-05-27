@@ -23,8 +23,13 @@ if( $gContent->isValid() ) {
 $errors = [];
 
 if( !empty( $_REQUEST['save'] ) ) {
+	$isNew = empty( $_REQUEST['movement_id'] );
 	if( $gContent->store( $_REQUEST ) ) {
-		header( 'Location: '.STOCK_PKG_URL.'list_movements.php' );
+		if( $isNew ) {
+			header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?movement_id='.$gContent->mMovementId );
+		} else {
+			header( 'Location: '.STOCK_PKG_URL.'list_movements.php' );
+		}
 		die;
 	}
 	$errors = $gContent->mErrors;
