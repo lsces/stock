@@ -34,7 +34,7 @@ if( !file_exists( $csvFile ) ) {
 		$errors[] = 'Cannot open CSV file.';
 	} else {
 		$row = 0;
-		while( ( $data = fgetcsv( $handle, 1000, ',' ) ) !== false ) {
+		while( ( $data = fgetcsv( $handle, 1000, ',', '"', '\\' ) ) !== false ) {
 			$row++;
 			if( $row === 1 ) {
 				continue; // skip header

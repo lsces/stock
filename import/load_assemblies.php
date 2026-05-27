@@ -24,7 +24,7 @@ $gBitSystem->verifyPermission( 'p_stock_admin' );
 
 require_once __DIR__.'/ImportAssembly.php';
 
-$csvFile = __DIR__.'/data/assemblies.csv';
+$csvFile = __DIR__.'/data/simple_assemblies.csv';
 $loaded  = 0;
 $skipped = 0;
 $errors  = [];
@@ -39,7 +39,7 @@ if( !file_exists( $csvFile ) ) {
 		// Group rows by assembly title
 		$batches  = [];
 		$rowNum   = 0;
-		while( ( $data = fgetcsv( $handle, 1000, ',' ) ) !== false ) {
+		while( ( $data = fgetcsv( $handle, 1000, ',', '"', '\\' ) ) !== false ) {
 			$rowNum++;
 			if( $rowNum === 1 ) {
 				continue; // skip header
