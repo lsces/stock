@@ -1,6 +1,7 @@
 <?php
 /**
- * Create or edit a stock movement. Handles header save, item add/remove, and process.
+ * Create or edit a stock movement. Handles header save, item add/remove,
+ * CSV upload, and process.
  *
  * @package stock
  */
@@ -50,6 +51,60 @@ if( !empty( $_REQUEST['save'] ) ) {
 			$errors[] = "Component '$componentTitle' not found.";
 		} else {
 			$gContent->addItem( (int)$contentId, $qty, $qtySrc );
+			header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?movement_id='.$gContent->mMovementId );
+			die;
+		}
+	}
+
+} elseif( !empty( $_REQUEST['upload_csv'] ) && $gContent->isValid() ) {
+	$file = $_FILES['csv_file'] ?? null;
+	if( !$file || $file['error'] !== UPLOAD_ERR_OK ) {
+		$errors[] = 'No file uploaded or upload error.';
+	} else {
+		$handle = fopen( $file['tmp_name'], 'r' );
+		if( $handle === false ) {
+			$errors[] = 'Could not read uploaded file.';
+		} else {
+			$csvLoaded  = 0;
+			$csvSkipped = 0;
+			$csvErrors  = [];
+			$rowNum     = 0;
+			while( ( $data = fgetcsv( $handle, 1000, ',', '"', '' ) ) !== false ) {
+				$rowNum++;
+				$componentTitle = trim( $data[0] ?? '' );
+				$qty            = isset( $data[2] ) && is_numeric( trim( $data[2] ) ) ? (float)trim( $data[2] ) : null;
+
+				if( empty( $componentTitle ) ) {
+					$csvSkipped++;
+					continue;
+				}
+				if( $qty === null || $qty <= 0 ) {
+					$csvSkipped++;
+					$csvErrors[] = "Row $rowNum: '$componentTitle' — invalid or zero quantity, skipped.";
+					continue;
+				}
+
+				$contentId = $gBitDb->getOne(
+					"SELECT sc.`content_id`
+					 FROM `".BIT_DB_PREFIX."stock_component` sc
+					 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sc.`content_id`
+					 WHERE lc.`title` = ?",
+					[ $componentTitle ]
+				);
+				if( !$contentId ) {
+					$csvSkipped++;
+					$csvErrors[] = "Row $rowNum: '$componentTitle' not found, skipped.";
+					continue;
+				}
+
+				$gContent->addItem( (int)$contentId, $qty, 'SGL' );
+				$csvLoaded++;
+			}
+			fclose( $handle );
+
+			$gBitSmarty->assign( 'csvLoaded',  $csvLoaded );
+			$gBitSmarty->assign( 'csvSkipped', $csvSkipped );
+			$gBitSmarty->assign( 'csvErrors',  $csvErrors );
 			$gContent->load();
 		}
 	}
@@ -79,18 +134,17 @@ if( !empty( $_REQUEST['save'] ) ) {
 		);
 	} else {
 		$gContent->expunge();
-		header( 'Location: '.STOCK_PKG_URL );
+		header( 'Location: '.STOCK_PKG_URL.'list_movements.php' );
 		die;
 	}
 
 } else {
-	// Check for remove_item_NNNN submit buttons
 	foreach( $_REQUEST as $key => $val ) {
 		if( str_starts_with( $key, 'remove_item_' ) ) {
 			$itemContentId = (int)substr( $key, 12 );
 			$gContent->removeItem( $itemContentId );
-			$gContent->load();
-			break;
+			header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?movement_id='.$gContent->mMovementId );
+			die;
 		}
 	}
 }
@@ -101,6 +155,11 @@ $isPending  = ( ( $gContent->mInfo['status'] ?? '' ) === 'pending' );
 $gBitSmarty->assign( 'errors',     $errors );
 $gBitSmarty->assign( 'isComplete', $isComplete );
 $gBitSmarty->assign( 'isPending',  $isPending );
+$gBitSmarty->assign( 'statusOptions', [
+	'draft'     => 'Draft',
+	'pending'   => 'Pending',
+	'cancelled' => 'Cancelled',
+] );
 $gBitSmarty->assign( 'qtySrcOptions', [
 	'SGL' => 'Single unit',
 	'PCK' => 'Pack',

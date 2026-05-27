@@ -15,8 +15,8 @@
 
 		{* ── Header form ── *}
 		{form ipackage="stock" ifile="edit_movement.php"}
-			<input type="hidden" name="content_id"   value="{$gContent->mContentId|escape}"/>
-			<input type="hidden" name="movement_id"  value="{$gContent->mMovementId|escape}"/>
+			<input type="hidden" name="content_id"  value="{$gContent->mContentId|escape}"/>
+			<input type="hidden" name="movement_id" value="{$gContent->mMovementId|escape}"/>
 
 			<div class="form-group">
 				{formlabel label="Title" for="movement-title" mandatory="y"}
@@ -50,7 +50,7 @@
 						<span class="form-control-static">{tr}Complete{/tr}</span>
 					{else}
 						<select name="status" id="movement-status" class="form-control">
-							{foreach ['draft'=>'Draft','pending'=>'Pending','cancelled'=>'Cancelled'] as $val=>$label}
+							{foreach from=$statusOptions key=val item=label}
 								<option value="{$val}"{if ($gContent->mInfo.status|default:'draft') eq $val} selected="selected"{/if}>{tr}{$label}{/tr}</option>
 							{/foreach}
 						</select>
@@ -72,11 +72,25 @@
 			{/if}
 		{/form}
 
-		{* ── Items table ── *}
+		{* ── Items section ── *}
 		{if $gContent->isValid()}
 			<hr/>
 			<h3>{tr}Items{/tr}</h3>
 
+			{* CSV upload results *}
+			{if isset($csvLoaded)}
+				<div class="alert alert-info">
+					{tr}Loaded{/tr}: <strong>{$csvLoaded}</strong>
+					{if $csvSkipped} &nbsp; {tr}Skipped{/tr}: <strong>{$csvSkipped}</strong>{/if}
+				</div>
+				{if $csvErrors}
+					<ul class="text-warning">
+						{foreach from=$csvErrors item=msg}<li>{$msg|escape}</li>{/foreach}
+					</ul>
+				{/if}
+			{/if}
+
+			{* Items table *}
 			{if $gContent->mInfo.items}
 				{form ipackage="stock" ifile="edit_movement.php"}
 					<input type="hidden" name="content_id"  value="{$gContent->mContentId|escape}"/>
@@ -91,7 +105,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{foreach $gContent->mInfo.items as $itemId => $item}
+							{foreach from=$gContent->mInfo.items key=itemId item=item}
 								<tr>
 									<td>{$item.title|escape}</td>
 									<td>{$item.quantity_value|escape}</td>
@@ -111,8 +125,8 @@
 				<p class="muted">{tr}No items yet.{/tr}</p>
 			{/if}
 
-			{* ── Add item form ── *}
 			{if !$isComplete}
+				{* ── Add single item ── *}
 				<h4>{tr}Add Item{/tr}</h4>
 				{form ipackage="stock" ifile="edit_movement.php"}
 					<input type="hidden" name="content_id"  value="{$gContent->mContentId|escape}"/>
@@ -128,7 +142,7 @@
 						</div>
 						<div class="form-group">
 							<select name="qty_src" class="form-control">
-								{foreach $qtySrcOptions as $val => $label}
+								{foreach from=$qtySrcOptions key=val item=label}
 									<option value="{$val}">{tr}{$label}{/tr}</option>
 								{/foreach}
 							</select>
@@ -136,7 +150,20 @@
 						<input type="submit" class="btn btn-default" name="add_item" value="{tr}Add{/tr}"/>
 					</div>
 				{/form}
+
+				{* ── Upload CSV ── *}
+				<h4>{tr}Upload CSV{/tr}</h4>
+				<p class="help-block">{tr}Three columns: component title, description (ignored), quantity.{/tr}</p>
+				{form enctype="multipart/form-data" ipackage="stock" ifile="edit_movement.php"}
+					<input type="hidden" name="content_id"  value="{$gContent->mContentId|escape}"/>
+					<input type="hidden" name="movement_id" value="{$gContent->mMovementId|escape}"/>
+					<div class="form-inline">
+						<input type="file" name="csv_file" accept=".csv,text/csv"/>
+						<input type="submit" class="btn btn-default" name="upload_csv" value="{tr}Upload{/tr}"/>
+					</div>
+				{/form}
 			{/if}
+
 		{/if}
 
 	</div><!-- end .body -->
