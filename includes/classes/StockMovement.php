@@ -440,7 +440,7 @@ class StockMovement extends StockBase {
 		return $ret;
 	}
 
-	public static function getDisplayUrlFromHash( array &$pParamHash ): string {
+	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		global $gBitSystem;
 		if( BitBase::verifyId( $pParamHash['movement_id'] ?? 0 ) ) {
 			return STOCK_PKG_URL.'view_movement.php?movement_id='.$pParamHash['movement_id'];
