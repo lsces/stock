@@ -61,7 +61,7 @@
 		</table>
 
 		<nav>
-			{pagination}
+			{pagination assembly_id=$smarty.request.assembly_id}
 		</nav>
 
 	</section>
