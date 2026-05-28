@@ -1011,23 +1011,29 @@ class StockAssembly extends StockBase {
 					$mapJoin $joinSql
 					LEFT OUTER JOIN `".BIT_DB_PREFIX."liberty_content` plc ON (fg.`preview_content_id` = plc.`content_id`)
 				$whereSql $sortSql";
-			if( $data = $this->mDb->GetAssoc( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'] ) ) {
-			if( empty( $pListHash['no_thumbnails'] ) ) {
-				$thumbsize = !empty( $pListHash['thumbnail_size'] ) ? $pListHash['thumbnail_size'] : 'small';
-				foreach( array_keys( $data ) as $assemblyId ) {
-				$data[$assemblyId]['display_url'] = static::getDisplayUrlFromHash( $data[$assemblyId] );
-					$data[$assemblyId]['display_uri'] = static::getDisplayUriFromHash( $data[$assemblyId] );
-					if( $thumbImage = $this->getThumbnailImage( $data[$assemblyId]['content_id'], $data[$assemblyId]['preview_content_id'], $data[$assemblyId]['preview_content_type_guid'] ) ) {
-						$data[$assemblyId]['thumbnail_url'] = $thumbImage->getThumbnailUrl( $thumbsize );
-						$data[$assemblyId]['thumbnail_uri'] = $thumbImage->getThumbnailUri( $thumbsize );
-					} elseif( !empty( $pListHash['show_empty'] ) ) {
-						$data[$assemblyId]['thumbnail_url'] = STOCK_PKG_URL.'image/no_image.png';
-					} else {
-						unset( $data[$assemblyId] );
+			$data = [];
+			if( $rows = $this->mDb->query( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'] ) ) {
+				foreach( $rows as $row ) {
+					$data[$row['hash_key']] = $row;
+				}
+			}
+			if( !empty( $data ) ) {
+				if( empty( $pListHash['no_thumbnails'] ) ) {
+					$thumbsize = !empty( $pListHash['thumbnail_size'] ) ? $pListHash['thumbnail_size'] : 'small';
+					foreach( array_keys( $data ) as $assemblyId ) {
+						$data[$assemblyId]['display_url'] = static::getDisplayUrlFromHash( $data[$assemblyId] );
+						$data[$assemblyId]['display_uri'] = static::getDisplayUriFromHash( $data[$assemblyId] );
+						if( $thumbImage = $this->getThumbnailImage( $data[$assemblyId]['content_id'], $data[$assemblyId]['preview_content_id'], $data[$assemblyId]['preview_content_type_guid'] ) ) {
+							$data[$assemblyId]['thumbnail_url'] = $thumbImage->getThumbnailUrl( $thumbsize );
+							$data[$assemblyId]['thumbnail_uri'] = $thumbImage->getThumbnailUri( $thumbsize );
+						} elseif( !empty( $pListHash['show_empty'] ) ) {
+							$data[$assemblyId]['thumbnail_url'] = STOCK_PKG_URL.'image/no_image.png';
+						} else {
+							unset( $data[$assemblyId] );
+						}
 					}
 				}
 			}
-		}
 
 		// count galleries
 		$query_c = "SELECT COUNT( fg.`assembly_id` )

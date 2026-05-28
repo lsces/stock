@@ -2,7 +2,7 @@
 <div class="listing stock">
 	<header>
 		<div class="floaticon">
-			{minifind prompt="Assemblies"}
+			{minifind prompt="Assemblies" assembly_id=$smarty.request.assembly_id}
 		</div>
 		<h1>{tr}Assemblies{/tr}{if $gQueryUserId} {tr}by{/tr} {displayname user_id=$gQueryUserId}{/if}</h1>
 	</header>
