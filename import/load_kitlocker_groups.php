@@ -37,7 +37,7 @@ if( !$parent->isValid() ) {
 } else {
 	$fh = fopen( $csvFile, 'r' );
 	$rowNum = 0;
-	while( ($cols = fgetcsv( $fh )) !== false ) {
+	while( ($cols = fgetcsv( $fh, 0, ',', '"', '' )) !== false ) {
 		$rowNum++;
 		if( $rowNum === 1 ) continue; // header: KLID, Title
 

@@ -40,7 +40,7 @@ if( empty( $klidMap ) ) {
 } else {
 	$fh = fopen( $csvFile, 'r' );
 	$rowNum = 0;
-	while( ($cols = fgetcsv( $fh )) !== false ) {
+	while( ($cols = fgetcsv( $fh, 0, ',', '"', '' )) !== false ) {
 		$rowNum++;
 		if( $rowNum === 1 ) continue; // header: Title, Description, SGL, KL3M, Group
 
