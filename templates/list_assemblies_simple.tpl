@@ -8,6 +8,13 @@
 	</header>
 
 	<section class="body">
+		{if $parentAssembly && $parentAssembly->isValid()}
+			<p>
+				<a href="{$smarty.const.STOCK_PKG_URL}list_assemblies.php">{tr}All Assemblies{/tr}</a>
+				&rsaquo; {$parentAssembly->getTitle()|escape}
+			</p>
+		{/if}
+
 		<table class="table table-striped table-hover">
 			<thead>
 				<tr>
@@ -30,7 +37,11 @@
 							{/if}
 						</td>
 						<td>
-							<a href="{$gal.display_url|escape}">{$gal.title|escape}</a>
+							{if $gal.child_count > 0}
+								<a href="{$smarty.const.STOCK_PKG_URL}list_assemblies.php?assembly_id={$gal.assembly_id}">{$gal.title|escape}</a>
+							{else}
+								<a href="{$gal.display_url|escape}">{$gal.title|escape}</a>
+							{/if}
 							{if $gal.is_hidden|default:'n' == 'y' || $gal.is_private|default:'n' == 'y' || $gal.access_answer|default:false}
 								{booticon iname="icon-lock" ipackage="icons" iexplain="Restricted"}
 							{/if}

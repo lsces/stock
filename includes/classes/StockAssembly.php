@@ -951,6 +951,16 @@ class StockAssembly extends StockBase {
 			$bindVars[] = $term;
 		}
 
+		if( !empty( $pListHash['parent_content_id'] ) ) {
+			if( $gBitDbType != 'mysql' ) {
+				$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."stock_assembly_component_map` sacm WHERE sacm.`assembly_content_id`=? AND sacm.`item_content_id`=lc.`content_id`)";
+			} else {
+				$joinSql .= " INNER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` sacmp ON sacmp.`item_content_id`=lc.`content_id`";
+				$whereSql .= " AND sacmp.`assembly_content_id`=?";
+			}
+			$bindVars[] = (int)$pListHash['parent_content_id'];
+		}
+
 		if( !empty( $pListHash['show_public'] ) ) {
 			$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."liberty_content_prefs` lcp ON( lcp.`content_id`=lc.`content_id` )";
 			$whereSql .= " OR  ( lcp.`pref_name`=? AND lcp.`pref_value`=? ) ";
@@ -978,6 +988,8 @@ class StockAssembly extends StockBase {
 			//converted in prepGetList()
 			$sortSql .= " ORDER BY ".$this->mDb->convertSortmode( $pListHash['sort_mode'] )." ";
 		}
+		$selectSql .= ", (SELECT COUNT(*) FROM `".BIT_DB_PREFIX."stock_assembly_component_map` sacmc WHERE sacmc.`assembly_content_id` = lc.`content_id`) AS `child_count`";
+
 		// Putting in the below hack because mssql cannot select distinct on a text blob column.
 		$selectSql .= $gBitDbType == 'mssql' ? " ,CAST(lc.`data` AS VARCHAR(250)) as `data` " : " ,lc.`data` ";
 
