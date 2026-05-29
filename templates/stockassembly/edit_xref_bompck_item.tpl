@@ -29,9 +29,12 @@
 			{/if}
 
 			<div class="form-group">
-				{formlabel label="Quantity" for="xkey"}
+				{formlabel label="Pieces required" for="xkey"}
 				{forminput}
-					<input type="text" class="form-control input-small" name="xkey" id="xkey" value="{$xrefInfo.xkey|escape}" />
+					<div class="form-inline">
+						<input type="text" class="form-control input-small" name="xkey" id="xkey" value="{$xrefInfo.xkey|escape}" />
+						{if $xrefInfo.pack_size} of {$xrefInfo.pack_size|escape}{if $xrefInfo.pack_size_ext} {$xrefInfo.pack_size_ext|escape}{/if}{/if}
+					</div>
 				{/forminput}
 			</div>
 

@@ -73,6 +73,24 @@ class StockAssembly extends StockBase {
 		return @$this->verifyId( $this->mAssemblyId ) || @$this->verifyId( $this->mContentId );
 	}
 
+	public function enrichXrefDisplay( array &$pXrefInfo ): void {
+		if( !empty( $pXrefInfo['xref'] ) ) {
+			if( $comp = $this->mDb->getRow(
+				"SELECT lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`, pck.`xkey_ext` AS `pack_size_ext`
+				 FROM `".BIT_DB_PREFIX."stock_component` sc
+				 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sc.`content_id`
+				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = sc.`content_id` AND pck.`item` = 'PCK'
+				 WHERE sc.`component_id` = ?",
+				[ (int)$pXrefInfo['xref'] ]
+			) ) {
+				$pXrefInfo['xref_title'] = $comp['title'];
+				$pXrefInfo['xref_data']  = $comp['data'];
+				$pXrefInfo['pack_size']     = $comp['pack_size'];
+				$pXrefInfo['pack_size_ext'] = $comp['pack_size_ext'];
+			}
+		}
+	}
+
 	public function loadXrefList(): void {
 		parent::loadXrefList();
 		if( !empty( $this->mInfo['quantity'] ) ) {
@@ -82,7 +100,7 @@ class StockAssembly extends StockBase {
 			if( $componentIds ) {
 				$placeholders = implode( ',', array_fill( 0, count( $componentIds ), '?' ) );
 				$components = $this->mDb->getAssoc(
-					"SELECT sc.`component_id`, lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`
+					"SELECT sc.`component_id`, lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`, pck.`xkey_ext` AS `pack_size_ext`
 					 FROM `".BIT_DB_PREFIX."stock_component` sc
 					 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sc.`content_id`
 					 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = sc.`content_id` AND pck.`item` = 'PCK'
@@ -93,7 +111,8 @@ class StockAssembly extends StockBase {
 					if( !empty( $row['xref'] ) && isset( $components[$row['xref']] ) ) {
 						$row['xref_title'] = $components[$row['xref']]['title'];
 						$row['xref_data']  = $components[$row['xref']]['data'];
-						$row['pack_size']  = $components[$row['xref']]['pack_size'];
+						$row['pack_size']     = $components[$row['xref']]['pack_size'];
+					$row['pack_size_ext'] = $components[$row['xref']]['pack_size_ext'];
 					}
 				}
 				unset( $row );

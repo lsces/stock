@@ -8,7 +8,7 @@
 		{/if}
 	</td>
 	<td>{$gContent->mInfo.$source[xref].xref_data|escape}</td>
-	<td>{$gContent->mInfo.$source[xref].xkey|escape} of {$gContent->mInfo.$source[xref].pack_size|escape}</td>
+	<td>{$gContent->mInfo.$source[xref].xkey|escape}{if $gContent->mInfo.$source[xref].pack_size} of {$gContent->mInfo.$source[xref].pack_size|escape}{if $gContent->mInfo.$source[xref].pack_size_ext} {$gContent->mInfo.$source[xref].pack_size_ext|escape}{/if}{/if}</td>
 	<td>{$gContent->mInfo.$source[xref].xkey_ext|escape}</td>
 	{if $xrefAllowEdit}
 		<td>{$gContent->mInfo.$source[xref].start_date|bit_short_date}</td>
