@@ -21,19 +21,17 @@ if( $gContent->isValid() ) {
 }
 
 if( !empty($_REQUEST['save']) ) {
-	if( empty($_REQUEST['assembly_id']) && empty($_REQUEST['component_id']) ) {
-		$gBitSmarty->assign( 'msg', KernelTools::tra('No assembly or component was specified') );
-		$gBitSystem->display( 'error.tpl', null, [ 'display_mode' => 'edit' ] );
-		die;
-	}
-
+	$isNew = !$gContent->isValid();
 	if( $gContent->store( $_REQUEST ) ) {
 		$gContent->load();
 		if( !empty( $_REQUEST['gallery_additions'] ) ) {
 			$gContent->addToAssemblies( $_REQUEST['gallery_additions'] );
 		}
 		if( empty( $gContent->mErrors ) ) {
-			header( 'Location: '.$gContent->getDisplayUrl() );
+			$url = $isNew
+				? STOCK_PKG_URL.'edit_component.php?component_id='.$gContent->mComponentId
+				: $gContent->getDisplayUrl();
+			header( 'Location: '.$url );
 			die;
 		}
 	}

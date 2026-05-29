@@ -12,7 +12,7 @@
 
 	<div class="body">
 		{form id="editAssemblyForm" ipackage="stock" ifile="edit.php"}
-			{formfeedback error=$errors warning=$stockWarnings success=$stockSuccess}
+			{formfeedback error=$errors success=$stockSuccess}
 
 			<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}"/>
 
@@ -33,7 +33,7 @@
 			{if $gContent->mInfo.stockassembly_types}
 				{jstabs}
 					{section name=xrefGroup loop=$gContent->mInfo.stockassembly_types}
-						{include file="bitpackage:liberty/list_xref.tpl"
+						{include file=$gContent->getXrefListTemplate($gContent->mInfo.stockassembly_types[xrefGroup].template)
 							source=$gContent->mInfo.stockassembly_types[xrefGroup].source
 							source_title=$gContent->mInfo.stockassembly_types[xrefGroup].title
 							group=$gContent->mInfo.stockassembly_types[xrefGroup].sort_order
@@ -98,27 +98,14 @@
 				<p class="muted">{tr}No components yet.{/tr}</p>
 			{/if}
 
-			{* ── Add single component ── *}
-			<h4>{tr}Add Component{/tr}</h4>
-			{form ipackage="stock" ifile="edit.php"}
-				<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}"/>
-				<div class="form-inline">
-					<div class="form-group">
-						<input type="text" class="form-control" name="component_title"
-							placeholder="{tr}Component title{/tr}" size="40"/>
-					</div>
-					<input type="submit" class="btn btn-default" name="add_component" value="{tr}Add{/tr}"/>
-				</div>
-			{/form}
-
-			{* ── Upload CSV ── *}
-			<h4>{tr}Upload Components CSV{/tr}</h4>
-			<p class="help-block">{tr}One component title per line (or comma-separated with title in first column).{/tr}</p>
+			{* ── Upload BOM CSV ── *}
+			<h4>{tr}Upload Parts List (BOM){/tr}</h4>
+			<p class="help-block">{tr}Columns: ITEM, XORDER, XREF (component title), XKEY (quantity), XKEY_EXT (ref designators), DATA{/tr}</p>
 			{form enctype="multipart/form-data" ipackage="stock" ifile="edit.php"}
 				<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}"/>
 				<div class="form-inline">
 					<input type="file" name="csv_file" accept=".csv,text/csv"/>
-					<input type="submit" class="btn btn-default" name="upload_components_csv" value="{tr}Upload{/tr}"/>
+					<input type="submit" class="btn btn-default" name="upload_bom_csv" value="{tr}Upload BOM{/tr}"/>
 				</div>
 			{/form}
 		{/if}

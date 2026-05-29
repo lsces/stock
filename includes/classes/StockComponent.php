@@ -272,6 +272,13 @@ class StockComponent extends StockBase {
 		return static::getDisplayUrlFromHash( $info );
 	}
 
+	public function getEditUrl( $pContentId = null, $pMixed = null ): string {
+		if( $this->verifyId( $this->mComponentId ) ) {
+			return STOCK_PKG_URL.'edit_component.php?component_id='.$this->mComponentId;
+		}
+		return STOCK_PKG_URL.'edit_component.php';
+	}
+
 	public static function getDisplayLinkFromHash( &$pParamHash, $pTitle='', $pAnchor=null ) {
 		global $gBitSystem;
 		$pTitle = trim( $pTitle );

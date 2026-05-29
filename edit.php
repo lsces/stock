@@ -62,62 +62,85 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 	header( 'Location: '.$gContent->getDisplayUrl() );
 	die();
 
-} elseif( $gContent->isValid() && !empty( $_REQUEST['add_component'] ) ) {
-	$title = trim( $_REQUEST['component_title'] ?? '' );
-	if( $title !== '' ) {
-		$row = $gBitDb->getRow(
-			"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
-			 WHERE UPPER(lc.`title`) = UPPER(?) AND lc.`content_type_guid` = 'stockcomponent'",
-			[ $title ]
-		);
-		if( $row ) {
-			$nextPos = ((int)$gBitDb->getOne(
-				"SELECT MAX(`item_position`) FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `assembly_content_id`=?",
-				[ $gContent->mContentId ]
-			)) + 1;
-			if( !$gContent->addItem( $row['content_id'], $nextPos ) ) {
-				$stockErrors[] = KernelTools::tra('Component already in this assembly:').' '.htmlspecialchars($title);
-			}
-		} else {
-			$stockErrors[] = KernelTools::tra('Component not found:').' '.htmlspecialchars($title);
-		}
-	}
-	if( empty( $stockErrors ) ) {
-		header( 'Location: '.STOCK_PKG_URL.'edit.php?content_id='.$gContent->mContentId );
-		die();
-	}
-
-} elseif( $gContent->isValid() && !empty( $_REQUEST['upload_components_csv'] ) ) {
+} elseif( $gContent->isValid() && !empty( $_REQUEST['upload_bom_csv'] ) ) {
 	$csvLoaded = $csvSkipped = 0;
 	$csvErrors = [];
 	if( !empty( $_FILES['csv_file']['tmp_name'] ) && is_uploaded_file( $_FILES['csv_file']['tmp_name'] ) ) {
-		$nextPos = ((int)$gBitDb->getOne(
-			"SELECT MAX(`item_position`) FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `assembly_content_id`=?",
-			[ $gContent->mContentId ]
-		)) + 1;
+		// Valid BOM unit types (MOV is for movements, not BOM lines)
+		$validItems = [ 'SGL', 'PCK', 'SHT', 'VOL' ];
 		if( ($fh = fopen( $_FILES['csv_file']['tmp_name'], 'r' )) !== false ) {
-			while( ($cols = fgetcsv($fh)) !== false ) {
-				$title = trim($cols[0]);
-				if( $title === '' || strtolower($title) === 'title' ) continue;
-				$row = $gBitDb->getRow(
-					"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
-					 WHERE UPPER(lc.`title`) = UPPER(?) AND lc.`content_type_guid` = 'stockcomponent'",
-					[ $title ]
+			$rowNum = 0;
+			while( ($cols = fgetcsv($fh, 0, ',', '"', '')) !== false ) {
+				$rowNum++;
+				$item = strtoupper( trim( $cols[0] ?? '' ) );
+				if( $item === '' || $item === 'ITEM' ) continue;
+
+				if( !in_array( $item, $validItems ) ) {
+					$csvErrors[] = KernelTools::tra('Row')." $rowNum: ".KernelTools::tra('unknown item type')." '$item'";
+					$csvSkipped++;
+					continue;
+				}
+
+				$xorder         = (int)( $cols[1] ?? 0 );
+				$componentTitle = trim( $cols[2] ?? '' );
+				$xkey           = trim( $cols[3] ?? '' );
+				$xkeyExt        = trim( $cols[4] ?? '' ) ?: null;
+				$data           = trim( $cols[5] ?? '' ) ?: null;
+
+				if( empty( $componentTitle ) ) {
+					$csvErrors[] = KernelTools::tra('Row')." $rowNum: ".KernelTools::tra('empty component name');
+					$csvSkipped++;
+					continue;
+				}
+
+				$compId = $gBitDb->getOne(
+					"SELECT sc.`component_id` FROM `".BIT_DB_PREFIX."stock_component` sc
+					 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sc.`content_id`
+					 WHERE lc.`title` = ?",
+					[ $componentTitle ]
 				);
-				if( $row ) {
-					if( $gContent->addItem( $row['content_id'], $nextPos ) ) {
-						$nextPos++;
-						$csvLoaded++;
-					} else {
-						$csvSkipped++;
-					}
+				if( !$compId ) {
+					$csvErrors[] = KernelTools::tra('Row')." $rowNum: ".KernelTools::tra('component not found').' — '.htmlspecialchars( $componentTitle );
+					$csvSkipped++;
+					continue;
+				}
+
+				$xrefObj = new \Bitweaver\Liberty\LibertyXref();
+				$xrefObj->mContentTypeGuid = STOCKASSEMBLY_CONTENT_TYPE_GUID;
+				$pHash = [
+					'content_id' => $gContent->mContentId,
+					'item'       => $item,
+					'xorder'     => $xorder,
+					'xref'       => $compId,
+					'xkey'       => $xkey,
+					'xkey_ext'   => $xkeyExt,
+					'edit'       => $data,
+				];
+				$existingId = $gBitDb->getOne(
+					"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref`
+					 WHERE `content_id`=? AND `item`=? AND `xorder`=?",
+					[ $gContent->mContentId, $item, $xorder ]
+				);
+				if( $existingId ) {
+					$xrefObj->load( $existingId );
+					$pHash['xref_id'] = $existingId;
+				}
+				if( $xrefObj->store( $pHash ) ) {
+					$csvLoaded++;
 				} else {
-					$csvErrors[] = KernelTools::tra('Not found:').' '.htmlspecialchars($title);
+					$csvErrors[] = KernelTools::tra('Row')." $rowNum: ".KernelTools::tra('failed to store').' '.htmlspecialchars($componentTitle);
+					$csvSkipped++;
 				}
 			}
 			fclose($fh);
 		}
 	}
+	// Clear stale xref buckets so loadXrefList() re-reads from DB for the display below
+	foreach( [ 'supplier', 'quantity', 'values', 'kitlocker', 'history' ] as $_xg ) {
+		unset( $gContent->mInfo[$_xg] );
+	}
+	$gContent->loadXrefList();
+
 	$gBitSmarty->assign( 'csvLoaded',  $csvLoaded );
 	$gBitSmarty->assign( 'csvSkipped', $csvSkipped );
 	$gBitSmarty->assign( 'csvErrors',  $csvErrors );
@@ -135,9 +158,6 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 // Initalize the errors list which contains any errors which occured during storage
 $errors = !empty($gContent->mErrors) ? $gContent->mErrors : [];
 $gBitSmarty->assign('errors', $errors);
-if( !empty($stockErrors) ) {
-	$gBitSmarty->assign('stockWarnings', $stockErrors);
-}
 
 if( $gContent->isValid() ) {
 	$sortMode = $_REQUEST['sort_mode'] ?? 'item_position_asc';
