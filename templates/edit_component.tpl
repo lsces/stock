@@ -30,7 +30,7 @@
 			{if $gContent->mInfo.stockcomponent_types}
 				{jstabs}
 					{section name=xrefGroup loop=$gContent->mInfo.stockcomponent_types}
-						{include file="bitpackage:liberty/list_xref.tpl"
+						{include file=$gContent->getXrefListTemplate($gContent->mInfo.stockcomponent_types[xrefGroup].template)
 							source=$gContent->mInfo.stockcomponent_types[xrefGroup].source
 							source_title=$gContent->mInfo.stockcomponent_types[xrefGroup].title
 							group=$gContent->mInfo.stockcomponent_types[xrefGroup].sort_order

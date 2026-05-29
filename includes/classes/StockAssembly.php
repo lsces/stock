@@ -74,6 +74,7 @@ class StockAssembly extends StockBase {
 	}
 
 	public function enrichXrefDisplay( array &$pXrefInfo ): void {
+		parent::enrichXrefDisplay( $pXrefInfo );
 		if( !empty( $pXrefInfo['xref'] ) ) {
 			if( $comp = $this->mDb->getRow(
 				"SELECT lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`, pck.`xkey_ext` AS `pack_size_ext`

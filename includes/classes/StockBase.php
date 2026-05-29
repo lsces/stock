@@ -32,6 +32,39 @@ abstract class StockBase extends LibertyContent
 	}
 
 	// regular expression to determine if the title was computer generated
+	public function loadXrefList(): void {
+		parent::loadXrefList();
+		if( !empty( $this->mInfo['supplier'] ) ) {
+			$contactIds = array_values( array_unique( array_filter( array_column( $this->mInfo['supplier'], 'xref' ) ) ) );
+			if( $contactIds ) {
+				$placeholders = implode( ',', array_fill( 0, count( $contactIds ), '?' ) );
+				$contacts = $this->mDb->getAssoc(
+					"SELECT lc.`content_id` AS hash_key, lc.`title`
+					 FROM `".BIT_DB_PREFIX."liberty_content` lc
+					 WHERE lc.`content_id` IN ($placeholders)",
+					$contactIds
+				);
+				foreach( $this->mInfo['supplier'] as &$row ) {
+					if( !empty( $row['xref'] ) && isset( $contacts[$row['xref']] ) ) {
+						$row['xref_title'] = $contacts[$row['xref']]['title'];
+					}
+				}
+				unset( $row );
+			}
+		}
+	}
+
+	public function enrichXrefDisplay( array &$pXrefInfo ): void {
+		if( !empty( $pXrefInfo['xref'] ) && ( $pXrefInfo['x_group'] ?? '' ) === 'supplier' ) {
+			if( $contact = $this->mDb->getRow(
+				"SELECT lc.`title` FROM `".BIT_DB_PREFIX."liberty_content` lc WHERE lc.`content_id` = ?",
+				[ (int)$pXrefInfo['xref'] ]
+			) ) {
+				$pXrefInfo['xref_title'] = $contact['title'];
+			}
+		}
+	}
+
 	public function isMachineName( $pString ) {
 		if ( !empty($pString) ) {
 			return preg_match( '/(^[0-9][-0-9 ]*$)|(^[-0-9 ]*(img|dsc|dscn|pict|htg|dscf|p)[-0-9 ][-0-9 ]*.*$)/i', trim( $pString ) );

@@ -137,13 +137,14 @@ $xrefTypes = [];
 $xrefItems = [];
 
 foreach( [ 'stockcomponent', 'stockassembly' ] as $guid ) {
-	$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`) VALUES ('supplier','{$guid}','Supplier',  1,3,'')";
+	$supGrpTpl = ( $guid === 'stockcomponent' ) ? 'sup' : '';
+	$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('supplier','{$guid}','Supplier',  1,3,'','{$supGrpTpl}')";
 	$qtyGrpTpl = ( $guid === 'stockassembly' ) ? 'bom' : '';
 	$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('quantity','{$guid}','Quantity',  2,3,'','{$qtyGrpTpl}')";
 	$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`) VALUES ('values',  '{$guid}','Values',    3,3,'')";
 
 	// Supplier sources — multi=1 (multiple suppliers per item)
-	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#SUP','{$guid}','supplier','Supplier',        1,3,'../contact/?content_id=','text',NULL)";
+	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#SUP','{$guid}','supplier','Supplier',        1,3,'../contact/?content_id=','sup', NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#PN', '{$guid}','supplier','Part Number',      1,3,'',                      'text',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#PR', '{$guid}','supplier','Price',            1,3,'',                      'text',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#URL','{$guid}','supplier','Supplier URL',     1,3,'',                      'text',NULL)";
