@@ -10,8 +10,11 @@
 	<td>{$gContent->mInfo.$source[xref].xkey|escape}</td>
 	<td>{$gContent->mInfo.$source[xref].xkey_ext|escape}</td>
 	<td>{$gContent->mInfo.$source[xref].data|escape}</td>
-	<td>{$gContent->mInfo.$source[xref].last_update_date|bit_short_date}</td>
-	{if $xrefAllowEdit|default:true}
+	{if $xrefAllowEdit}
+		<td>{$gContent->mInfo.$source[xref].start_date|bit_short_date}</td>
+		<td>{$gContent->mInfo.$source[xref].last_update_date|bit_short_date}</td>
+	{/if}
+	{if $xrefAllowEdit}
 		<td>
 			<span class="actionicon">
 				{if $gContent->hasUpdatePermission() && $source ne 'history'}

@@ -46,7 +46,7 @@ abstract class StockBase extends LibertyContent
 				);
 				foreach( $this->mInfo['supplier'] as &$row ) {
 					if( !empty( $row['xref'] ) && isset( $contacts[$row['xref']] ) ) {
-						$row['xref_title'] = $contacts[$row['xref']]['title'];
+						$row['xref_title'] = $contacts[$row['xref']];
 					}
 				}
 				unset( $row );
