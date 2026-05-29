@@ -151,11 +151,12 @@ foreach( [ 'stockcomponent', 'stockassembly' ] as $guid ) {
 	// Quantity sources — selectable types multi=0, movement multi=1
 	// entry_date on liberty_xref timestamps each MOV row automatically
 	// stockassembly uses 'bom' template (stock package override); stockcomponent uses 'text'
-	$qtyTpl = ( $guid === 'stockassembly' ) ? 'bom' : 'text';
-	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('SGL','{$guid}','quantity','Single unit',     0,3,'','{$qtyTpl}',NULL)";
-	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('PCK','{$guid}','quantity','Pack',             0,3,'','{$qtyTpl}',NULL)";
-	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('SHT','{$guid}','quantity','Sheet (H x W)',    0,3,'','{$qtyTpl}',NULL)";
-	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('VOL','{$guid}','quantity','Volume',           0,3,'','{$qtyTpl}',NULL)";
+	$sglTpl = ( $guid === 'stockassembly' ) ? 'bom'    : 'text';
+	$pckTpl = ( $guid === 'stockassembly' ) ? 'bompck' : 'value';
+	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('SGL','{$guid}','quantity','Single unit',     0,3,'','{$sglTpl}',NULL)";
+	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('PCK','{$guid}','quantity','Pack',             0,3,'','{$pckTpl}',NULL)";
+	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('SHT','{$guid}','quantity','Sheet (H x W)',    0,3,'','{$sglTpl}',NULL)";
+	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('VOL','{$guid}','quantity','Volume',           0,3,'','{$sglTpl}',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('MOV','{$guid}','quantity','Stock movement',   1,3,'','text',NULL)";
 
 	// Values sources — starter catalogue, all multi=0, add more via admin
