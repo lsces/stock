@@ -12,8 +12,8 @@ global $gBitSystem, $gBitSmarty, $gStockAssembly;
 
 $gStockAssembly = new StockAssembly();
 
-if( !empty( $_REQUEST['assembly_id'] ) && is_numeric( $_REQUEST['assembly_id'] ) ) {
-	$parentAssembly = new StockAssembly( (int)$_REQUEST['assembly_id'], null );
+if( !empty( $_REQUEST['content_id'] ) && is_numeric( $_REQUEST['content_id'] ) ) {
+	$parentAssembly = new StockAssembly( (int)$_REQUEST['content_id'] );
 	$parentAssembly->load();
 	if( $parentAssembly->isValid() ) {
 		$_REQUEST['parent_content_id'] = $parentAssembly->mContentId;

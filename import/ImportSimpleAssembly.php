@@ -23,19 +23,15 @@ function stockExpungeAssemblyByTitle( string $title ): bool {
 	global $gBitDb;
 
 	$contentId = $gBitDb->getOne(
-		"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."stock_assembly` sa
-		 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sa.`content_id`
-		 WHERE lc.`title` = ?",
+		"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
+		 WHERE lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
 		[ $title ]
 	);
 	if( !$contentId ) {
 		return false;
 	}
 
-	// StockAssembly::expunge() cleans component_map + stock_assembly,
-	// then calls LibertyContent::expunge() which now handles liberty_xref + liberty_content
-	$assembly = new StockAssembly();
-	$assembly->mContentId = (int)$contentId;
+	$assembly = new StockAssembly( (int)$contentId );
 	$assembly->expunge();
 	return true;
 }
@@ -54,9 +50,8 @@ function stockImportSimpleAssembly( array $data, int $rowNum ): array {
 
 	// Skip if already exists
 	$exists = $gBitDb->getOne(
-		"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."stock_assembly` sa
-		 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sa.`content_id`
-		 WHERE lc.`title` = ?",
+		"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
+		 WHERE lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
 		[ $title ]
 	);
 	if( $exists ) {

@@ -35,7 +35,7 @@
 
 	</div><!-- end .body -->
 
-	{pagination assembly_id=$gContent->mAssemblyId}
+	{pagination content_id=$gContent->mContentId}
 
 	{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='view' serviceHash=$gContent->mInfo}
 

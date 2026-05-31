@@ -6,7 +6,7 @@
 		<h1>{$gContent->getTitle()|escape}</h1>
 	</div>
 
-	{pagination assembly_id=$gContent->mAssemblyId}
+	{pagination content_id=$gContent->mContentId}
 
 	<div class="body">
 		{formfeedback success=$stockSuccess error=$stockErrors warning=$stockWarnings}

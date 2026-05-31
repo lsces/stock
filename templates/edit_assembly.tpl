@@ -100,7 +100,7 @@
 
 			{* ── Upload BOM CSV ── *}
 			<h4>{tr}Upload Parts List (BOM){/tr}</h4>
-			<p class="help-block">{tr}Columns: ITEM, XORDER, XREF (component title), XKEY (quantity), XKEY_EXT (ref designators), DATA{/tr}</p>
+			<p class="help-block">{tr}Columns: Component, Order, Quantity, Size (SGL/PCK/SHT/VOL — optional), Ref designators, Note{/tr}</p>
 			{form enctype="multipart/form-data" ipackage="stock" ifile="edit.php"}
 				<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}"/>
 				<div class="form-inline">

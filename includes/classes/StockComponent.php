@@ -195,7 +195,10 @@ class StockComponent extends StockBase {
 		global $gBitSystem;
 		$ret = '';
 		if( BitBase::verifyId( $pParamHash['content_id'] ?? 0 ) ) {
-			$ret = STOCK_PKG_URL.'view_component.php?content_id='.$pParamHash['content_id'];
+			$ret = STOCK_PKG_URL;
+			$ret .= $gBitSystem->isFeatureActive( 'pretty_urls' )
+				? 'component/'.$pParamHash['content_id']
+				: 'view_component.php?content_id='.$pParamHash['content_id'];
 		}
 		return $ret;
 	}

@@ -35,7 +35,7 @@
 		{if $itemCount % 4 != 0}</tr>{/if}
 		</table>
 
-		{pagination assembly_id=$gContent->mAssemblyId}
+		{pagination content_id=$gContent->mContentId}
 	</div><!-- end .body -->
 </div><!-- end .stock -->
 {/strip}

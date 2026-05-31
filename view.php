@@ -27,7 +27,7 @@ global $gHideModules;
 $gHideModules = $gBitSystem->isFeatureActive( 'stock_gallery_hide_modules' );
 
 if ( !$gContent->isValid() ) {
-	if ( !empty( $_REQUEST['assembly_id'] ) || !empty( $_REQUEST['content_id'] ) ) {
+	if ( !empty( $_REQUEST['content_id'] ) ) {
 		$gBitSystem->fatalError( KernelTools::tra('No assembly exists with the given ID'), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 	}
 	KernelTools::bit_redirect( STOCK_PKG_URL."list_assemblies.php", HttpStatusCodes::HTTP_FOUND );
@@ -39,7 +39,7 @@ if( $gContent->isCommentable() ) {
 	$comments_vars = [ 'stockassembly' ];
 	$comments_prefix_var='stockassembly:';
 	$comments_object_var='stockassembly';
-	$comments_return_url = $_SERVER['SCRIPT_NAME']."?assembly_id=".$gContent->mAssemblyId;
+	$comments_return_url = $_SERVER['SCRIPT_NAME']."?content_id=".$gContent->mContentId;
 	include_once LIBERTY_PKG_INCLUDE_PATH.'comments_inc.php';
 }
 

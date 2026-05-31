@@ -37,7 +37,7 @@
 									{if $gBitSystem->isFeatureActive('stock_list_title')}
 										{$gal.title|truncate|escape}
 									{else}
-										{tr}Assembly{/tr} {$gal.assembly_id}
+										{tr}Assembly{/tr} {$gal.content_id}
 									{/if}
 								</a>
 								{if $gal.is_hidden|default:'n' == 'y' || $gal.is_private|default:'n' == 'y' || $gal.access_answer|default:false}

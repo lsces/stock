@@ -32,7 +32,7 @@ $errors           = [];
 $parent = new StockAssembly( $parentAssemblyId, null );
 $parent->load();
 if( !$parent->isValid() || empty( $parent->mContentId ) ) {
-	$errors[] = "Parent assembly $parentAssemblyId not found or has no content_id — check the assembly_id.";
+	$errors[] = "Parent assembly $parentAssemblyId not found or has no content_id.";
 } elseif( !file_exists( $csvFile ) ) {
 	$errors[] = "File not found: $csvFile";
 } else {

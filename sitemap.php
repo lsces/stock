@@ -18,7 +18,7 @@ if( $galleries = $gallery->getList( $listHash ) ) {
 	foreach( $galleries as $row ) {
 		$url = StockAssembly::getDisplayUrlFromHash( $row );
 		if( empty( $url ) ) continue;
-		$gSiteMapHash['g'.$row['assembly_id']] = [
+		$gSiteMapHash['g'.$row['content_id']] = [
 			'loc'        => BIT_BASE_URI . $url,
 			'lastmod'    => date( 'Y-m-d', $row['last_modified'] ),
 			'changefreq' => 'monthly',

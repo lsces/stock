@@ -64,9 +64,8 @@ if( empty( $klidMap ) ) {
 
 		// Skip if assembly already exists by title
 		if( $gBitDb->getOne(
-			"SELECT sa.`content_id` FROM `".BIT_DB_PREFIX."stock_assembly` sa
-			 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sa.`content_id`
-			 WHERE lc.`title` = ?",
+			"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
+			 WHERE lc.`content_type_guid`='".STOCKASSEMBLY_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
 			[ $title ]
 		) ) {
 			$skipped++;

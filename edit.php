@@ -37,7 +37,7 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 		// user cancelled - just continue on, doing nothing
 	} elseif( empty( $_REQUEST['confirm'] ) ) {
 		$formHash['delete'] = true;
-		$formHash['assembly_id'] = $gContent->mAssemblyId;
+		$formHash['content_id'] = $gContent->mContentId;
 		$formHash['input'] = [
 			'<label><input name="recurse" value="" type="radio" checked="checked" /> '.KernelTools::tra( 'Delete only components in this assembly. Sub-assemblies will not be removed.' ).'</label>',
 			'<label><input name="recurse" value="all" type="radio" /> '.KernelTools::tra( 'Permanently delete all contents, even if they appear in other assemblies.' ).'</label>',

@@ -40,10 +40,10 @@ if( $gBitSystem->isPackageActive( 'stock' ) ) { // && $gBitUser->hasPermission( 
 	function stock_expunge_user( $pObject ) {
 		global $gBitDb;
 		if( !empty( $pObject->mUserId ) ) {
-			$query = "SELECT fg.`content_id` FROM `".BIT_DB_PREFIX."stock_assembly` fg INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(fg.`content_id`=lc.`content_id`) WHERE lc.`user_id`=?";
+			$query = "SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc WHERE lc.`content_type_guid`='".STOCKASSEMBLY_CONTENT_TYPE_GUID."' AND lc.`user_id`=?";
 			if( $galleries = $gBitDb->getCol( $query, [ $pObject->mUserId ] ) ) {
 				foreach( $galleries as $contentId ) {
-					$delGallery = new StockAssembly( null, $contentId );
+					$delGallery = new StockAssembly( $contentId );
 					if( $delGallery->load() ) {
 						$delGallery->expunge();
 					}
