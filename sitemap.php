@@ -33,7 +33,7 @@ if( $components = $component->getList( $listHash ) ) {
 	foreach( $components as $row ) {
 		$url = StockComponent::getDisplayUrlFromHash( $row );
 		if( empty( $url ) ) continue;
-		$gSiteMapHash['i'.$row['component_id']] = [
+		$gSiteMapHash['i'.$row['content_id']] = [
 			'loc'        => BIT_BASE_URI . $url,
 			'lastmod'    => date( 'Y-m-d', $row['last_modified'] ),
 			'changefreq' => 'monthly',

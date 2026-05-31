@@ -78,10 +78,9 @@ class StockAssembly extends StockBase {
 		if( !empty( $pXrefInfo['xref'] ) ) {
 			if( $comp = $this->mDb->getRow(
 				"SELECT lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`, pck.`xkey_ext` AS `pack_size_ext`
-				 FROM `".BIT_DB_PREFIX."stock_component` sc
-				 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sc.`content_id`
-				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = sc.`content_id` AND pck.`item` = 'PCK'
-				 WHERE sc.`component_id` = ?",
+				 FROM `".BIT_DB_PREFIX."liberty_content` lc
+				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PCK'
+				 WHERE lc.`content_id` = ?",
 				[ (int)$pXrefInfo['xref'] ]
 			) ) {
 				$pXrefInfo['xref_title'] = $comp['title'];
@@ -101,11 +100,10 @@ class StockAssembly extends StockBase {
 			if( $componentIds ) {
 				$placeholders = implode( ',', array_fill( 0, count( $componentIds ), '?' ) );
 				$components = $this->mDb->getAssoc(
-					"SELECT sc.`component_id`, lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`, pck.`xkey_ext` AS `pack_size_ext`
-					 FROM `".BIT_DB_PREFIX."stock_component` sc
-					 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sc.`content_id`
-					 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = sc.`content_id` AND pck.`item` = 'PCK'
-					 WHERE sc.`component_id` IN ($placeholders)",
+					"SELECT lc.`content_id`, lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`, pck.`xkey_ext` AS `pack_size_ext`
+					 FROM `".BIT_DB_PREFIX."liberty_content` lc
+					 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PCK'
+					 WHERE lc.`content_id` IN ($placeholders)",
 					$componentIds
 				);
 				foreach( $this->mInfo['quantity'] as &$row ) {
@@ -309,11 +307,10 @@ class StockAssembly extends StockBase {
 
 			$this->mItems = [];
 
-			$query = "SELECT lc.`content_id` AS `has_key`, fgim.*, lc.*, lct.*, fi.`component_id`, ufm.`favorite_content_id` AS is_favorite $selectSql
+			$query = "SELECT lc.`content_id` AS `has_key`, fgim.*, lc.*, lct.*, ufm.`favorite_content_id` AS is_favorite $selectSql
 					FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
 						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( lc.`content_id`=fgim.`item_content_id` )
 						INNER JOIN `".BIT_DB_PREFIX."liberty_content_types` lct ON ( lct.`content_type_guid`=lc.`content_type_guid` )
-						LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_component` fi ON ( fgim.`item_content_id`=fi.`content_id` )
 						$joinSql
 						LEFT OUTER JOIN `".BIT_DB_PREFIX."users_favorites_map` ufm ON ( ufm.`favorite_content_id`=lc.`content_id` AND lc.`user_id`=ufm.`user_id` )
 					WHERE fgim.`assembly_content_id` = ? $whereSql

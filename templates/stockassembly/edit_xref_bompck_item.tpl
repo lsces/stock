@@ -14,7 +14,7 @@
 				{formlabel label="Component"}
 				{forminput}
 					<p class="form-control-static">
-						<a href="{$smarty.const.STOCK_PKG_URL}view_component.php?component_id={$xrefInfo.xref|escape}">{$xrefInfo.xref_title|default:$xrefInfo.xref|escape}</a>
+						<a href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$xrefInfo.xref|escape}">{$xrefInfo.xref_title|default:$xrefInfo.xref|escape}</a>
 					</p>
 				{/forminput}
 			</div>

@@ -103,12 +103,12 @@ abstract class StockBase extends LibertyContent
 				if ( $parents['pre_t'] == 'stockassembly' ) {
 					$ret['previous_gallery_id'] = $parents['previous'];
 				} else {
-					$ret['previous_component_id'] = $parents['previous'];
+					$ret['previous_content_id'] = $parents['previous'];
 				}
 				if ( $parents['next_t'] == 'stockassembly' ) {
 					$ret['next_gallery_id'] = $parents['next'];
-				}else {
-					$ret['next_component_id'] = $parents['previous'];
+				} else {
+					$ret['next_content_id'] = $parents['next'];
 				}
 			}
 		}

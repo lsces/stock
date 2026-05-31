@@ -4,7 +4,7 @@
  *
  * CSV column layout (0-based):
  *   0  assembly_title   Kit / assembly name
- *   1  component_title  Component name (must already exist in stock_component)
+ *   1  component_title  Component name (must already exist as a stockcomponent content item)
  *   2  quantity_value   Numeric quantity in BOM  (optional, default 1)
  *   3  quantity_item  SGL / PCK / SHT / VOL   (optional, default SGL)
  *   4  item_position    Float position (e.g. 1.1, 1.2, 2.1) (optional)
@@ -85,10 +85,9 @@ function StockAssemblyBatchLoad( string $assemblyTitle, array $pRows ): array {
 function _stockImportFindComponent( string $title ): ?int {
 	global $gBitDb;
 	$contentId = $gBitDb->getOne(
-		"SELECT fi.`content_id`
-		 FROM `".BIT_DB_PREFIX."stock_component` fi
-		 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = fi.`content_id`
-		 WHERE lc.`title` = ?",
+		"SELECT lc.`content_id`
+		 FROM `".BIT_DB_PREFIX."liberty_content` lc
+		 WHERE lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
 		[ $title ]
 	);
 	return $contentId ? (int)$contentId : null;

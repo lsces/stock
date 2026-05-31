@@ -17,13 +17,11 @@ define('STOCKCOMPONENT_CONTENT_TYPE_GUID', 'stockcomponent');
  * @package stock
  */
 class StockComponent extends StockBase {
-	public $mComponentId;
 	protected $mXrefTypeKey = 'stockcomponent_types';
 
-	public function __construct($pComponentId = null, $pContentId = null) {
+	public function __construct($pContentId = null) {
 		parent::__construct();
 		$this->mContentTypeGuid = STOCKCOMPONENT_CONTENT_TYPE_GUID;
-		$this->mComponentId = (int)$pComponentId;
 		$this->mContentId = (int)$pContentId;
 
 		$this->registerContentType(
@@ -44,32 +42,14 @@ class StockComponent extends StockBase {
 		$this->mAdminContentPerm  = 'p_stock_admin';
 	}
 
-	public function __sleep() {
-		return array_merge( parent::__sleep(), [ 'mComponentId' ] );
-	}
-
 	public static function lookup( $pLookupHash ) {
-		global $gBitDb;
 		$ret = null;
-
 		$lookupContentId = null;
-		if( !empty($pLookupHash['component_id']) && is_numeric($pLookupHash['component_id']) ) {
-			if( $lookup = $gBitDb->getRow(
-				"SELECT lc.`content_id`, lc.`content_type_guid` FROM `".BIT_DB_PREFIX."stock_component` fi
-				 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id`=fi.`content_id`)
-				 WHERE `component_id`=?",
-				[ $pLookupHash['component_id'] ]
-			) ) {
-				$lookupContentId   = $lookup['content_id'];
-				$lookupContentGuid = $lookup['content_type_guid'];
-			}
-		} elseif( !empty($pLookupHash['content_id']) && is_numeric($pLookupHash['content_id']) ) {
-			$lookupContentId   = $pLookupHash['content_id'];
-			$lookupContentGuid = null;
+		if( !empty($pLookupHash['content_id']) && is_numeric($pLookupHash['content_id']) ) {
+			$lookupContentId = (int)$pLookupHash['content_id'];
 		}
-
 		if( static::verifyId( $lookupContentId ) ) {
-			$ret = static::getLibertyObject( $lookupContentId, $lookupContentGuid );
+			$ret = static::getLibertyObject( $lookupContentId, STOCKCOMPONENT_CONTENT_TYPE_GUID );
 		}
 		return $ret;
 	}
@@ -79,26 +59,19 @@ class StockComponent extends StockBase {
 			$selectSql = $joinSql = $whereSql = '';
 			$bindVars = [];
 
-			if( @$this->verifyId( $this->mComponentId ) ) {
-				$whereSql = " WHERE fi.`component_id` = ?";
-				$bindVars[] = $this->mComponentId;
-			} elseif( @$this->verifyId( $this->mContentId ) ) {
-				$whereSql = " WHERE fi.`content_id` = ?";
-				$bindVars[] = $this->mContentId;
-			}
+			$whereSql = " WHERE lc.`content_id` = ? AND lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."'";
+			$bindVars[] = $this->mContentId;
 
 			$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
 
-			$sql = "SELECT fi.*, lc.* $selectSql
+			$sql = "SELECT lc.* $selectSql
 						, uue.`login` AS `modifier_user`, uue.`real_name` AS `modifier_real_name`
 						, uuc.`login` AS `creator_user`, uuc.`real_name` AS `creator_real_name`
-					FROM `".BIT_DB_PREFIX."stock_component` fi
-						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id` = fi.`content_id`)
+					FROM `".BIT_DB_PREFIX."liberty_content` lc
 						LEFT JOIN `".BIT_DB_PREFIX."users_users` uue ON (uue.`user_id` = lc.`modifier_user_id`)
 						LEFT JOIN `".BIT_DB_PREFIX."users_users` uuc ON (uuc.`user_id` = lc.`user_id`) $joinSql
 					$whereSql";
 			if( $this->mInfo = $this->mDb->getRow( $sql, $bindVars ) ) {
-				$this->mComponentId     = $this->mInfo['component_id'];
 				$this->mContentId       = $this->mInfo['content_id'];
 				$this->mContentTypeGuid = $this->mInfo['content_type_guid'];
 				$this->mInfo['creator'] = $this->mInfo['creator_real_name'] ?? $this->mInfo['creator_user'];
@@ -126,16 +99,8 @@ class StockComponent extends StockBase {
 		if( $this->verifyComponentData( $pParamHash ) ) {
 			$this->StartTrans();
 			if( LibertyContent::store( $pParamHash ) ) {
-				$this->mContentId        = $pParamHash['content_id'];
+				$this->mContentId          = $pParamHash['content_id'];
 				$this->mInfo['content_id'] = $this->mContentId;
-				if( !$this->componentExistsInDatabase() ) {
-					$this->mComponentId        = $this->mDb->GenID('stock_component_id_seq');
-					$this->mInfo['component_id'] = $this->mComponentId;
-					$this->mDb->getOne(
-						"INSERT INTO `".BIT_DB_PREFIX."stock_component` (`component_id`, `content_id`) VALUES (?,?)",
-						[ $this->mComponentId, $this->mContentId ]
-					);
-				}
 				$this->CompleteTrans();
 			} else {
 				$this->mDb->RollbackTrans();
@@ -148,12 +113,9 @@ class StockComponent extends StockBase {
 		if( $this->isValid() ) {
 			$this->StartTrans();
 			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `item_content_id` = ?", [ $this->mContentId ] );
-			$this->mDb->getOne( "UPDATE `".BIT_DB_PREFIX."stock_assembly` SET `preview_content_id`=null WHERE `preview_content_id` = ?", [ $this->mContentId ] );
-			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_component` WHERE `content_id` = ?", [ $this->mContentId ] );
 			if( LibertyContent::expunge() ) {
 				$this->CompleteTrans();
-				$this->mComponentId = null;
-				$this->mContentId   = null;
+				$this->mContentId = null;
 			} else {
 				$this->mDb->RollbackTrans();
 			}
@@ -162,28 +124,7 @@ class StockComponent extends StockBase {
 	}
 
 	public function isValid() {
-		return @$this->verifyId( $this->mComponentId ) || @$this->verifyId( $this->mContentId );
-	}
-
-	public function isLocked(): bool {
-		$ret = false;
-		if( $this->verifyId( $this->mComponentId ) ) {
-			if( empty( $this->mInfo ) ) {
-				$this->load();
-			}
-			$ret = (bool)$this->getField( 'flag', false );
-		}
-		return $ret;
-	}
-
-	public function componentExistsInDatabase(): bool {
-		if( $this->isValid() && $this->mComponentId ) {
-			return $this->mDb->getOne(
-				"SELECT COUNT(`component_id`) FROM `".BIT_DB_PREFIX."stock_component` WHERE `component_id` = ?",
-				[ $this->mComponentId ]
-			) > 0;
-		}
-		return false;
+		return @$this->verifyId( $this->mContentId );
 	}
 
 	public function getList( &$pListHash ) {
@@ -193,14 +134,16 @@ class StockComponent extends StockBase {
 		$ret = $bindVars = [];
 		$selectSql = $whereSql = $joinSql = '';
 
+		$whereSql .= " AND lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."'";
+
 		if( @$this->verifyId( $pListHash['user_id'] ?? 0 ) ) {
 			$whereSql .= " AND lc.`user_id` = ? ";
 			$bindVars[] = (int)$pListHash['user_id'];
 		}
 
-		if( @$this->verifyId( $pListHash['assembly_id'] ?? 0 ) ) {
-			$whereSql .= " AND fg.`assembly_id` = ? ";
-			$bindVars[] = (int)$pListHash['assembly_id'];
+		if( @$this->verifyId( $pListHash['assembly_content_id'] ?? 0 ) ) {
+			$whereSql .= " AND tfgim2.`assembly_content_id` = ? ";
+			$bindVars[] = (int)$pListHash['assembly_content_id'];
 		}
 
 		if( !empty( $pListHash['search'] ) ) {
@@ -221,27 +164,22 @@ class StockComponent extends StockBase {
 		}
 
 		$pListHash['cant'] = (int)$this->mDb->getOne(
-			"SELECT COUNT(DISTINCT fi.`component_id`)
-			 FROM `".BIT_DB_PREFIX."stock_component` fi
-				INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (fi.`content_id` = lc.`content_id`)
+			"SELECT COUNT(DISTINCT lc.`content_id`)
+			 FROM `".BIT_DB_PREFIX."liberty_content` lc
 				INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON (uu.`user_id` = lc.`user_id`) $joinSql
 				LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)
-				LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly` fg ON (fg.`content_id`=tfgim2.`assembly_content_id`)
 			$whereSql",
 			$bindVars
 		);
 
-		$query = "SELECT fi.`component_id` AS `hash_key`, fi.*, lc.*, fg.`assembly_id`, uu.`login`, uu.`real_name` $selectSql
-				FROM `".BIT_DB_PREFIX."stock_component` fi
-					INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (fi.`content_id` = lc.`content_id`)
+		$query = "SELECT lc.`content_id` AS `hash_key`, lc.*, uu.`login`, uu.`real_name` $selectSql
+				FROM `".BIT_DB_PREFIX."liberty_content` lc
 					INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON (uu.`user_id` = lc.`user_id`) $joinSql
 					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)
-					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly` fg ON (fg.`content_id`=tfgim2.`assembly_content_id`)
 				$whereSql $orderby";
 		if( $rows = $this->mDb->query( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'] ) ) {
 			foreach( $rows as $row ) {
-				$row['hash_key']      = $row['component_id'];
-				$row['display_url']   = static::getDisplayUrlFromHash( $row );
+				$row['display_url']    = static::getDisplayUrlFromHash( $row );
 				$ret[$row['hash_key']] = $row;
 			}
 		}
@@ -256,25 +194,19 @@ class StockComponent extends StockBase {
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		global $gBitSystem;
 		$ret = '';
-		if( BitBase::verifyId( $pParamHash['component_id'] ?? 0 ) ) {
-			$ret = $gBitSystem->isFeatureActive( 'pretty_urls' )
-				? STOCK_PKG_URL.'component/'.$pParamHash['component_id']
-				: STOCK_PKG_URL.'view_component.php?component_id='.$pParamHash['component_id'];
-		} elseif( BitBase::verifyId( $pParamHash['content_id'] ?? 0 ) ) {
+		if( BitBase::verifyId( $pParamHash['content_id'] ?? 0 ) ) {
 			$ret = STOCK_PKG_URL.'view_component.php?content_id='.$pParamHash['content_id'];
 		}
 		return $ret;
 	}
 
 	public function getDisplayUrl() {
-		$info = &$this->mInfo;
-		$info['component_id'] = $this->mComponentId;
-		return static::getDisplayUrlFromHash( $info );
+		return static::getDisplayUrlFromHash( $this->mInfo );
 	}
 
 	public function getEditUrl( $pContentId = null, $pMixed = null ): string {
-		if( $this->verifyId( $this->mComponentId ) ) {
-			return STOCK_PKG_URL.'edit_component.php?component_id='.$this->mComponentId;
+		if( $this->verifyId( $this->mContentId ) ) {
+			return STOCK_PKG_URL.'edit_component.php?content_id='.$this->mContentId;
 		}
 		return STOCK_PKG_URL.'edit_component.php';
 	}
@@ -297,8 +229,8 @@ class StockComponent extends StockBase {
 			if( empty( $ret ) && $pDefault ) {
 				global $gLibertySystem;
 				$ret = $gLibertySystem->getContentTypeName( $pHash['content_type_guid'] ?? 'empty' );
-				if( !empty( $pHash['component_id'] ) ) {
-					$ret .= ' '.$pHash['component_id'];
+				if( !empty( $pHash['content_id'] ) ) {
+					$ret .= ' '.$pHash['content_id'];
 				}
 			}
 			return $ret;

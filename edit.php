@@ -72,20 +72,18 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 			$rowNum = 0;
 			while( ($cols = fgetcsv($fh, 0, ',', '"', '')) !== false ) {
 				$rowNum++;
-				$item = strtoupper( trim( $cols[0] ?? '' ) );
-				if( $item === '' || $item === 'ITEM' ) continue;
+				$componentTitle = trim( $cols[0] ?? '' );
+				if( $componentTitle === '' || strtolower( $componentTitle ) === 'component' ) continue;
+
+				$xorder  = (int)( $cols[1] ?? 0 );
+				$xkey    = trim( $cols[2] ?? '' );
+				$item    = strtoupper( trim( $cols[3] ?? 'SGL' ) );
+				$xkeyExt = trim( $cols[4] ?? '' ) ?: null;
+				$data    = trim( $cols[5] ?? '' ) ?: null;
 
 				if( !in_array( $item, $validItems ) ) {
-					$csvErrors[] = KernelTools::tra('Row')." $rowNum: ".KernelTools::tra('unknown item type')." '$item'";
-					$csvSkipped++;
-					continue;
+					$item = 'SGL';
 				}
-
-				$xorder         = (int)( $cols[1] ?? 0 );
-				$componentTitle = trim( $cols[2] ?? '' );
-				$xkey           = trim( $cols[3] ?? '' );
-				$xkeyExt        = trim( $cols[4] ?? '' ) ?: null;
-				$data           = trim( $cols[5] ?? '' ) ?: null;
 
 				if( empty( $componentTitle ) ) {
 					$csvErrors[] = KernelTools::tra('Row')." $rowNum: ".KernelTools::tra('empty component name');
@@ -94,9 +92,8 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 				}
 
 				$compId = $gBitDb->getOne(
-					"SELECT sc.`component_id` FROM `".BIT_DB_PREFIX."stock_component` sc
-					 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sc.`content_id`
-					 WHERE lc.`title` = ?",
+					"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
+					 WHERE lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
 					[ $componentTitle ]
 				);
 				if( !$compId ) {

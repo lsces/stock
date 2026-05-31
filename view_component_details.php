@@ -25,7 +25,7 @@ if( is_object( $gGallery ) && $gGallery->isCommentable() ) {
 	$comments_vars = [ 'stockcomponent' ];
 	$comments_prefix_var='stockcomponent:';
 	$comments_object_var='stockcomponent';
-	$comments_return_url = STOCK_PKG_URL."view_component.php?component_id=".$gContent->mContentId;
+	$comments_return_url = STOCK_PKG_URL."view_component.php?content_id=".$gContent->mContentId;
 	include_once LIBERTY_PKG_INCLUDE_PATH.'comments_inc.php';
 }
 

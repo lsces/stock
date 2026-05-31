@@ -14,7 +14,7 @@
 				{if $gContent->mAssemblyId}
 					<a class="btn btn-warning btn-block" href="{$smarty.const.STOCK_PKG_URL}edit.php?assembly_id={$gContent->mAssemblyId}">{booticon iname="fa-pen-to-square" iexplain="Edit"} {tr}Edit Assembly{/tr}</a>
 					<a class="btn btn-default btn-block" href="{$smarty.const.STOCK_PKG_URL}component_order.php?assembly_id={$gContent->mAssemblyId}">{booticon iname="fa-sort" iexplain="Order"} {tr}Component Order{/tr}</a>
-				{elseif $gContent->mComponentId}
+				{elseif $gContent->mContentId && $gContent->mContentTypeGuid == 'stockcomponent'}
 					<a class="btn btn-warning btn-block" href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$gContent->mContentId}">{booticon iname="fa-pen-to-square" iexplain="Edit"} {tr}Edit Component{/tr}</a>
 				{/if}
 			{/if}

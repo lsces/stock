@@ -2,7 +2,7 @@
 <tr class="{cycle values="even,odd"}">
 	<td>
 		{if $gContent->mInfo.$source[xref].xref > 0}
-			<a href="{$smarty.const.STOCK_PKG_URL}view_component.php?component_id={$gContent->mInfo.$source[xref].xref|escape}">{$gContent->mInfo.$source[xref].xref_title|default:$gContent->mInfo.$source[xref].xref|escape}</a>
+			<a href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$gContent->mInfo.$source[xref].xref|escape}">{$gContent->mInfo.$source[xref].xref_title|default:$gContent->mInfo.$source[xref].xref|escape}</a>
 		{else}
 			&nbsp;
 		{/if}

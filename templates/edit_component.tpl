@@ -2,14 +2,14 @@
 
 <div class="edit stock">
 	<div class="header">
-		<h1>{if $gContent->mComponentId}{tr}Edit Component{/tr}: {$gContent->getTitle()|escape}{else}{tr}Add New Component{/tr}{/if}</h1>
+		<h1>{if $gContent->mContentId}{tr}Edit Component{/tr}: {$gContent->getTitle()|escape}{else}{tr}Add New Component{/tr}{/if}</h1>
 	</div>
 
 	<div class="body">
 		{form}
 			{formfeedback error=$errors}
 
-			<input type="hidden" name="component_id" value="{$gContent->mComponentId}"/>
+			<input type="hidden" name="content_id" value="{$gContent->mContentId}"/>
 
 			<div class="form-group">
 				{formlabel label="Title" for="component-title"}

@@ -67,10 +67,9 @@ if( !file_exists( $csvFile ) ) {
 				}
 
 				$contentId = $gBitDb->getOne(
-					"SELECT sc.`content_id`
-					 FROM `".BIT_DB_PREFIX."stock_component` sc
-					 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sc.`content_id`
-					 WHERE lc.`title` = ?",
+					"SELECT lc.`content_id`
+					 FROM `".BIT_DB_PREFIX."liberty_content` lc
+					 WHERE lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
 					[ $componentTitle ]
 				);
 				if( !$contentId ) {

@@ -29,7 +29,7 @@ if( !empty($_REQUEST['save']) ) {
 		}
 		if( empty( $gContent->mErrors ) ) {
 			$url = $isNew
-				? STOCK_PKG_URL.'edit_component.php?component_id='.$gContent->mComponentId
+				? STOCK_PKG_URL.'edit_component.php?content_id='.$gContent->mContentId
 				: $gContent->getDisplayUrl();
 			header( 'Location: '.$url );
 			die;
@@ -42,7 +42,7 @@ if( !empty($_REQUEST['save']) ) {
 		// user cancelled
 	} elseif( empty( $_REQUEST['confirm'] ) ) {
 		$formHash['delete']       = true;
-		$formHash['component_id'] = $gContent->mComponentId;
+		$formHash['content_id'] = $gContent->mContentId;
 		$gBitSystem->confirmDialog( $formHash,
 			[
 				'confirm_item' => $gContent->getTitle(),
@@ -70,9 +70,9 @@ if( $gContent->mContentId ) {
 if( $gBitSystem->isFeatureActive( 'stock_show_all_to_admins' ) && $gBitUser->hasPermission( 'p_stock_admin' ) ) {
 	unset( $getHash['user_id'] );
 }
-$galleryTree = $gStockAssembly->generateList( $getHash, [ 'name' => 'assembly_id', 'id' => 'gallerylist', 'item_attributes' => [ 'class' => 'listingtitle' ], 'radio_checkbox' => true ], true );
+$galleryTree = $gStockAssembly->generateList( $getHash, [ 'name' => 'assembly_content_id', 'id' => 'gallerylist', 'item_attributes' => [ 'class' => 'listingtitle' ], 'radio_checkbox' => true ], true );
 $gBitSmarty->assign( 'galleryTree', $galleryTree );
-$gBitSmarty->assign( 'requested_gallery', !empty($_REQUEST['assembly_id']) ? $_REQUEST['assembly_id'] : null );
+$gBitSmarty->assign( 'requested_gallery', !empty($_REQUEST['assembly_content_id']) ? $_REQUEST['assembly_content_id'] : null );
 
 $gContent->mInfo['stockcomponent_types'] = $gContent->getXrefGroupList();
 

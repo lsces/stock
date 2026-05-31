@@ -46,18 +46,15 @@ function stockExpungeComponentByTitle( string $title ): bool {
 
 	$contentId = $gBitDb->getOne(
 		"SELECT lc.`content_id`
-		 FROM `".BIT_DB_PREFIX."stock_component` sc
-		 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sc.`content_id`
-		 WHERE lc.`title` = ?",
+		 FROM `".BIT_DB_PREFIX."liberty_content` lc
+		 WHERE lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
 		[ $title ]
 	);
 	if( !$contentId ) {
 		return false;
 	}
 
-	// StockComponent::expunge() handles component_map + stock_component;
-	// LibertyContent::expunge() now handles liberty_xref + liberty_content
-	$component = new StockComponent( null, (int)$contentId );
+	$component = new StockComponent( (int)$contentId );
 	$component->expunge();
 	return true;
 }
@@ -76,9 +73,8 @@ function stockImportSimpleComponent( array $data, int $rowNum ): array {
 
 	$exists = $gBitDb->getOne(
 		"SELECT lc.`content_id`
-		 FROM `".BIT_DB_PREFIX."stock_component` sc
-		 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = sc.`content_id`
-		 WHERE lc.`title` = ?",
+		 FROM `".BIT_DB_PREFIX."liberty_content` lc
+		 WHERE lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
 		[ $title ]
 	);
 	if( $exists ) {

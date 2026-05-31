@@ -28,7 +28,7 @@ if( is_object( $gGallery ) && $gGallery->isCommentable() ) {
 	$comments_vars = [ 'stockcomponent' ];
 	$comments_prefix_var='stockcomponent:';
 	$comments_object_var='stockcomponent';
-	$comments_return_url = $_SERVER['SCRIPT_NAME']."?component_id=" . $gContent->mComponentId ?? $gContent->mContentId;
+	$comments_return_url = $_SERVER['SCRIPT_NAME']."?content_id=".$gContent->mContentId;
 	include_once LIBERTY_PKG_INCLUDE_PATH.'comments_inc.php';
 }
 

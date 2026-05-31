@@ -1,0 +1,57 @@
+"ResCF-10kRQW","10K 0.25W",150
+"ResCF-1k8RQW","1K8 0.25W",59
+"ResCF-2k2RQW","2K2 0.25W",25
+"ResCF-100kRQW","100K 0.25W",22
+"ResWW-4R7/0.5W","4R7 0.5W",89
+"ResWW-1R2/0.5W","1R2 0.5W",95
+"ResWW-0R1/3W","0R1 3W",45
+"ResNet-10k4+C","10K 5-pin commoned resistor network",2
+"1N4002","1N4002",2472
+"1N4001","1N4001",17
+"UF4002","UF4002",11
+"1N4148","1N4148",3482
+"LED-3mmYLC","yellow LED low current 3mm",8
+"LED-3mmGLC","green LED low current 3mm",7
+"LED-3mmRLC","red LED low current 3mm",22
+"CapRE-470u/35V","470uF/35V electrolytic",4
+"CapRE-220u/25V","220uF 25V Radial Electrolytic Capacitor",37
+"CapRE-100u/25V","100uF/25V electrolytic",63
+"CapTB-10u/16V","10uF tantalum 2.5mm",44
+"CapTB-4.7u/16V","4.7uF/16V tantalum 2.5mm",31
+"CapRC-100n/50V2.5","100nF/0.1uF ceramic 2.5mm",12
+"CapRC-22p/100V2.5","22pF 100V 2.5mm Radial Ceramic capacitor",68
+"FDV304P","FDV304P/XP221P0501TR-G XML CBUS Transistor",248
+"STP55NF06L","STP55NF06L MOSFET",24
+"ZTX1149A","ZTX1149A PNP Transistor",87
+"2N4401","2N4401 NPN Transistor",14
+"MCP2562-I/P","MCP2551 CAN Xceiver",43
+"L7805CV","L7805 5v 1A Regulator",8
+"PIC18F26K80-I/SP","PIC18F26K80",104
+"MIC4426","MIC4426YN Driver",60
+"CD74HC238E","CD74HC238E Mux/Demux",43
+"TLC5917N","TLC5917IN LED Driver",49
+"R-78E5.0-0.5","R-78E5.0-0.5 5V 0.5A",2
+"RzPC-4M","4MHz 3 pin Resonator",54
+"SWTact-4.3mm","Tactile Switch 4.3mm Miniature Rectangular SPST",16
+"SWDIL-6w","DIL switch 6 Way 12 Pin",7
+"SRH-p1-36","Header 36 Way Single Row Plug 2.54mm",127
+"TB-3.5-2","Terminal Block 2 Way 10A 3.5mm Camden Type",52
+"Sock-SPCB-D25","D Type 25 Way Socket Straight PCB",3
+"Plug-SL-D25","D Type 25 Way Plug Solder Lug",4
+"BoxH-p1-2x13","Header 26 Way IDC Straight Boxed 2.54mm",7
+"TBSE-10A-3.5-4","4 way 10A 3.5mm Pitch Side Entry Header",11
+"TBPL-10A-3.5-4","4 Way 10A 3.5mm Pitch Free Plug",4
+"TBSE-10A-3.5-3","3 way 10A 3.5mm Pitch Side Entry Header",131
+"TBPL-10A-3.5-3","3 Way 10A 3.5mm Pitch Free Plug",212
+"Xyl-4MLP","4MHz Crystal",53
+"MCP2562-I/P","MCP2562-I/P CAN Transceiver",87
+"CANPAN PCB","CANPAN Printed Circuit Board",54
+"BagSS-75x85","Bag (M) 75x85",119
+"BagSS-140x140","Bag (L) 140x140",99
+"ASFoam","Antistatic Foam (whole sheets) 305x305x6mm",19
+,"CANPAN",1
+,"CANPAN Test Module",1
+"CapRE-2200u/35V","2200uF/35V electrolytic",0
+"SocDIL-28","28 way DIL socket 7.62mm",0
+"SocDIL-16","16 way DIL socket 7.62mm",0
+"SocDIL-8","8 way DIL socket 7.62mm",0
