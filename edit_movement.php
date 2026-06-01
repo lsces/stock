@@ -1,16 +1,16 @@
 <?php
 /**
- * Create or edit a stock movement. Handles header save, item add/remove,
- * CSV upload, and process.
- *
  * @package stock
+ * @subpackage functions
  */
 
 namespace Bitweaver\Stock;
 
+use Bitweaver\KernelTools;
+
 require_once '../kernel/includes/setup_inc.php';
 
-global $gBitSystem, $gBitSmarty, $gBitDb;
+global $gBitSystem, $gBitSmarty, $gBitUser, $gBitDb;
 
 include_once STOCK_PKG_INCLUDE_PATH.'movement_lookup_inc.php';
 
@@ -20,167 +20,196 @@ if( $gContent->isValid() ) {
 	$gBitSystem->verifyPermission( 'p_stock_create' );
 }
 
-$errors = [];
+// TODO: derive from liberty_xref_item WHERE content_type_guid='stockcomponent' AND x_group='quantity'
+$qtyTypes = [ 'SGL', 'PCK', 'SHT', 'VOL' ];
 
-if( !empty( $_REQUEST['save'] ) ) {
-	$isNew = empty( $_REQUEST['movement_id'] );
+// Movement reference types from DB — drives the type selector on create
+$refTypes = $gBitDb->getAssoc(
+	"SELECT xi.`item`, xi.`cross_ref_title`
+	 FROM `".BIT_DB_PREFIX."liberty_xref_item` xi
+	 JOIN `".BIT_DB_PREFIX."liberty_xref_group` xg ON xg.`x_group` = xi.`x_group` AND xg.`content_type_guid` = xi.`content_type_guid`
+	 WHERE xi.`content_type_guid` = '".STOCKMOVEMENT_CONTENT_TYPE_GUID."' AND xi.`x_group` = 'reference'
+	 ORDER BY xi.`item`"
+);
+
+if( !empty( $_REQUEST['fSave'] ) ) {
+	$isNew = !$gContent->isValid();
 	if( $gContent->store( $_REQUEST ) ) {
-		if( $isNew ) {
-			header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?movement_id='.$gContent->mMovementId );
-		} else {
-			header( 'Location: '.STOCK_PKG_URL.'list_movements.php' );
+		// On creation, immediately store the chosen movement type xref
+		if( $isNew && !empty( $_REQUEST['movement_type'] ) && isset( $refTypes[$_REQUEST['movement_type']] ) ) {
+			$typeHash = [
+				'content_id' => $gContent->mContentId,
+				'item'       => $_REQUEST['movement_type'],
+				'fAddXref'   => 1,
+			];
+			$gContent->storeXref( $typeHash );
 		}
+		header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
 		die;
 	}
-	$errors = $gContent->mErrors;
 
-} elseif( !empty( $_REQUEST['add_item'] ) && $gContent->isValid() ) {
-	$componentTitle = trim( $_REQUEST['component_title'] ?? '' );
-	$qty            = is_numeric( $_REQUEST['qty'] ?? '' ) ? (float)$_REQUEST['qty'] : 0;
-	$qtySrc         = in_array( $_REQUEST['qty_src'] ?? '', [ 'SGL', 'PCK', 'SHT', 'VOL' ] )
-	                  ? $_REQUEST['qty_src'] : 'SGL';
-
-	if( empty( $componentTitle ) ) {
-		$errors[] = 'Component title is required.';
-	} elseif( $qty < 0 ) {
-		$errors[] = 'Quantity cannot be negative.';
-	} else {
-		$contentId = $gBitDb->getOne(
-			"SELECT lc.`content_id`
-			 FROM `".BIT_DB_PREFIX."liberty_content` lc
-			 WHERE lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
-			[ $componentTitle ]
-		);
-		if( !$contentId ) {
-			$errors[] = "Component '$componentTitle' not found.";
-		} else {
-			$existingItems = $gContent->mInfo['items'] ?? [];
-			$nextPos = empty( $existingItems ) ? 1
-				: max( array_map( fn( $i ) => (int)( $i['item_position'] ?? 0 ), $existingItems ) ) + 1;
-			$gContent->addItem( (int)$contentId, $qty, $qtySrc, (float)$nextPos );
-			header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?movement_id='.$gContent->mMovementId );
-			die;
-		}
-	}
+} elseif( !empty( $_REQUEST['fReceived'] ) && $gContent->isValid() ) {
+	$gContent->markReceived();
+	header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
+	die;
 
 } elseif( !empty( $_REQUEST['upload_csv'] ) && $gContent->isValid() ) {
 	$file = $_FILES['csv_file'] ?? null;
 	if( !$file || $file['error'] !== UPLOAD_ERR_OK ) {
-		$errors[] = 'No file uploaded or upload error.';
+		$gContent->mErrors[] = KernelTools::tra( 'No file uploaded or upload error.' );
 	} else {
 		$handle = fopen( $file['tmp_name'], 'r' );
 		if( $handle === false ) {
-			$errors[] = 'Could not read uploaded file.';
+			$gContent->mErrors[] = KernelTools::tra( 'Could not read uploaded file.' );
 		} else {
 			$csvLoaded  = 0;
 			$csvSkipped = 0;
 			$csvErrors  = [];
 			$rowNum     = 0;
-			$existingItems = $gContent->mInfo['items'] ?? [];
-			$nextPos = empty( $existingItems ) ? 1
-				: max( array_map( fn( $i ) => (int)( $i['item_position'] ?? 0 ), $existingItems ) ) + 1;
+
+			// Seed xorder from any existing movement items so re-uploads append cleanly
+			$nextXorder = (int)$gBitDb->getOne(
+				"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
+				 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')",
+				[ $gContent->mContentId ]
+			) ?: 1;
+
 			while( ( $data = fgetcsv( $handle, 1000, ',', '"', '' ) ) !== false ) {
 				$rowNum++;
-				$componentTitle = trim( $data[0] ?? '' );
-				$qty            = isset( $data[2] ) && is_numeric( trim( $data[2] ) ) ? (float)trim( $data[2] ) : null;
 
-				if( empty( $componentTitle ) ) {
+				if( $rowNum === 1 ) {
+					// Header: from, ref, start_date (dd/mm/yy)
+					$from    = trim( $data[0] ?? '' );
+					$ref     = trim( $data[1] ?? '' );
+					$dateStr = trim( $data[2] ?? '' );
+
+					if( $ref !== '' ) {
+						// Update existing reference xref if already set (type selected on create), else insert
+						$existingXrefId = $gBitDb->getOne(
+							"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref`
+							 WHERE `content_id` = ? AND `item` IN ('REQN','TRANS','ORDER')
+							 ORDER BY `xorder`",
+							[ $gContent->mContentId ]
+						);
+						$refHash = [
+							'content_id' => $gContent->mContentId,
+							'item'       => 'TRANS',
+							'xkey'       => $ref,
+							'edit'       => $from,
+						];
+						if( $existingXrefId ) {
+							$refHash['xref_id'] = $existingXrefId;
+						} else {
+							$refHash['fAddXref'] = 1;
+						}
+						$gContent->storeXref( $refHash );
+					}
+
+					if( $dateStr !== '' ) {
+						$parts = explode( '/', $dateStr );
+						if( count( $parts ) === 3 ) {
+							$year = (int)$parts[2] < 100 ? 2000 + (int)$parts[2] : (int)$parts[2];
+							$ts   = mktime( 0, 0, 0, (int)$parts[1], (int)$parts[0], $year );
+							if( $ts ) {
+								$gBitDb->query(
+									"UPDATE `".BIT_DB_PREFIX."liberty_content` SET `event_time` = ? WHERE `content_id` = ?",
+									[ $ts, $gContent->mContentId ]
+								);
+							}
+						}
+					}
+					continue;
+				}
+
+				// Data rows: component name, quantity, [optional qty type]
+				$componentName = trim( $data[0] ?? '' );
+				$rawQty        = trim( $data[1] ?? '' );
+				$qtyOverride   = strtoupper( trim( $data[2] ?? '' ) );
+
+				if( $componentName === '' ) {
 					$csvSkipped++;
 					continue;
 				}
-				if( $qty === null || $qty < 0 ) {
+
+				// Take numeric part before any space
+				$qty = (float)$rawQty;
+				if( $qty <= 0 ) {
+					$csvErrors[] = "Row $rowNum: '$componentName' — invalid quantity '$rawQty', skipped.";
 					$csvSkipped++;
-					$csvErrors[] = "Row $rowNum: '$componentTitle' — invalid quantity, skipped.";
 					continue;
 				}
 
 				$contentId = $gBitDb->getOne(
 					"SELECT lc.`content_id`
 					 FROM `".BIT_DB_PREFIX."liberty_content` lc
-					 WHERE lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
-					[ $componentTitle ]
+					 WHERE lc.`content_type_guid` = 'stockcomponent'
+					 AND lc.`title` = ?",
+					[ $componentName ]
 				);
 				if( !$contentId ) {
+					$csvErrors[] = "Row $rowNum: '$componentName' not found, skipped.";
 					$csvSkipped++;
-					$csvErrors[] = "Row $rowNum: '$componentTitle' not found, skipped.";
 					continue;
 				}
 
-				$gContent->addItem( (int)$contentId, $qty, 'SGL', (float)$nextPos );
-				$nextPos++;
+				// Qty type: use CSV column 3 if valid, else read from component's existing xref
+				$qtySrc = in_array( $qtyOverride, $qtyTypes ) ? $qtyOverride : null;
+				if( !$qtySrc ) {
+					$placeholders = implode( ',', array_fill( 0, count( $qtyTypes ), '?' ) );
+					$qtySrc = $gBitDb->getOne(
+						"SELECT x.`item` FROM `".BIT_DB_PREFIX."liberty_xref` x
+						 WHERE x.`content_id` = ? AND x.`item` IN ($placeholders)
+						 ORDER BY x.`xorder`",
+						array_merge( [ (int)$contentId ], $qtyTypes )
+					) ?: 'SGL';
+				}
+
+				$itemHash = [
+					'content_id' => $gContent->mContentId,
+					'item'       => $qtySrc,
+					'xref'       => (int)$contentId,
+					'xkey'       => $qty,
+					'xorder'     => $nextXorder,
+				];
+				$gContent->storeXref( $itemHash );
+				$nextXorder++;
 				$csvLoaded++;
 			}
 			fclose( $handle );
+			$gContent->load();
 
 			$gBitSmarty->assign( 'csvLoaded',  $csvLoaded );
 			$gBitSmarty->assign( 'csvSkipped', $csvSkipped );
 			$gBitSmarty->assign( 'csvErrors',  $csvErrors );
-			$gContent->load();
 		}
-	}
-
-} elseif( !empty( $_REQUEST['process'] ) && $gContent->isValid() ) {
-	if( !$gContent->processMovement() ) {
-		$errors = $gContent->mErrors;
-	} else {
-		$gContent->load();
 	}
 
 } elseif( !empty( $_REQUEST['delete'] ) ) {
 	$gBitSystem->verifyPermission( 'p_stock_admin' );
-
 	if( !empty( $_REQUEST['cancel'] ) ) {
-		header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?movement_id='.$gContent->mMovementId );
+		header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
 		die;
 	} elseif( empty( $_REQUEST['confirm'] ) ) {
-		$formHash['delete']      = true;
-		$formHash['movement_id'] = $gContent->mMovementId;
-		$gBitSystem->confirmDialog( $formHash,
+		$gBitSystem->confirmDialog(
+			[ 'delete' => true, 'content_id' => $gContent->mContentId ],
 			[
 				'confirm_item' => $gContent->getTitle(),
-				'warning'      => 'Are you sure you want to delete this movement? ('.$gContent->getTitle().')',
-				'error'        => 'This cannot be undone!',
-			],
+				'warning'      => KernelTools::tra( 'Are you sure you want to delete this movement?' ).' ('.$gContent->getTitle().')',
+				'error'        => KernelTools::tra( 'This cannot be undone!' ),
+			]
 		);
 	} else {
 		$gContent->expunge();
 		header( 'Location: '.STOCK_PKG_URL.'list_movements.php' );
 		die;
 	}
-
-} else {
-	foreach( $_REQUEST as $key => $val ) {
-		if( str_starts_with( $key, 'remove_item_' ) ) {
-			$itemContentId = (int)substr( $key, 12 );
-			$gContent->removeItem( $itemContentId );
-			header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?movement_id='.$gContent->mMovementId );
-			die;
-		}
-	}
 }
 
-$isComplete = ( ( $gContent->mInfo['status'] ?? '' ) === 'complete' );
-$isPending  = ( ( $gContent->mInfo['status'] ?? '' ) === 'pending' );
-
-$sortMode = $_REQUEST['sort_mode'] ?? 'item_position_asc';
 if( $gContent->isValid() ) {
-	$gContent->mInfo['items'] = $gContent->loadItems( $sortMode );
+	$gContent->mInfo['movement_xref_groups'] = $gContent->getXrefGroupList();
 }
-$gBitSmarty->assign( 'sortMode', $sortMode );
 
-$gBitSmarty->assign( 'errors',     $errors );
-$gBitSmarty->assign( 'isComplete', $isComplete );
-$gBitSmarty->assign( 'isPending',  $isPending );
-$gBitSmarty->assign( 'statusOptions', [
-	'draft'     => 'Draft',
-	'pending'   => 'Pending',
-	'cancelled' => 'Cancelled',
-] );
-$gBitSmarty->assign( 'qtySrcOptions', [
-	'SGL' => 'Single unit',
-	'PCK' => 'Pack',
-	'SHT' => 'Sheet',
-	'VOL' => 'Volume',
-] );
+$gBitSmarty->assign( 'refTypes', $refTypes );
+$gBitSmarty->assign( 'errors',   $gContent->mErrors );
 
-$gBitSystem->display( 'bitpackage:stock/edit_movement.tpl', 'Edit Movement: '.$gContent->getTitle(), [ 'display_mode' => 'edit' ] );
+$gBitSystem->display( 'bitpackage:stock/edit_movement.tpl', KernelTools::tra( 'Edit Movement: ' ).$gContent->getTitle(), [ 'display_mode' => 'edit' ] );

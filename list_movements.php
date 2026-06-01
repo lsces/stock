@@ -11,13 +11,12 @@ global $gBitSystem, $gBitSmarty;
 
 $gBitSystem->verifyPermission( 'p_stock_view' );
 
-$movement    = new StockMovement();
-$listHash    = $_REQUEST;
+$movement     = new StockMovement();
+$listHash     = $_REQUEST;
 $movementList = $movement->getList( $listHash );
 
 $gBitSmarty->assign( 'listInfo',     $listHash['listInfo'] );
 $gBitSmarty->assign( 'movementList', $movementList );
-$gBitSmarty->assign( 'filterDir',    $_REQUEST['direction'] ?? '' );
-$gBitSmarty->assign( 'filterStatus', $_REQUEST['status']    ?? '' );
+$gBitSmarty->assign( 'filterType',   $_REQUEST['ref_type'] ?? '' );
 
 $gBitSystem->display( 'bitpackage:stock/list_movements.tpl', 'Movements', [ 'display_mode' => 'list' ] );

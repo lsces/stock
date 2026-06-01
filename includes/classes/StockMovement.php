@@ -115,6 +115,29 @@ class StockMovement extends LibertyContent {
 		return true;
 	}
 
+	public function loadXrefList(): void {
+		parent::loadXrefList();
+		if( !empty( $this->mInfo['quantity'] ) ) {
+			$componentIds = array_values( array_unique( array_filter( array_column( $this->mInfo['quantity'], 'xref' ) ) ) );
+			if( $componentIds ) {
+				$placeholders = implode( ',', array_fill( 0, count( $componentIds ), '?' ) );
+				$components   = $this->mDb->getAssoc(
+					"SELECT lc.`content_id`, lc.`title`, lc.`data`
+					 FROM `".BIT_DB_PREFIX."liberty_content` lc
+					 WHERE lc.`content_id` IN ($placeholders)",
+					$componentIds
+				);
+				foreach( $this->mInfo['quantity'] as &$row ) {
+					if( !empty( $row['xref'] ) && isset( $components[$row['xref']] ) ) {
+						$row['xref_title'] = $components[$row['xref']]['title'];
+						$row['xref_data']  = $components[$row['xref']]['data'];
+					}
+				}
+				unset( $row );
+			}
+		}
+	}
+
 	// Direction inferred from reference xref: REQN = out, TRANS/ORDER = in
 	public function getDirection(): string {
 		if( !empty( $this->mInfo['reference'] ) ) {
@@ -161,13 +184,14 @@ class StockMovement extends LibertyContent {
 			[ $pAssemblyContentId ]
 		);
 		foreach( $rows as $row ) {
-			$this->storeXref( [
+			$bomHash = [
 				'content_id' => $this->mContentId,
 				'item'       => $row['quantity_item'],
 				'xref'       => $row['item_content_id'],
 				'xkey'       => $row['quantity_value'] * $pKitCount,
 				'xorder'     => $row['item_position'],
-			] );
+			];
+			$this->storeXref( $bomHash );
 		}
 		$this->CompleteTrans();
 		return true;
@@ -180,6 +204,11 @@ class StockMovement extends LibertyContent {
 		$selectSql = $whereSql = $joinSql = '';
 
 		$whereSql = " AND lc.`content_type_guid` = '".STOCKMOVEMENT_CONTENT_TYPE_GUID."'";
+
+		if( !empty( $pListHash['ref_type'] ) && in_array( $pListHash['ref_type'], [ 'REQN', 'TRANS', 'ORDER' ] ) ) {
+			$joinSql  .= " INNER JOIN `".BIT_DB_PREFIX."liberty_xref` xrf ON xrf.`content_id` = lc.`content_id` AND xrf.`item` = ?";
+			$bindVars[] = $pListHash['ref_type'];
+		}
 
 		if( $this->verifyId( $pListHash['user_id'] ?? 0 ) ) {
 			$whereSql .= " AND lc.`user_id` = ?";
@@ -200,11 +229,18 @@ class StockMovement extends LibertyContent {
 			$whereSql = substr_replace( $whereSql, ' WHERE ', 0, 4 );
 		}
 
+		$X = BIT_DB_PREFIX;
 		$query = "SELECT lc.`content_id`, lc.`title`, lc.`created`, lc.`last_modified`, lc.`event_time`,
-						uu.`login`, uu.`real_name`
+						uu.`login`, uu.`real_name`,
+						(SELECT FIRST 1 x.`item` FROM `{$X}liberty_xref` x
+						 WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+						 ORDER BY x.`xorder`) AS ref_type,
+						(SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x
+						 WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+						 ORDER BY x.`xorder`) AS ref_key
 						$selectSql
-				FROM `".BIT_DB_PREFIX."liberty_content` lc
-					INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON uu.`user_id` = lc.`user_id`
+				FROM `{$X}liberty_content` lc
+					INNER JOIN `{$X}users_users` uu ON uu.`user_id` = lc.`user_id`
 					$joinSql
 				$whereSql $orderby";
 

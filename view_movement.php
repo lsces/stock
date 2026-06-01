@@ -21,9 +21,4 @@ if( !$gContent->isValid() ) {
 
 $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );
 
-$sortMode = $_REQUEST['sort_mode'] ?? 'item_position_asc';
-$gContent->mInfo['items'] = $gContent->loadItems( $sortMode );
-
-$gBitSmarty->assign( 'sortMode', $sortMode );
-
 $gBitSystem->display( 'bitpackage:stock/view_movement.tpl', $gContent->getTitle() );
