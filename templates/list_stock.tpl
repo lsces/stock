@@ -47,7 +47,7 @@
 		{/form}
 
 		{if $stockList}
-		<table class="table table-striped table-hover table-condensed">
+		<table class="table table-hover table-condensed">
 			<thead>
 				<tr>
 					<th>{tr}Component{/tr}</th>
@@ -60,7 +60,14 @@
 				</tr>
 			</thead>
 			<tbody>
+				{assign var=lastBomGroup value=-1}
 				{foreach from=$stockList item=comp}
+					{if $showBom && $comp.bom_group !== $lastBomGroup}
+					<tr class="active">
+						<th colspan="10">{tr}Group{/tr} {$comp.bom_group}</th>
+					</tr>
+					{assign var=lastBomGroup value=$comp.bom_group}
+					{/if}
 					{foreach from=$comp.stock key=qtype item=row name=stockRow}
 					{if $showBom}{assign var=remaining value=$row.level-($row.bom_qty*$kitCount)}{/if}
 					<tr{if $row.level < 0 || ($showBom && $remaining < 0)} class="danger"{elseif $row.level == 0} class="warning"{/if}>

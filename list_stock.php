@@ -38,11 +38,13 @@ if( $find !== '' ) {
 	$bindVars[] = '%'.strtoupper( $find ).'%';
 }
 
-$bomQtySelect  = $assemblyContentId
-	? ", MAX(CAST(bom.`xkey` AS DOUBLE PRECISION)) AS bom_qty"
-	: ", CAST(NULL AS DOUBLE PRECISION) AS bom_qty";
+$bomQtySelect = $assemblyContentId
+	? ", MAX(CAST(bom.`xkey` AS DOUBLE PRECISION)) AS bom_qty, MIN(bom.`xorder`) AS bom_xorder"
+	: ", CAST(NULL AS DOUBLE PRECISION) AS bom_qty, CAST(NULL AS INTEGER) AS bom_xorder";
 
-$bomQtyGroup   = $assemblyContentId ? "" : "";
+$orderBy = $assemblyContentId
+	? "ORDER BY MIN(bom.`xorder`), x.`item`"
+	: "ORDER BY lc.`title`, x.`item`";
 
 // Stock level per component per qty type, signed by movement direction
 $query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
@@ -67,7 +69,7 @@ $query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
 		WHERE lc.`content_type_guid` = 'stockcomponent'
 		$whereSql
 		GROUP BY lc.`content_id`, lc.`title`, lc.`data`, x.`item`
-		ORDER BY lc.`title`, x.`item`";
+		$orderBy";
 
 $rows = $gBitDb->query( $query, $bindVars );
 
@@ -76,12 +78,14 @@ $stockList = [];
 foreach( $rows as $row ) {
 	$cid = $row['content_id'];
 	if( !isset( $stockList[$cid] ) ) {
+		$bomXorder = $row['bom_xorder'] !== null ? (int)$row['bom_xorder'] : null;
 		$stockList[$cid] = [
 			'content_id'  => $cid,
 			'title'       => $row['title'],
 			'data'        => $row['data'],
 			'part_number' => $row['part_number'],
 			'display_url' => STOCK_PKG_URL.'view_component.php?content_id='.$cid,
+			'bom_group'   => $bomXorder !== null ? (int)floor( $bomXorder / 1000 ) : null,
 			'stock'       => [],
 		];
 	}
