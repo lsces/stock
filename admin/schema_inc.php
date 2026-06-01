@@ -2,7 +2,7 @@
 
 $tables = [
 
-'stock_assembly_component_map' => "
+'stock_assembly_map' => "
 	assembly_content_id I4 PRIMARY,
 	item_content_id I4 PRIMARY,
 	item_position N(10,3),

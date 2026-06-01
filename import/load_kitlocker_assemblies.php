@@ -85,7 +85,7 @@ if( empty( $klidMap ) ) {
 
 		// Add as child of the group assembly
 		$gBitDb->getOne(
-			"INSERT INTO `".BIT_DB_PREFIX."stock_assembly_component_map`
+			"INSERT INTO `".BIT_DB_PREFIX."stock_assembly_map`
 			 (`assembly_content_id`, `item_content_id`, `item_position`) VALUES (?,?,NULL)",
 			[ $groupContentId, $contentId ]
 		);

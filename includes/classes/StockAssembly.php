@@ -173,7 +173,7 @@ class StockAssembly extends StockBase {
 
 			$this->mInfo['num_components'] = $this->getComponentCount();
 			if( $this->getPreference( 'assembly_pagination' ) == STOCK_PAGINATION_POSITION_NUMBER ) {
-				$this->mInfo['num_pages'] = $this->mDb->getOne( "SELECT COUNT( distinct( floor(`item_position`) ) ) FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE assembly_content_id=?", [ $this->mContentId ] );
+				$this->mInfo['num_pages'] = $this->mDb->getOne( "SELECT COUNT( distinct( floor(`item_position`) ) ) FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE assembly_content_id=?", [ $this->mContentId ] );
 			} else {
 				$pagination = $this->getPreference( 'assembly_pagination' );
 				if( in_array( $pagination, [ STOCK_PAGINATION_AUTO_FLOW, STOCK_PAGINATION_SIMPLE_LIST ] ) ) {
@@ -212,7 +212,7 @@ class StockAssembly extends StockBase {
 			if( $pListHash['page'] != -1 ) {
 				if( $this->getLayout() == STOCK_PAGINATION_POSITION_NUMBER ) {
 					$query = "SELECT DISTINCT(FLOOR(`item_position`))
-							  FROM `".BIT_DB_PREFIX."stock_assembly_component_map`
+							  FROM `".BIT_DB_PREFIX."stock_assembly_map`
 							  WHERE assembly_content_id=?
 							  ORDER BY floor(item_position)";
 					$mantissa = $this->mDb->getOne( $query, [ $this->mContentId ], 1, $pListHash['page'] - 1 );
@@ -233,7 +233,7 @@ class StockAssembly extends StockBase {
 			$this->mItems = [];
 
 			$query = "SELECT fgim.*, lc.`user_id`, lct.*, ufm.`favorite_content_id` AS is_favorite $selectSql
-					FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
+					FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
 						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( lc.`content_id`=fgim.`item_content_id` )
 						INNER JOIN `".BIT_DB_PREFIX."liberty_content_types` lct ON ( lct.`content_type_guid`=lc.`content_type_guid` )
 						$joinSql
@@ -278,7 +278,7 @@ class StockAssembly extends StockBase {
 			$this->mItems = [];
 
 			$query = "SELECT lc.`content_id` AS `has_key`, fgim.*, lc.*, lct.*, ufm.`favorite_content_id` AS is_favorite $selectSql
-					FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
+					FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
 						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( lc.`content_id`=fgim.`item_content_id` )
 						INNER JOIN `".BIT_DB_PREFIX."liberty_content_types` lct ON ( lct.`content_type_guid`=lc.`content_type_guid` )
 						$joinSql
@@ -311,7 +311,7 @@ class StockAssembly extends StockBase {
 	public function getItemPage( $pItemContentId ) {
 		$ret = null;
 		if( empty( $this->mPaginationLookup ) ) {
-			$this->mPaginationLookup = $this->mDb->getAssoc( "SELECT `item_content_id`, floor(`item_position`) FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `assembly_content_id`=?", [ $this->mContentId ] );
+			$this->mPaginationLookup = $this->mDb->getAssoc( "SELECT `item_content_id`, floor(`item_position`) FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE `assembly_content_id`=?", [ $this->mContentId ] );
 		}
 		if( !empty( $this->mPaginationLookup[$pItemContentId] ) ) {
 			$ret = $this->mPaginationLookup[$pItemContentId];
@@ -339,7 +339,7 @@ class StockAssembly extends StockBase {
 			$paramHash['no_fatal'] = true;
 			$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, null, $paramHash );
 			$query = 'SELECT COUNT(*) AS "count"
-					FROM `'.BIT_DB_PREFIX."stock_assembly_component_map` fgim
+					FROM `'.BIT_DB_PREFIX."stock_assembly_map` fgim
 					INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( lc.`content_id`=fgim.`item_content_id` )
 					$joinSql WHERE `assembly_content_id` = ? $whereSql";
 			$rs = $this->mDb->getRow($query, $bindVars);
@@ -402,7 +402,7 @@ class StockAssembly extends StockBase {
 					$bindVars[] = $gBitUser->mUserId;
 				}
 				$query = "SELECT lc.`content_id`, lc.`content_type_guid`
-							FROM connectby('`".BIT_DB_PREFIX."stock_assembly_component_map`', '`item_content_id`', '`assembly_content_id`', ?, 0, '/') AS t(`cb_item_content_id` int, `cb_parent_content_id` int, `level` int, `branch` text)
+							FROM connectby('`".BIT_DB_PREFIX."stock_assembly_map`', '`item_content_id`', '`assembly_content_id`', ?, 0, '/') AS t(`cb_item_content_id` int, `cb_parent_content_id` int, `level` int, `branch` text)
 							INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id`=cb_item_content_id)
 							LEFT OUTER JOIN `".BIT_DB_PREFIX."gatekeeper_security_map` cgm ON (cgm.`content_id`=lc.`content_id`)
 							WHERE `cb_parent_content_id`=? $whereSql";
@@ -412,7 +412,7 @@ class StockAssembly extends StockBase {
 				}
 			} else {
 				$query = "SELECT fgim.`item_content_id`, lc.`content_type_guid`
-						FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
+						FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
 						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( fgim.`item_content_id`=lc.`content_id` )
 						WHERE fgim.`assembly_content_id` = ?
 						ORDER BY ".$this->mDb->convertSortmode('random');
@@ -476,7 +476,7 @@ class StockAssembly extends StockBase {
 			};
 			if( $rows = $this->mDb->query(
 				"SELECT fgim.`item_content_id`, fgim.`item_position`, lc.`title`
-				 FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
+				 FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
 				 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id` = fgim.`item_content_id`)
 				 WHERE fgim.`assembly_content_id` = ?
 				 ORDER BY $orderby",
@@ -493,7 +493,7 @@ class StockAssembly extends StockBase {
 	public function removeItem( $pContentId ) {
 		$ret = false;
 		if( $this->isValid() && @$this->verifyId( $pContentId ) ) {
-			$query = "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map`
+			$query = "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_map`
 					  WHERE `item_content_id`=? AND `assembly_content_id`=?";
 			$rs = $this->mDb->getOne($query, [ $pContentId, $this->mContentId ] );
 			$ret = true;
@@ -510,7 +510,7 @@ class StockAssembly extends StockBase {
 		global $gBitSystem;
 		$ret = false;
 		if( @$this->verifyId( $this->mContentId ) && @$this->verifyId( $pContentId ) && ( $this->mContentId != $pContentId ) && !$this->isInAssembly( $this->mContentId, $pContentId  )  && !$this->isInAssembly( $pContentId, $this->mContentId ) ) {
-			$query = "INSERT INTO `".BIT_DB_PREFIX."stock_assembly_component_map` (`item_content_id`, `assembly_content_id`, `item_position`) VALUES (?,?,?)";
+			$query = "INSERT INTO `".BIT_DB_PREFIX."stock_assembly_map` (`item_content_id`, `assembly_content_id`, `item_position`) VALUES (?,?,?)";
 			$rs = $this->mDb->getOne($query, [ $pContentId, $this->mContentId, $pPosition ] );
 			$query = "UPDATE `".BIT_DB_PREFIX."liberty_content` SET `last_modified`=? WHERE `content_id`=?";
 			$rs = $this->mDb->getOne( $query, [ $gBitSystem->getUTCTime(), $this->mContentId ] );
@@ -533,7 +533,7 @@ class StockAssembly extends StockBase {
 						// make sure we have a valid content_id before we exec
 						if( is_numeric( $this->mItems[$key]->mContentId ) ) {
 							$query = "SELECT COUNT(`item_content_id`) AS `other_gallery`
-									  FROM `".BIT_DB_PREFIX."stock_assembly_component_map`
+									  FROM `".BIT_DB_PREFIX."stock_assembly_map`
 									  WHERE `item_content_id`=? AND `assembly_content_id`!=?";
 							if( !($inOtherGallery = $this->mDb->getOne($query, [ $this->mItems[$key]->mContentId, $this->mContentId ] )) ) {
 								$this->mItems[$key]->expunge();
@@ -543,8 +543,8 @@ class StockAssembly extends StockBase {
 				}
 			}
 
-			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `assembly_content_id`=?", [ $this->mContentId ] );
-			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `item_content_id`=?", [ $this->mContentId ] );
+			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE `assembly_content_id`=?", [ $this->mContentId ] );
+			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE `item_content_id`=?", [ $this->mContentId ] );
 			if( LibertyContent::expunge() ) {
 				$this->CompleteTrans();
 			} else {
@@ -619,7 +619,7 @@ class StockAssembly extends StockBase {
 			$whereSql = '';
 			if( !empty( $pListHash['contain_item'] ) ) {
 				$selectSql = " , tfgim3.`item_content_id` AS `in_gallery` ";
-				$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim3 ON (tfgim3.`assembly_content_id`=lc.`content_id`) AND tfgim3.`item_content_id`=? ";
+				$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_map` tfgim3 ON (tfgim3.`assembly_content_id`=lc.`content_id`) AND tfgim3.`item_content_id`=? ";
 				$bindVars[] = $pListHash['contain_item'];
 				$containVars[] = $pListHash['contain_item'];
 			}
@@ -635,14 +635,14 @@ class StockAssembly extends StockBase {
 			$query =   "SELECT lc.`content_id` AS `hash_key`, lc.* $selectSql
 						FROM `".BIT_DB_PREFIX."liberty_content` lc
 							$joinSql
-						WHERE lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."' AND $whereSql NOT EXISTS (SELECT assembly_content_id FROM stock_assembly_component_map tfgim2 WHERE tfgim2.item_content_id=lc.content_id)
+						WHERE lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."' AND $whereSql NOT EXISTS (SELECT assembly_content_id FROM stock_assembly_map tfgim2 WHERE tfgim2.item_content_id=lc.content_id)
 						ORDER BY lc.title";
 			$rootContent = $gBitDb->GetAssoc( $query, $bindVars );
 
 			foreach( array_keys( $rootContent ) as $conId ) {
 				$splitVars = [];
 				$query = "SELECT branch AS hash_key, * $selectSql
-						  FROM connectby('`".BIT_DB_PREFIX."stock_assembly_component_map`', '`item_content_id`', '`assembly_content_id`', ?, 0, '/') AS t(cb_item_content_id int,cb_assembly_content_id int, level int, branch text)
+						  FROM connectby('`".BIT_DB_PREFIX."stock_assembly_map`', '`item_content_id`', '`assembly_content_id`', ?, 0, '/') AS t(cb_item_content_id int,cb_assembly_content_id int, level int, branch text)
 							INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=cb_item_content_id AND lc.`content_type_guid`='".STOCKASSEMBLY_CONTENT_TYPE_GUID."')
 							$joinSql
 						  ORDER BY branch, lc.`title`";
@@ -663,7 +663,7 @@ class StockAssembly extends StockBase {
 
 			if( !empty( $pListHash['contain_item'] ) ) {
 				$selectSql = " , tfgim3.`item_content_id` AS `in_gallery` ";
-				$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim3 ON (tfgim3.`assembly_content_id`=lc.`content_id`) AND tfgim3.`item_content_id`=? ";
+				$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_map` tfgim3 ON (tfgim3.`assembly_content_id`=lc.`content_id`) AND tfgim3.`item_content_id`=? ";
 				$bindVars[] = $pListHash['contain_item'];
 				$containVars[] = $pListHash['contain_item'];
 			}
@@ -684,19 +684,19 @@ class StockAssembly extends StockBase {
 								SELECT lcp.`content_id` AS assembly_content_id, lcp.`content_id` AS item_content_id, 0 AS BLEVEL, CAST( lcp.`title` AS VARCHAR(255) ) AS BRANCH, 0 AS gallery_parent_id
 								FROM `".BIT_DB_PREFIX."liberty_content` lcp
 								WHERE lcp.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."'
-								AND NOT EXISTS (SELECT assembly_content_id FROM `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim2 WHERE tfgim2.item_content_id=lcp.content_id)
+								AND NOT EXISTS (SELECT assembly_content_id FROM `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 WHERE tfgim2.item_content_id=lcp.content_id)
 
 								UNION ALL
 
 								SELECT G1.`item_content_id` AS assembly_content_id, G1.`item_content_id`, G.BLEVEL + 1, G.BRANCH || '/' || G1.`item_content_id` AS BRANCH, G1.`assembly_content_id` AS gallery_parent_id
-								FROM `".BIT_DB_PREFIX."stock_assembly_component_map` G1
+								FROM `".BIT_DB_PREFIX."stock_assembly_map` G1
 								JOIN GALLERY_TREE G ON G1.`assembly_content_id` = G.`item_content_id`
 								INNER JOIN `".BIT_DB_PREFIX."liberty_content` lcg1 ON(lcg1.`content_id`=G1.`item_content_id` AND lcg1.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."')
 							)
 							SELECT T.BRANCH AS hash_key, T.BLEVEL, lc.* $selectSql
 							FROM GALLERY_TREE T
 							INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id`=T.`item_content_id`)
-							LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` fgimo ON (fgimo.`assembly_content_id`=T.gallery_parent_id AND fgimo.`item_content_id`=T.assembly_content_id)
+							LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_map` fgimo ON (fgimo.`assembly_content_id`=T.gallery_parent_id AND fgimo.`item_content_id`=T.assembly_content_id)
 							$joinSql
 							WHERE lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."' $whereSql
 						  ORDER BY T.BRANCH, fgimo.`item_position`";
@@ -871,14 +871,14 @@ class StockAssembly extends StockBase {
 		if( $gBitDbType == 'mysql' ) {
 			// loser mysql without subselects
 			if( !empty( $pListHash['root_only'] ) ) {
-				$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)";
+				$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)";
 				$whereSql .= ' AND tfgim2.`item_content_id` IS null ';
 			}
 		}
 
 		if( !empty( $pListHash['contain_item'] ) ) {
 			$selectSql = " , tfgim3.`item_content_id` AS `in_gallery` ";
-			$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim3 ON (tfgim3.`assembly_content_id`=lc.`content_id`) AND tfgim3.`item_content_id`=? ";
+			$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_map` tfgim3 ON (tfgim3.`assembly_content_id`=lc.`content_id`) AND tfgim3.`item_content_id`=? ";
 			$bindVars[] = $pListHash['contain_item'];
 		}
 
@@ -896,9 +896,9 @@ class StockAssembly extends StockBase {
 
 		if( !empty( $pListHash['parent_content_id'] ) ) {
 			if( $gBitDbType != 'mysql' ) {
-				$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."stock_assembly_component_map` sacm WHERE sacm.`assembly_content_id`=? AND sacm.`item_content_id`=lc.`content_id`)";
+				$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."stock_assembly_map` sacm WHERE sacm.`assembly_content_id`=? AND sacm.`item_content_id`=lc.`content_id`)";
 			} else {
-				$joinSql .= " INNER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` sacmp ON sacmp.`item_content_id`=lc.`content_id`";
+				$joinSql .= " INNER JOIN `".BIT_DB_PREFIX."stock_assembly_map` sacmp ON sacmp.`item_content_id`=lc.`content_id`";
 				$whereSql .= " AND sacmp.`assembly_content_id`=?";
 			}
 			$bindVars[] = (int)$pListHash['parent_content_id'];
@@ -917,15 +917,15 @@ class StockAssembly extends StockBase {
 		if( $gBitDbType != 'mysql' ) {
 			// weed out empty galleries if we don't need them. DO NOT get clever and change the IN and EXISTS choices here.
 			if( empty( $pListHash['show_empty'] ) ) {
-				$whereSql .= " AND lc.`content_id` IN (SELECT `assembly_content_id` FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim WHERE fgim.`assembly_content_id`=lc.`content_id`)";
+				$whereSql .= " AND lc.`content_id` IN (SELECT `assembly_content_id` FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim WHERE fgim.`assembly_content_id`=lc.`content_id`)";
 			}
 			if( !empty( $pListHash['root_only'] ) ) {
-				$whereSql .= " AND NOT EXISTS (SELECT `assembly_content_id` FROM `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim2 WHERE tfgim2.`item_content_id`=lc.`content_id`)";
+				$whereSql .= " AND NOT EXISTS (SELECT `assembly_content_id` FROM `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 WHERE tfgim2.`item_content_id`=lc.`content_id`)";
 			}
 		} else {
 			// weed out empty galleries if we don't need them
 			if( empty( $pListHash['show_empty'] ) ) {
-				$mapJoin = "INNER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` fgim ON (fgim.`assembly_content_id`=lc.`content_id`)";
+				$mapJoin = "INNER JOIN `".BIT_DB_PREFIX."stock_assembly_map` fgim ON (fgim.`assembly_content_id`=lc.`content_id`)";
 			}
 		}
 
@@ -933,7 +933,7 @@ class StockAssembly extends StockBase {
 			//converted in prepGetList()
 			$sortSql .= " ORDER BY ".$this->mDb->convertSortmode( $pListHash['sort_mode'] )." ";
 		}
-		$selectSql .= ", (SELECT COUNT(*) FROM `".BIT_DB_PREFIX."stock_assembly_component_map` sacmc WHERE sacmc.`assembly_content_id` = lc.`content_id`) AS `child_count`";
+		$selectSql .= ", (SELECT COUNT(*) FROM `".BIT_DB_PREFIX."stock_assembly_map` sacmc WHERE sacmc.`assembly_content_id` = lc.`content_id`) AS `child_count`";
 
 		// Putting in the below hack because mssql cannot select distinct on a text blob column.
 		$selectSql .= $gBitDbType == 'mssql' ? " ,CAST(lc.`data` AS VARCHAR(250)) as `data` " : " ,lc.`data` ";

@@ -69,7 +69,7 @@ function StockAssemblyBatchLoad( string $assemblyTitle, array $pRows ): array {
 		// Update quantity_value and quantity_item on the map row just inserted
 		global $gBitDb;
 		$gBitDb->query(
-			"UPDATE `".BIT_DB_PREFIX."stock_assembly_component_map`
+			"UPDATE `".BIT_DB_PREFIX."stock_assembly_map`
 			 SET `quantity_value` = ?, `quantity_item` = ?
 			 WHERE `assembly_content_id` = ? AND `item_content_id` = ?",
 			[ $qtyValue, $qtySrc, $assembly->mContentId, $componentContentId ]

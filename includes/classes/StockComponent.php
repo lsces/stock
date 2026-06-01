@@ -112,7 +112,7 @@ class StockComponent extends StockBase {
 	public function expunge(): bool {
 		if( $this->isValid() ) {
 			$this->StartTrans();
-			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `item_content_id` = ?", [ $this->mContentId ] );
+			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE `item_content_id` = ?", [ $this->mContentId ] );
 			if( LibertyContent::expunge() ) {
 				$this->CompleteTrans();
 				$this->mContentId = null;
@@ -167,7 +167,7 @@ class StockComponent extends StockBase {
 			"SELECT COUNT(DISTINCT lc.`content_id`)
 			 FROM `".BIT_DB_PREFIX."liberty_content` lc
 				INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON (uu.`user_id` = lc.`user_id`) $joinSql
-				LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)
+				LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)
 			$whereSql",
 			$bindVars
 		);
@@ -175,7 +175,7 @@ class StockComponent extends StockBase {
 		$query = "SELECT lc.`content_id` AS `hash_key`, lc.*, uu.`login`, uu.`real_name` $selectSql
 				FROM `".BIT_DB_PREFIX."liberty_content` lc
 					INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON (uu.`user_id` = lc.`user_id`) $joinSql
-					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)
+					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)
 				$whereSql $orderby";
 		if( $rows = $this->mDb->query( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'] ) ) {
 			foreach( $rows as $row ) {

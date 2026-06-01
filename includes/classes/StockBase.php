@@ -75,7 +75,7 @@ abstract class StockBase extends LibertyContent
 		if( is_numeric( $pContentId ) ) {
 			$sql = "SELECT lc.`content_id` AS `hash_key`, lc.*
 					FROM `".BIT_DB_PREFIX."liberty_content` lc
-					INNER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` fgim ON (fgim.`assembly_content_id`=lc.`content_id`)
+					INNER JOIN `".BIT_DB_PREFIX."stock_assembly_map` fgim ON (fgim.`assembly_content_id`=lc.`content_id`)
 					WHERE fgim.`item_content_id` = ? AND lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."'";
 			$ret = $this->mDb->getAssoc( $sql, [ $pContentId ] );
 		}
@@ -85,7 +85,7 @@ abstract class StockBase extends LibertyContent
 				( SELECT fgim.`item_content_id` AS assembly_content_id,
 				LAG( fgim.`item_content_id`) OVER (ORDER BY fgim.`item_position`) AS PREVIOUS,
 				LEAD( fgim.`item_content_id` ) OVER (ORDER BY fgim.`item_position`) AS NEXT
-				FROM `".BIT_DB_PREFIX."stock_assembly_component_map` fgim
+				FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
 				WHERE fgim.`assembly_content_id` = ?
 				order by fgim.`item_position` )
 				SELECT pr.PREVIOUS, prec.`content_type_guid` AS PRE_T, pr.NEXT, posc.`content_type_guid` AS NEXT_T FROM TREE pr
@@ -143,7 +143,7 @@ not ready for primetime
 				$whereSql = '';
 
 				$query = "SELECT fg.assembly_id, branch
-						  FROM connectby('`".BIT_DB_PREFIX."stock_assembly_component_map`', '`assembly_content_id`', '`item_content_id`', ?, 0, '/') AS t(cb_item_content_id int,cb_assembly_content_id int, level int, branch text)
+						  FROM connectby('`".BIT_DB_PREFIX."stock_assembly_map`', '`assembly_content_id`', '`item_content_id`', ?, 0, '/') AS t(cb_item_content_id int,cb_assembly_content_id int, level int, branch text)
 							INNER JOIN `".BIT_DB_PREFIX."stock_assembly` fg ON (fg.`content_id`=cb_item_content_id)
 							INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=fg.`content_id`)
 						  ORDER BY level DESC, branch, lc.`title`";
@@ -165,7 +165,7 @@ not ready for primetime
 					$parent = $this->mDb->getRow(
 						"SELECT lc.`content_id`, lc.`title`
 						 FROM `".BIT_DB_PREFIX."liberty_content` lc
-						 INNER JOIN `".BIT_DB_PREFIX."stock_assembly_component_map` fgim ON (fgim.`assembly_content_id`=lc.`content_id`)
+						 INNER JOIN `".BIT_DB_PREFIX."stock_assembly_map` fgim ON (fgim.`assembly_content_id`=lc.`content_id`)
 						 WHERE fgim.`item_content_id`=? AND lc.`content_type_guid`='".STOCKASSEMBLY_CONTENT_TYPE_GUID."'",
 						[ $currentContentId ]
 					);
@@ -213,7 +213,7 @@ not ready for primetime
 		if( $this->isValid() ) {
 			$inGalleries = $this->mDb->getAssoc(
 				"SELECT `assembly_content_id`, `assembly_content_id`
-				 FROM `".BIT_DB_PREFIX."stock_assembly_component_map`
+				 FROM `".BIT_DB_PREFIX."stock_assembly_map`
 				 WHERE `item_content_id` = ?",
 				[ $this->mContentId ]
 			);
@@ -234,7 +234,7 @@ not ready for primetime
 									$pos = null;
 								} else {
 									$pos = $this->mDb->getOne(
-										"SELECT MAX(`item_position`) FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `assembly_content_id`=?",
+										"SELECT MAX(`item_position`) FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE `assembly_content_id`=?",
 										[ $contentId ]
 									) + 10;
 								}
@@ -251,7 +251,7 @@ not ready for primetime
 			// remove from any unchecked assemblies
 			foreach( array_keys( $inGalleries ) as $contentId ) {
 				$this->mDb->getOne(
-					"DELETE FROM `".BIT_DB_PREFIX."stock_assembly_component_map` WHERE `assembly_content_id` = ? AND `item_content_id` = ?",
+					"DELETE FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE `assembly_content_id` = ? AND `item_content_id` = ?",
 					[ $contentId, $this->mContentId ]
 				);
 			}
@@ -278,7 +278,7 @@ not ready for primetime
 				// without hitting a security_id. If there is clear path it returns true. If there is a security_id, then
 				// it determines if the current user has permission
 				$query = "SELECT branch,level,cb_item_content_id,cb_assembly_content_id
-						  FROM connectby('`".BIT_DB_PREFIX."stock_assembly_component_map`', '`assembly_content_id`', '`item_content_id`', ?, 0, '/') AS t(`cb_assembly_content_id` int,`cb_item_content_id` int, `level` int, `branch` text)
+						  FROM connectby('`".BIT_DB_PREFIX."stock_assembly_map`', '`assembly_content_id`', '`item_content_id`', ?, 0, '/') AS t(`cb_assembly_content_id` int,`cb_item_content_id` int, `level` int, `branch` text)
 						  WHERE `cb_assembly_content_id`=?
 						  ORDER BY branch
 						";
@@ -287,7 +287,7 @@ not ready for primetime
 				}
 			} else {
 				$sql = "SELECT count(`item_content_id`) as `item_count`
-						FROM `".BIT_DB_PREFIX."stock_assembly_component_map`
+						FROM `".BIT_DB_PREFIX."stock_assembly_map`
 						WHERE `assembly_content_id` = ? AND `item_content_id` = ?";
 				$rs = $this->mDb->getRow($sql, [ $pAssemblyContentId, $pItemContentId ] );
 				if ($rs['item_count'] > 0) {

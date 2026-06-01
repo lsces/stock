@@ -79,13 +79,13 @@ if( !$parent->isValid() || empty( $parent->mContentId ) ) {
 
 		// Always ensure parent link exists (safe to re-run)
 		$alreadyLinked = (int)$gBitDb->getOne(
-			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."stock_assembly_component_map`
+			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."stock_assembly_map`
 			 WHERE `assembly_content_id`=? AND `item_content_id`=?",
 			[ $parentContentId, $contentId ]
 		);
 		if( !$alreadyLinked ) {
 			$gBitDb->getOne(
-				"INSERT INTO `".BIT_DB_PREFIX."stock_assembly_component_map`
+				"INSERT INTO `".BIT_DB_PREFIX."stock_assembly_map`
 				 (`assembly_content_id`, `item_content_id`, `item_position`) VALUES (?,?,NULL)",
 				[ $parentContentId, $contentId ]
 			);
