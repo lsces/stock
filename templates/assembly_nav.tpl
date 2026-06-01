@@ -10,7 +10,7 @@
 			{if $breadCrumbs}
 				{foreach from=$breadCrumbs item=breadTitle key=breadId}
 					{if $breadId==$gContent->mContentId}<li class="active">{$breadTitle}</li>
-					{else}<li><a href="{$smarty.const.STOCK_PKG_URL}view.php?content_id={$breadId}">{$breadTitle}</a></li>{/if}
+					{else}<li><a href="{$smarty.const.STOCK_PKG_URL}view_assembly.php?content_id={$breadId}">{$breadTitle}</a></li>{/if}
 				{/foreach}
 			{/if}
 		</ol>

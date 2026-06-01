@@ -601,7 +601,7 @@ class StockAssembly extends StockBase {
 			$ret = STOCK_PKG_URL;
 			$ret .= $gBitSystem->isFeatureActive( 'pretty_urls' )
 				? 'assembly/'.$pParamHash['content_id']
-				: 'view.php?content_id='.$pParamHash['content_id'];
+				: 'view_assembly.php?content_id='.$pParamHash['content_id'];
 		}
 		return $ret;
 	}

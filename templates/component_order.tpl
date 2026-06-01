@@ -1,7 +1,7 @@
 {strip}
 <div class="edit stock">
 	<div class="header">
-		<h1>{tr}Parts List{/tr}: <a href="{$smarty.const.STOCK_PKG_URL}view.php?content_id={$gContent->mContentId}">{$gContent->getTitle()|escape}</a></h1>
+		<h1>{tr}Parts List{/tr}: <a href="{$smarty.const.STOCK_PKG_URL}view_assembly.php?content_id={$gContent->mContentId}">{$gContent->getTitle()|escape}</a></h1>
 	</div>
 
 	<div class="body">

@@ -2,10 +2,10 @@
 {if $gContent->hasUpdatePermission()}
 	<div class="floaticon">
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='icon' serviceHash=$gContent->mInfo}
-		<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit.php?content_id={$gContent->mContentId}">{booticon iname="fa-pen-to-square" iexplain="Edit Assembly"}</a>
+		<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php?content_id={$gContent->mContentId}">{booticon iname="fa-pen-to-square" iexplain="Edit Assembly"}</a>
 		<a title="{tr}Component Order{/tr}" href="{$smarty.const.STOCK_PKG_URL}component_order.php?content_id={$gContent->mContentId}">{booticon iname="fa-sort" iexplain="Component Order"}</a>
 		{if $gContent->hasAdminPermission()}
-			<a title="{tr}Delete Assembly{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit.php?content_id={$gContent->mContentId}&amp;delete=1">{booticon iname="fa-trash" iexplain="Delete Assembly"}</a>
+			<a title="{tr}Delete Assembly{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php?content_id={$gContent->mContentId}&amp;delete=1">{booticon iname="fa-trash" iexplain="Delete Assembly"}</a>
 		{/if}
 	</div>
 {/if}
