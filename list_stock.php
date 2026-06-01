@@ -61,6 +61,7 @@ $query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
 			$joinSql
 			INNER JOIN `{$X}liberty_xref` x ON x.`xref` = lc.`content_id`
 				AND x.`item` IN ('SGL','PCK','SHT','VOL')
+				AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
 			INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
 				AND mc.`content_type_guid` = 'stockmovement'
 		WHERE lc.`content_type_guid` = 'stockcomponent'

@@ -39,6 +39,10 @@
 					</label>
 				</div>
 				<button type="submit" class="btn btn-default btn-sm">{tr}Go{/tr}</button>
+				{if $showBom && $gBitUser->hasPermission('p_stock_create')}
+					<a class="btn btn-warning btn-sm"
+						href="{$smarty.const.STOCK_PKG_URL}add_requisition.php?assembly_content_id={$assemblyContentId}&amp;kit_count={$kitCount}">{tr}Create Requisition{/tr}</a>
+				{/if}
 			</div>
 		{/form}
 
@@ -66,12 +70,12 @@
 						<td rowspan="{$comp.stock|@count}">{$comp.data|escape}</td>
 						<td rowspan="{$comp.stock|@count}">{$comp.part_number|escape}</td>
 						{/if}
-						{if $showBom}<td class="text-right">{math equation="b*k" b=$row.bom_qty k=$kitCount format="%.3g"}</td>{/if}
+						{if $showBom}<td class="text-right">{math equation="b*k" b=$row.bom_qty k=$kitCount format="%.0f"}</td>{/if}
 						<td>{$qtype|escape}</td>
-						<td class="text-right">{$row.level|string_format:"%.3g"}</td>
+						<td class="text-right">{$row.level|string_format:"%.0f"}</td>
 						{if $showBom}
 							{assign var=remaining value=$row.level-($row.bom_qty*$kitCount)}
-							<td class="text-right{if $remaining < 0} text-danger{/if}">{$remaining|string_format:"%.3g"}</td>
+							<td class="text-right{if $remaining < 0} text-danger{/if}">{$remaining|string_format:"%.0f"}</td>
 						{/if}
 					</tr>
 					{/foreach}
