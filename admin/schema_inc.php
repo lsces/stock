@@ -2,42 +2,12 @@
 
 $tables = [
 
-'stock_assembly' => "
-	assembly_id I4 PRIMARY,
-	content_id I4,
-	rows_per_page I4,
-	cols_per_page I4,
-	preview_content_id I4,
-	component_comment C(1)
-",
-
 'stock_assembly_component_map' => "
 	assembly_content_id I4 PRIMARY,
 	item_content_id I4 PRIMARY,
 	item_position N(10,3),
 	quantity_value N(10,3) DEFAULT 1,
 	quantity_item C(8) DEFAULT 'SGL'
-",
-
-'stock_component' => "
-	component_id I4 PRIMARY,
-	content_id I4 NOTNULL
-",
-
-'stock_movement' => "
-	movement_id  I4 PRIMARY,
-	content_id   I4 NOTNULL,
-	direction    C(1) DEFAULT 'O',
-	status       C(20) DEFAULT 'draft',
-	parent_id    I4
-",
-
-'stock_movement_item' => "
-	movement_content_id  I4 PRIMARY,
-	item_content_id      I4 PRIMARY,
-	item_position        N(10,3),
-	quantity_value       N(10,3) DEFAULT 1,
-	quantity_item      C(8) DEFAULT 'SGL'
 ",
 
 ];
@@ -48,27 +18,12 @@ foreach( array_keys( $tables ) AS $tableName ) {
 	$gBitInstaller->registerSchemaTable( STOCK_PKG_NAME, $tableName, $tables[$tableName] );
 }
 
-$indices = [
-	'stock_assembly_id_idx'       => [ 'table' => 'stock_assembly',               'cols' => 'assembly_id',   'opts' => null ],
-	'stock_assembly_content_idx'  => [ 'table' => 'stock_assembly',               'cols' => 'content_id',    'opts' => [ 'UNIQUE' ] ],
-	'stock_component_id_idx'           => [ 'table' => 'stock_component',      'cols' => 'component_id',          'opts' => null ],
-	'stock_component_content_idx'      => [ 'table' => 'stock_component',      'cols' => 'content_id',            'opts' => [ 'UNIQUE' ] ],
-	'stock_movement_content_idx'       => [ 'table' => 'stock_movement',       'cols' => 'content_id',            'opts' => [ 'UNIQUE' ] ],
-	'stock_movement_parent_idx'        => [ 'table' => 'stock_movement',       'cols' => 'parent_id',             'opts' => null ],
-];
-$gBitInstaller->registerSchemaIndexes( STOCK_PKG_NAME, $indices );
 
 $gBitInstaller->registerPackageInfo( STOCK_PKG_NAME, [
 	'description' => 'Stock manages manufacturing assemblies and components with supplier, quantity, and specification tracking.',
 	'license'     => '<a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>',
 ] );
 
-// ### Sequences
-$gBitInstaller->registerSchemaSequences( STOCK_PKG_NAME, [
-	'stock_assembly_id_seq'  => [ 'start' => 1 ],
-	'stock_component_id_seq' => [ 'start' => 1 ],
-	'stock_movement_id_seq'  => [ 'start' => 1 ],
-] );
 
 // ### Default Preferences
 $gBitInstaller->registerPreferences( STOCK_PKG_NAME, [
@@ -119,6 +74,7 @@ $gBitInstaller->registerUserPermissions( STOCK_PKG_NAME, [
 $gBitInstaller->registerContentObjects( STOCK_PKG_NAME, [
 	'StockAssembly'  => STOCK_PKG_CLASS_PATH.'StockAssembly.php',
 	'StockComponent' => STOCK_PKG_CLASS_PATH.'StockComponent.php',
+	'StockMovement'  => STOCK_PKG_CLASS_PATH.'StockMovement.php',
 ] );
 
 // ### Requirements
@@ -158,7 +114,6 @@ foreach( [ 'stockcomponent', 'stockassembly' ] as $guid ) {
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('PCK','{$guid}','quantity','Pack',             0,3,'','{$pckTpl}',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('SHT','{$guid}','quantity','Sheet (H x W)',    0,3,'','{$sglTpl}',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('VOL','{$guid}','quantity','Volume',           0,3,'','{$sglTpl}',NULL)";
-	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('MOV','{$guid}','quantity','Stock movement',   1,3,'','text',NULL)";
 
 	// Values sources — starter catalogue, all multi=0, add more via admin
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('RES','{$guid}','values','Resistance',       0,3,'','text',NULL)";
