@@ -30,9 +30,10 @@ class StockAssembly extends StockBase {
 	public $pRecursiveDelete;
 	protected $mXrefTypeKey = 'stockassembly_types';
 
-	public function __construct($pContentId = null) {
+	public function __construct($pAssemblyId = null, $pContentId = null) {
 		parent::__construct();
 		$this->mContentTypeGuid = STOCKASSEMBLY_CONTENT_TYPE_GUID;
+		$pContentId = $pContentId ?? $pAssemblyId;
 		if( $this->verifyId( $pContentId ) ) {
 			$this->mContentId = (int)$pContentId;
 		}

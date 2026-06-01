@@ -19,10 +19,10 @@ define('STOCKCOMPONENT_CONTENT_TYPE_GUID', 'stockcomponent');
 class StockComponent extends StockBase {
 	protected $mXrefTypeKey = 'stockcomponent_types';
 
-	public function __construct($pContentId = null) {
+	public function __construct($pComponentId = null, $pContentId = null) {
 		parent::__construct();
 		$this->mContentTypeGuid = STOCKCOMPONENT_CONTENT_TYPE_GUID;
-		$this->mContentId = (int)$pContentId;
+		$this->mContentId = (int)($pContentId ?? $pComponentId);
 
 		$this->registerContentType(
 			STOCKCOMPONENT_CONTENT_TYPE_GUID, [

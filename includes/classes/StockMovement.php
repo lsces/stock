@@ -17,9 +17,10 @@ define( 'STOCKMOVEMENT_CONTENT_TYPE_GUID', 'stockmovement' );
 class StockMovement extends LibertyContent {
 	protected $mXrefTypeKey = 'stockmovement_types';
 
-	public function __construct( $pContentId = null ) {
+	public function __construct( $pMovementId = null, $pContentId = null ) {
 		parent::__construct();
 		$this->mContentTypeGuid = STOCKMOVEMENT_CONTENT_TYPE_GUID;
+		$pContentId = $pContentId ?? $pMovementId;
 		if( $this->verifyId( $pContentId ) ) {
 			$this->mContentId = (int)$pContentId;
 		}
@@ -165,33 +166,40 @@ class StockMovement extends LibertyContent {
 		return true;
 	}
 
-	// Populate movement quantity xrefs from an assembly BOM, scaled by $pKitCount
+	// Append movement quantity xrefs from an assembly BOM (liberty_xref), scaled by $pKitCount.
+	// Appends to any existing items — safe to call multiple times for multi-assembly requisitions.
 	public function explodeFromAssembly( int $pAssemblyContentId, float $pKitCount = 1 ): bool {
 		if( !$this->isValid() || !$this->verifyId( $pAssemblyContentId ) ) {
 			return false;
 		}
-		$this->StartTrans();
-		$this->mDb->query(
-			"DELETE FROM `".BIT_DB_PREFIX."liberty_xref`
-			 WHERE `content_id` = ? AND `item` IN ('SGL','PCK','SHT','VOL')",
+
+		$nextXorder = (int)$this->mDb->getOne(
+			"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')",
 			[ $this->mContentId ]
-		);
+		) ?: 1;
+
 		$rows = $this->mDb->query(
-			"SELECT `item_content_id`, `item_position`, `quantity_value`, `quantity_item`
-			 FROM `".BIT_DB_PREFIX."stock_assembly_component_map`
-			 WHERE `assembly_content_id` = ?
-			 ORDER BY `item_position`",
+			"SELECT x.`xref` AS item_content_id, x.`item` AS quantity_item,
+			        CAST(x.`xkey` AS DOUBLE PRECISION) AS quantity_value
+			 FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')
+			   AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
+			 ORDER BY x.`xorder`",
 			[ $pAssemblyContentId ]
 		);
+
+		$this->StartTrans();
 		foreach( $rows as $row ) {
 			$bomHash = [
 				'content_id' => $this->mContentId,
 				'item'       => $row['quantity_item'],
-				'xref'       => $row['item_content_id'],
+				'xref'       => (int)$row['item_content_id'],
 				'xkey'       => $row['quantity_value'] * $pKitCount,
-				'xorder'     => $row['item_position'],
+				'xorder'     => $nextXorder,
 			];
 			$this->storeXref( $bomHash );
+			$nextXorder++;
 		}
 		$this->CompleteTrans();
 		return true;
@@ -210,6 +218,10 @@ class StockMovement extends LibertyContent {
 			$bindVars[] = $pListHash['ref_type'];
 		}
 
+		if( $this->verifyId( $pListHash['assembly_content_id'] ?? 0 ) ) {
+			$joinSql  .= " INNER JOIN `".BIT_DB_PREFIX."liberty_xref` xasm ON xasm.`content_id` = lc.`content_id` AND xasm.`item` = 'ASSEMBLY' AND xasm.`xref` = ?";
+			$bindVars[] = (int)$pListHash['assembly_content_id'];
+		}
 		if( $this->verifyId( $pListHash['user_id'] ?? 0 ) ) {
 			$whereSql .= " AND lc.`user_id` = ?";
 			$bindVars[] = (int)$pListHash['user_id'];
