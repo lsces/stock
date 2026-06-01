@@ -12,22 +12,42 @@ global $gBitSystem, $gBitSmarty, $gBitDb;
 
 $gBitSystem->verifyPermission( 'p_stock_view' );
 
-$find     = trim( $_REQUEST['find'] ?? '' );
-$hideZero = empty( $_REQUEST['show_zero'] );
+$find              = trim( $_REQUEST['find'] ?? '' );
+$hideZero          = empty( $_REQUEST['show_zero'] );
+$assemblyContentId = isset( $_REQUEST['assembly_content_id'] ) && is_numeric( $_REQUEST['assembly_content_id'] )
+                     ? (int)$_REQUEST['assembly_content_id'] : null;
+$kitCount          = isset( $_REQUEST['kit_count'] ) && is_numeric( $_REQUEST['kit_count'] ) && (float)$_REQUEST['kit_count'] > 0
+                     ? (float)$_REQUEST['kit_count'] : 1;
 
 $X = BIT_DB_PREFIX;
 
-$whereSql  = '';
-$bindVars  = [];
+$joinSql  = '';
+$whereSql = '';
+$bindVars = [];
+
+if( $assemblyContentId ) {
+	// Filter to components on this assembly's BOM via liberty_xref
+	$joinSql .= " INNER JOIN `{$X}liberty_xref` bom ON bom.`content_id` = ?
+					AND bom.`item` IN ('SGL','PCK','SHT','VOL')
+					AND bom.`xref` = lc.`content_id`";
+	$bindVars[] = $assemblyContentId;
+}
 
 if( $find !== '' ) {
 	$whereSql .= " AND UPPER(lc.`title`) LIKE ?";
 	$bindVars[] = '%'.strtoupper( $find ).'%';
 }
 
+$bomQtySelect  = $assemblyContentId
+	? ", MAX(CAST(bom.`xkey` AS DOUBLE PRECISION)) AS bom_qty"
+	: ", CAST(NULL AS DOUBLE PRECISION) AS bom_qty";
+
+$bomQtyGroup   = $assemblyContentId ? "" : "";
+
 // Stock level per component per qty type, signed by movement direction
 $query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
-				x.`item` AS qty_type,
+				x.`item` AS qty_type
+				$bomQtySelect,
 				(SELECT FIRST 1 sup.`xkey`
 				 FROM `{$X}liberty_xref` sup
 				 WHERE sup.`content_id` = lc.`content_id` AND sup.`item` = '#SUP'
@@ -38,6 +58,7 @@ $query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
 				) THEN CAST(x.`xkey` AS DOUBLE PRECISION)
 				  ELSE -CAST(x.`xkey` AS DOUBLE PRECISION) END ) AS stock_level
 		FROM `{$X}liberty_content` lc
+			$joinSql
 			INNER JOIN `{$X}liberty_xref` x ON x.`xref` = lc.`content_id`
 				AND x.`item` IN ('SGL','PCK','SHT','VOL')
 			INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
@@ -65,7 +86,10 @@ foreach( $rows as $row ) {
 	}
 	$level = (float)$row['stock_level'];
 	if( !$hideZero || $level != 0 ) {
-		$stockList[$cid]['stock'][$row['qty_type']] = $level;
+		$stockList[$cid]['stock'][$row['qty_type']] = [
+			'level'   => $level,
+			'bom_qty' => $row['bom_qty'] !== null ? (float)$row['bom_qty'] : null,
+		];
 	}
 }
 
@@ -74,8 +98,24 @@ if( $hideZero ) {
 	$stockList = array_filter( $stockList, fn($c) => !empty( $c['stock'] ) );
 }
 
-$gBitSmarty->assign( 'stockList',  $stockList );
-$gBitSmarty->assign( 'find',       $find );
-$gBitSmarty->assign( 'showZero',   !$hideZero );
+// Assembly selector list
+$assembly = new StockAssembly();
+$listHash = [ 'show_empty' => true, 'sort_mode' => 'title_asc', 'max_records' => 500 ];
+$assemblyList = $assembly->getList( $listHash );
+
+// Load selected assembly title for display
+$assemblyTitle = '';
+if( $assemblyContentId && isset( $assemblyList[$assemblyContentId] ) ) {
+	$assemblyTitle = $assemblyList[$assemblyContentId]['title'];
+}
+
+$gBitSmarty->assign( 'stockList',          $stockList );
+$gBitSmarty->assign( 'assemblyList',        $assemblyList );
+$gBitSmarty->assign( 'assemblyContentId',   $assemblyContentId );
+$gBitSmarty->assign( 'assemblyTitle',       $assemblyTitle );
+$gBitSmarty->assign( 'find',               $find );
+$gBitSmarty->assign( 'showZero',           !$hideZero );
+$gBitSmarty->assign( 'showBom',            (bool)$assemblyContentId );
+$gBitSmarty->assign( 'kitCount',           $kitCount );
 
 $gBitSystem->display( 'bitpackage:stock/list_stock.tpl', 'Stock Levels', [ 'display_mode' => 'list' ] );
