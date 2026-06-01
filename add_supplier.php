@@ -30,7 +30,7 @@ if( !empty( $_REQUEST['fAddSupplier'] ) ) {
 	if( empty( $_REQUEST['supplier_content_id'] ) || !is_numeric( $_REQUEST['supplier_content_id'] ) ) {
 		$gContent->mErrors[] = KernelTools::tra( 'Please select a supplier.' );
 	} else {
-		$gContent->storeXref( [
+		$supHash = [
 			'content_id' => $gContent->mContentId,
 			'item'       => '#SUP',
 			'xref'       => (int)$_REQUEST['supplier_content_id'],
@@ -38,7 +38,8 @@ if( !empty( $_REQUEST['fAddSupplier'] ) ) {
 			'xkey_ext'   => trim( $_REQUEST['price'] ?? '' ),
 			'edit'       => trim( $_REQUEST['note'] ?? '' ),
 			'fAddXref'   => 1,
-		] );
+		];
+		$gContent->storeXref( $supHash );
 
 		if( empty( $gContent->mErrors ) ) {
 			header( 'Location: '.$gContent->getEditUrl() );
