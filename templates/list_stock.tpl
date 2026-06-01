@@ -62,7 +62,8 @@
 			<tbody>
 				{foreach from=$stockList item=comp}
 					{foreach from=$comp.stock key=qtype item=row name=stockRow}
-					<tr{if $row.level < 0} class="danger"{elseif $row.level == 0} class="warning"{/if}>
+					{if $showBom}{assign var=remaining value=$row.level-($row.bom_qty*$kitCount)}{/if}
+					<tr{if $row.level < 0 || ($showBom && $remaining < 0)} class="danger"{elseif $row.level == 0} class="warning"{/if}>
 						{if $smarty.foreach.stockRow.first}
 						<td rowspan="{$comp.stock|@count}">
 							<a href="{$comp.display_url|escape}">{$comp.title|escape}</a>
@@ -74,7 +75,6 @@
 						<td>{$qtype|escape}</td>
 						<td class="text-right">{$row.level|string_format:"%.0f"}</td>
 						{if $showBom}
-							{assign var=remaining value=$row.level-($row.bom_qty*$kitCount)}
 							<td class="text-right{if $remaining < 0} text-danger{/if}">{$remaining|string_format:"%.0f"}</td>
 						{/if}
 					</tr>
