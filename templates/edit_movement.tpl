@@ -13,7 +13,7 @@
 	<div class="body">
 		{formfeedback error=$errors}
 
-		{form id="editMovementForm" ipackage="stock" ifile="edit_movement.php"}
+		{form id="editMovementForm" enctype="multipart/form-data" ipackage="stock" ifile="edit_movement.php"}
 			<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}" />
 
 			<div class="form-group">
@@ -35,6 +35,16 @@
 								{if $smarty.foreach.default.first} checked="checked"{/if} /> {$label|escape}
 						</label>
 					{/foreach}
+				{/forminput}
+			</div>
+			{/if}
+
+			{if !$gContent->isValid()}
+			<div class="form-group">
+				{formlabel label="Load CSV"}
+				{forminput}
+					<input type="file" name="csv_file" accept=".csv,text/csv" />
+					{formhelp note="Optional — upload movement CSV at creation time"}
 				{/forminput}
 			</div>
 			{/if}
