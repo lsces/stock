@@ -10,7 +10,9 @@ namespace Bitweaver\Stock;
 
 use Bitweaver\Liberty\LibertyContent;
 
-defined( 'STOCKASSEMBLY_CONTENT_TYPE_GUID' ) || define( 'STOCKASSEMBLY_CONTENT_TYPE_GUID', 'stockassembly' );
+defined( 'STOCKASSEMBLY_CONTENT_TYPE_GUID' )  || define( 'STOCKASSEMBLY_CONTENT_TYPE_GUID',  'stockassembly' );
+defined( 'STOCKCOMPONENT_CONTENT_TYPE_GUID' ) || define( 'STOCKCOMPONENT_CONTENT_TYPE_GUID', 'stockcomponent' );
+defined( 'STOCKMOVEMENT_CONTENT_TYPE_GUID' )  || define( 'STOCKMOVEMENT_CONTENT_TYPE_GUID',  'stockmovement' );
 
 /**
  * @package stock

@@ -11,8 +11,6 @@ namespace Bitweaver\Stock;
 use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\BitBase;
 
-define('STOCKCOMPONENT_CONTENT_TYPE_GUID', 'stockcomponent');
-
 /**
  * @package stock
  */

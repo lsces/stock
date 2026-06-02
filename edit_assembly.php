@@ -11,7 +11,6 @@ namespace Bitweaver\Stock;
 
 require_once '../kernel/includes/setup_inc.php';
 use Bitweaver\KernelTools;
-use Bitweaver\Stock\StockComponent;
 
 global $gBitSystem, $gBitDb;
 
