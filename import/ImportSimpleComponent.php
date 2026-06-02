@@ -47,7 +47,7 @@ function stockExpungeComponentByTitle( string $title ): bool {
 	$contentId = $gBitDb->getOne(
 		"SELECT lc.`content_id`
 		 FROM `".BIT_DB_PREFIX."liberty_content` lc
-		 WHERE lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
+		 WHERE lc.`content_type_guid` = '".'stockcomponent'."' AND lc.`title` = ?",
 		[ $title ]
 	);
 	if( !$contentId ) {
@@ -74,7 +74,7 @@ function stockImportSimpleComponent( array $data, int $rowNum ): array {
 	$exists = $gBitDb->getOne(
 		"SELECT lc.`content_id`
 		 FROM `".BIT_DB_PREFIX."liberty_content` lc
-		 WHERE lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
+		 WHERE lc.`content_type_guid` = '".'stockcomponent'."' AND lc.`title` = ?",
 		[ $title ]
 	);
 	if( $exists ) {
