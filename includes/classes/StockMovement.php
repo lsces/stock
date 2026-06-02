@@ -8,6 +8,8 @@ namespace Bitweaver\Stock;
 use Bitweaver\BitBase;
 use Bitweaver\Liberty\LibertyContent;
 
+defined( 'STOCKMOVEMENT_CONTENT_TYPE_GUID' ) || define( 'STOCKMOVEMENT_CONTENT_TYPE_GUID', 'stockmovement' );
+
 /**
  * @package stock
  */
