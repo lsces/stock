@@ -6,10 +6,15 @@
 				<a class="btn btn-default btn-sm" href="{$smarty.const.STOCK_PKG_URL}edit_movement.php">{tr}Add Movement{/tr}</a>
 			{/if}
 		</div>
-		<h1>{tr}Movements{/tr}</h1>
+		<h1>{tr}Movements{/tr}{if $componentTitle} — {$componentTitle|escape}{/if}</h1>
 	</header>
 
 	<section class="body">
+
+		{if $componentContentId}
+			<p><a class="btn btn-xs btn-default" href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$componentContentId}">&larr; {tr}Back to component{/tr}</a></p>
+			<input type="hidden" name="component_content_id" value="{$componentContentId}" />
+		{/if}
 
 		{form ipackage="stock" ifile="list_movements.php" method="get"}
 			<div class="form-inline" style="margin-bottom:1em">
@@ -36,6 +41,7 @@
 					<th>{smartlink ititle="Reference" isort="title"}</th>
 					<th>{tr}Type{/tr}</th>
 					<th>{tr}Ref{/tr}</th>
+					{if $componentContentId}<th class="text-right">{tr}Qty{/tr}</th>{/if}
 					<th>{tr}Received{/tr}</th>
 					<th>{smartlink ititle="Date" isort="created_desc"}</th>
 					<th>{tr}Creator{/tr}</th>
@@ -48,6 +54,9 @@
 						<td><a href="{$mov.display_url|escape}">{$mov.title|escape}</a></td>
 						<td>{$mov.ref_type|escape|default:'—'}</td>
 						<td>{$mov.ref_key|escape}</td>
+						{if $componentContentId}
+							<td class="text-right">{$mov.cmp_qty|string_format:"%.0f"} {$mov.cmp_qty_type|escape}</td>
+						{/if}
 						<td>{if $mov.event_time}{$mov.event_time|bit_short_date}{else}—{/if}</td>
 						<td>{$mov.created|bit_short_date}</td>
 						<td>{$mov.real_name|default:$mov.login|escape}</td>
