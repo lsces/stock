@@ -280,4 +280,96 @@ class StockMovement extends LibertyContent {
 	public static function getServiceKey(): string {
 		return 'stock';
 	}
+
+	public function importCsv( array $pQtyTypes ): array {
+		$result = [ 'loaded' => 0, 'skipped' => 0, 'errors' => [] ];
+		$file   = $_FILES['csv_file'] ?? null;
+		if( !$file || $file['error'] !== UPLOAD_ERR_OK ) {
+			return $result;
+		}
+		$handle = fopen( $file['tmp_name'], 'r' );
+		if( $handle === false ) {
+			return $result;
+		}
+
+		$nextXorder = (int)$this->mDb->getOne(
+			"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')",
+			[ $this->mContentId ]
+		) ?: 1;
+
+		$rowNum = 0;
+		while( ( $data = fgetcsv( $handle, 1000, ',', '"', '' ) ) !== false ) {
+			$rowNum++;
+			if( $rowNum === 1 ) {
+				$from    = trim( $data[0] ?? '' );
+				$ref     = trim( $data[1] ?? '' );
+				$dateStr = trim( $data[2] ?? '' );
+				if( $ref !== '' ) {
+					$existingXrefId = $this->mDb->getOne(
+						"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref`
+						 WHERE `content_id` = ? AND `item` IN ('REQN','TRANS','ORDER') ORDER BY `xorder`",
+						[ $this->mContentId ]
+					);
+					$refHash = [ 'content_id' => $this->mContentId, 'item' => 'TRANS', 'xkey' => $ref, 'edit' => $from ];
+					$existingXrefId ? $refHash['xref_id'] = $existingXrefId : $refHash['fAddXref'] = 1;
+					$this->storeXref( $refHash );
+				}
+				if( $dateStr !== '' ) {
+					$parts = explode( '/', $dateStr );
+					if( count( $parts ) === 3 ) {
+						$year = (int)$parts[2] < 100 ? 2000 + (int)$parts[2] : (int)$parts[2];
+						$ts   = mktime( 0, 0, 0, (int)$parts[1], (int)$parts[0], $year );
+						if( $ts ) {
+							$this->mDb->query(
+								"UPDATE `".BIT_DB_PREFIX."liberty_content` SET `event_time` = ? WHERE `content_id` = ?",
+								[ $ts, $this->mContentId ]
+							);
+						}
+					}
+				}
+				continue;
+			}
+
+			$componentName = trim( $data[0] ?? '' );
+			$qty           = (float)trim( $data[1] ?? '' );
+			$qtyOverride   = strtoupper( trim( $data[2] ?? '' ) );
+
+			if( $componentName === '' ) { $result['skipped']++; continue; }
+			if( $qty <= 0 ) {
+				$result['errors'][] = "Row $rowNum: '$componentName' — invalid quantity, skipped.";
+				$result['skipped']++;
+				continue;
+			}
+
+			$contentId = $this->mDb->getOne(
+				"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
+				 WHERE lc.`content_type_guid` = 'stockcomponent' AND lc.`title` = ?",
+				[ $componentName ]
+			);
+			if( !$contentId ) {
+				$result['errors'][] = "Row $rowNum: '$componentName' not found, skipped.";
+				$result['skipped']++;
+				continue;
+			}
+
+			$qtySrc = in_array( $qtyOverride, $pQtyTypes ) ? $qtyOverride : null;
+			if( !$qtySrc ) {
+				$placeholders = implode( ',', array_fill( 0, count( $pQtyTypes ), '?' ) );
+				$qtySrc = $this->mDb->getOne(
+					"SELECT x.`item` FROM `".BIT_DB_PREFIX."liberty_xref` x
+					 WHERE x.`content_id` = ? AND x.`item` IN ($placeholders) ORDER BY x.`xorder`",
+					array_merge( [ (int)$contentId ], $pQtyTypes )
+				) ?: 'SGL';
+			}
+
+			$itemHash = [ 'content_id' => $this->mContentId, 'item' => $qtySrc, 'xref' => (int)$contentId, 'xkey' => $qty, 'xorder' => $nextXorder ];
+			$this->storeXref( $itemHash );
+			$nextXorder++;
+			$result['loaded']++;
+		}
+		fclose( $handle );
+		$this->load();
+		return $result;
+	}
 }
