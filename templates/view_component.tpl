@@ -25,8 +25,8 @@
 			<p class="description">{$gContent->mInfo.parsed_data}</p>
 		{/if}
 
-		{if $gContent->mInfo.stockcomponent_types}
-			{jstabs}
+		{jstabs}
+			{if $gContent->mInfo.stockcomponent_types}
 				{section name=xrefGroup loop=$gContent->mInfo.stockcomponent_types}
 					{include file=$gContent->getXrefListTemplate($gContent->mInfo.stockcomponent_types[xrefGroup].template)
 						source=$gContent->mInfo.stockcomponent_types[xrefGroup].source
@@ -34,8 +34,32 @@
 						group=$gContent->mInfo.stockcomponent_types[xrefGroup].sort_order
 						allow_edit=false}
 				{/section}
-			{/jstabs}
-		{/if}
+			{/if}
+
+			{jstab title="{tr}Stock{/tr}"}
+			<table class="table table-condensed">
+				<thead>
+					<tr>
+						<th>{tr}Type{/tr}</th>
+						<th class="text-right">{tr}Level{/tr}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{if $componentStockLevels}
+						{foreach from=$componentStockLevels key=qtype item=level}
+						<tr{if $level < 0} class="danger"{elseif $level == 0} class="warning"{/if}>
+							<td>{$qtype|escape}</td>
+							<td class="text-right">{$level|string_format:"%.0f"}</td>
+						</tr>
+						{/foreach}
+					{else}
+						<tr class="norecords"><td colspan="2">{tr}No stock movements recorded{/tr}</td></tr>
+					{/if}
+				</tbody>
+			</table>
+			<a class="btn btn-default btn-xs" href="{$smarty.const.STOCK_PKG_URL}list_stock.php?find={$gContent->getTitle()|escape:'url'}">{tr}Stock history{/tr}</a>
+			{/jstab}
+		{/jstabs}
 	</div><!-- end .body -->
 
 	{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='view' serviceHash=$gContent->mInfo}

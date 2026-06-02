@@ -36,4 +36,29 @@ $gContent->addHit();
 
 $gContent->mInfo['stockcomponent_types'] = $gContent->getXrefGroupList();
 
+// Stock levels for this component, calculated from movement xrefs
+if( $gContent->isValid() ) {
+	$X    = BIT_DB_PREFIX;
+	$rows = $gBitDb->query(
+		"SELECT x.`item` AS qty_type,
+				SUM( CASE WHEN EXISTS (
+					SELECT 1 FROM `{$X}liberty_xref` r
+					WHERE r.`content_id` = x.`content_id` AND r.`item` IN ('TRANS','ORDER')
+				) THEN CAST(x.`xkey` AS DOUBLE PRECISION)
+				  ELSE -CAST(x.`xkey` AS DOUBLE PRECISION) END ) AS stock_level
+		 FROM `{$X}liberty_xref` x
+		 INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
+		 	AND mc.`content_type_guid` = 'stockmovement'
+		 WHERE x.`xref` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')
+		   AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
+		 GROUP BY x.`item`",
+		[ $gContent->mContentId ]
+	);
+	$stockLevels = [];
+	foreach( $rows as $row ) {
+		$stockLevels[$row['qty_type']] = (float)$row['stock_level'];
+	}
+	$gBitSmarty->assign( 'componentStockLevels', $stockLevels );
+}
+
 require_once STOCK_PKG_INCLUDE_PATH.'display_stock_component_inc.php';
