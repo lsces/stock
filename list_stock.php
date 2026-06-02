@@ -21,62 +21,81 @@ $kitCount          = isset( $_REQUEST['kit_count'] ) && is_numeric( $_REQUEST['k
 
 $X = BIT_DB_PREFIX;
 
-$joinSql  = '';
-$whereSql = '';
 $bindVars = [];
 
 if( $assemblyContentId ) {
-	// Filter to components on this assembly's BOM via liberty_xref
-	$joinSql .= " INNER JOIN `{$X}liberty_xref` bom ON bom.`content_id` = ?
+	// BOM view: start from BOM items so components with no movements still appear
+	$findSql = $find !== '' ? " AND UPPER(lc.`title`) LIKE ?" : '';
+	if( $find !== '' ) $bindVars[] = '%'.strtoupper( $find ).'%';
+
+	$query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
+					bom.`item` AS qty_type,
+					CAST(bom.`xkey` AS DOUBLE PRECISION) AS bom_qty,
+					bom.`xorder` AS bom_xorder,
+					(SELECT FIRST 1 sup.`xkey`
+					 FROM `{$X}liberty_xref` sup
+					 WHERE sup.`content_id` = lc.`content_id` AND sup.`item` = '#SUP'
+					 ORDER BY sup.`xorder`) AS part_number,
+					(SELECT SUM( CASE WHEN EXISTS (
+							SELECT 1 FROM `{$X}liberty_xref` r
+							WHERE r.`content_id` = mx.`content_id` AND r.`item` IN ('TRANS','ORDER')
+						) THEN CAST(mx.`xkey` AS DOUBLE PRECISION)
+						  ELSE -CAST(mx.`xkey` AS DOUBLE PRECISION) END )
+					 FROM `{$X}liberty_xref` mx
+					 INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = mx.`content_id`
+					 	AND mc.`content_type_guid` = 'stockmovement'
+					 WHERE mx.`xref` = lc.`content_id`
+					   AND mx.`item` = bom.`item`
+					   AND mx.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?') AS stock_level
+			FROM `{$X}liberty_content` lc
+				INNER JOIN `{$X}liberty_xref` bom ON bom.`content_id` = ?
 					AND bom.`item` IN ('SGL','PCK','SHT','VOL')
-					AND bom.`xref` = lc.`content_id`";
+					AND bom.`xref` = lc.`content_id`
+			WHERE lc.`content_type_guid` = 'stockcomponent'
+			$findSql
+			ORDER BY bom.`xorder`";
 	$bindVars[] = $assemblyContentId;
+} else {
+	// General list: only components with movement history
+	$whereSql = '';
+	if( $find !== '' ) {
+		$whereSql = " AND UPPER(lc.`title`) LIKE ?";
+		$bindVars[] = '%'.strtoupper( $find ).'%';
+	}
+
+	$query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
+					x.`item` AS qty_type,
+					CAST(NULL AS DOUBLE PRECISION) AS bom_qty,
+					CAST(NULL AS INTEGER) AS bom_xorder,
+					(SELECT FIRST 1 sup.`xkey`
+					 FROM `{$X}liberty_xref` sup
+					 WHERE sup.`content_id` = lc.`content_id` AND sup.`item` = '#SUP'
+					 ORDER BY sup.`xorder`) AS part_number,
+					SUM( CASE WHEN EXISTS (
+						SELECT 1 FROM `{$X}liberty_xref` r
+						WHERE r.`content_id` = x.`content_id` AND r.`item` IN ('TRANS','ORDER')
+					) THEN CAST(x.`xkey` AS DOUBLE PRECISION)
+					  ELSE -CAST(x.`xkey` AS DOUBLE PRECISION) END ) AS stock_level
+			FROM `{$X}liberty_content` lc
+				INNER JOIN `{$X}liberty_xref` x ON x.`xref` = lc.`content_id`
+					AND x.`item` IN ('SGL','PCK','SHT','VOL')
+					AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
+				INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
+					AND mc.`content_type_guid` = 'stockmovement'
+			WHERE lc.`content_type_guid` = 'stockcomponent'
+			$whereSql
+			GROUP BY lc.`content_id`, lc.`title`, lc.`data`, x.`item`
+			ORDER BY lc.`title`, x.`item`";
 }
-
-if( $find !== '' ) {
-	$whereSql .= " AND UPPER(lc.`title`) LIKE ?";
-	$bindVars[] = '%'.strtoupper( $find ).'%';
-}
-
-$bomQtySelect = $assemblyContentId
-	? ", MAX(CAST(bom.`xkey` AS DOUBLE PRECISION)) AS bom_qty, MIN(bom.`xorder`) AS bom_xorder"
-	: ", CAST(NULL AS DOUBLE PRECISION) AS bom_qty, CAST(NULL AS INTEGER) AS bom_xorder";
-
-$orderBy = $assemblyContentId
-	? "ORDER BY MIN(bom.`xorder`), x.`item`"
-	: "ORDER BY lc.`title`, x.`item`";
-
-// Stock level per component per qty type, signed by movement direction
-$query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
-				x.`item` AS qty_type
-				$bomQtySelect,
-				(SELECT FIRST 1 sup.`xkey`
-				 FROM `{$X}liberty_xref` sup
-				 WHERE sup.`content_id` = lc.`content_id` AND sup.`item` = '#SUP'
-				 ORDER BY sup.`xorder`) AS part_number,
-				SUM( CASE WHEN EXISTS (
-					SELECT 1 FROM `{$X}liberty_xref` r
-					WHERE r.`content_id` = x.`content_id` AND r.`item` IN ('TRANS','ORDER')
-				) THEN CAST(x.`xkey` AS DOUBLE PRECISION)
-				  ELSE -CAST(x.`xkey` AS DOUBLE PRECISION) END ) AS stock_level
-		FROM `{$X}liberty_content` lc
-			$joinSql
-			INNER JOIN `{$X}liberty_xref` x ON x.`xref` = lc.`content_id`
-				AND x.`item` IN ('SGL','PCK','SHT','VOL')
-				AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
-			INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
-				AND mc.`content_type_guid` = 'stockmovement'
-		WHERE lc.`content_type_guid` = 'stockcomponent'
-		$whereSql
-		GROUP BY lc.`content_id`, lc.`title`, lc.`data`, x.`item`
-		$orderBy";
 
 $rows = $gBitDb->query( $query, $bindVars );
 
 // Group by component for display
 $stockList = [];
 foreach( $rows as $row ) {
-	$cid = $row['content_id'];
+	$cid   = $row['content_id'];
+	$level = $row['stock_level'] !== null ? (float)$row['stock_level'] : 0.0;
+
 	if( !isset( $stockList[$cid] ) ) {
 		$bomXorder = $row['bom_xorder'] !== null ? (int)$row['bom_xorder'] : null;
 		$stockList[$cid] = [
@@ -89,8 +108,9 @@ foreach( $rows as $row ) {
 			'stock'       => [],
 		];
 	}
-	$level = (float)$row['stock_level'];
-	if( !$hideZero || $level != 0 ) {
+
+	// In BOM view show all components; in general list respect hide-zero filter
+	if( $assemblyContentId || !$hideZero || $level != 0 ) {
 		$stockList[$cid]['stock'][$row['qty_type']] = [
 			'level'   => $level,
 			'bom_qty' => $row['bom_qty'] !== null ? (float)$row['bom_qty'] : null,
@@ -98,8 +118,8 @@ foreach( $rows as $row ) {
 	}
 }
 
-// Drop components with no stock rows after zero filter
-if( $hideZero ) {
+// General list only: drop components with no stock rows after zero filter
+if( !$assemblyContentId && $hideZero ) {
 	$stockList = array_filter( $stockList, fn($c) => !empty( $c['stock'] ) );
 }
 
