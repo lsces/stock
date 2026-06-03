@@ -336,9 +336,10 @@ class StockMovement extends LibertyContent {
 		while( ( $data = fgetcsv( $handle, 1000, ',', '"', '' ) ) !== false ) {
 			$rowNum++;
 			if( $rowNum === 1 ) {
-				$from    = trim( $data[0] ?? '' );
-				$ref     = trim( $data[1] ?? '' );
-				$dateStr = trim( $data[2] ?? '' );
+				$from         = trim( $data[0] ?? '' );
+				$ref          = trim( $data[1] ?? '' );
+				$orderDateStr = trim( $data[2] ?? '' );
+				$recvDateStr  = trim( $data[3] ?? '' );
 				if( $ref !== '' ) {
 					$existingXrefId = $this->mDb->getOne(
 						"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref`
@@ -349,8 +350,25 @@ class StockMovement extends LibertyContent {
 					$existingXrefId ? $refHash['xref_id'] = $existingXrefId : $refHash['fAddXref'] = 1;
 					$this->storeXref( $refHash );
 				}
-				if( $dateStr !== '' ) {
-					$parts = explode( '/', $dateStr );
+				// Order date (col 3) → xref.start_date
+				if( $orderDateStr !== '' ) {
+					$parts = explode( '/', $orderDateStr );
+					if( count( $parts ) === 3 ) {
+						$year = (int)$parts[2] < 100 ? 2000 + (int)$parts[2] : (int)$parts[2];
+						$ts   = mktime( 0, 0, 0, (int)$parts[1], (int)$parts[0], $year );
+						if( $ts ) {
+							$this->mDb->query(
+								"UPDATE `".BIT_DB_PREFIX."liberty_xref`
+								 SET `start_date` = ?
+								 WHERE `content_id` = ? AND `item` IN ('REQN','TRANS','ORDER')",
+								[ date( 'Y-m-d H:i:s', $ts ), $this->mContentId ]
+							);
+						}
+					}
+				}
+				// Received date (col 4) → lc.event_time
+				if( $recvDateStr !== '' ) {
+					$parts = explode( '/', $recvDateStr );
 					if( count( $parts ) === 3 ) {
 						$year = (int)$parts[2] < 100 ? 2000 + (int)$parts[2] : (int)$parts[2];
 						$ts   = mktime( 0, 0, 0, (int)$parts[1], (int)$parts[0], $year );
