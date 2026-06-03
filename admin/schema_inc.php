@@ -88,34 +88,39 @@ $gBitInstaller->registerRequirements( STOCK_PKG_NAME, [
 
 $X = BIT_DB_PREFIX;
 
-// Helper to generate x_group rows for both content types
 $xrefTypes = [];
 $xrefItems = [];
 
-foreach( [ 'stockcomponent', 'stockassembly' ] as $guid ) {
-	$supGrpTpl = ( $guid === 'stockcomponent' ) ? 'sup' : '';
-	$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('supplier','{$guid}','Supplier',  1,3,'','{$supGrpTpl}')";
-	$qtyGrpTpl = ( $guid === 'stockassembly' ) ? 'bom' : '';
-	$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('quantity','{$guid}','Quantity',  2,3,'','{$qtyGrpTpl}')";
-	$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`) VALUES ('values',  '{$guid}','Values',    3,3,'')";
+// ── stockcomponent xref groups (supplier=1, quantity=2, values=3) ─────────────
+$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('supplier','stockcomponent','Supplier',         1,3,'','sup')";
+$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('quantity','stockcomponent','Quantity',         2,3,'','')";
+$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('values',  'stockcomponent','Values',           3,3,'','')";
 
+// ── stockassembly xref groups (kitlocker=1, supplier=2, quantity/BOM=3) ─────────
+$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('kitlocker','stockassembly','KitLocker Details',1,3,'','')";
+$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('supplier', 'stockassembly','Supplier',         2,3,'','')";
+$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('quantity', 'stockassembly','Bill of Material', 3,3,'','bom')";
+
+// ── xref items shared across both content types ───────────────────────────────
+foreach( [ 'stockcomponent', 'stockassembly' ] as $guid ) {
 	// Supplier sources — multi=1 (multiple suppliers per item)
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#SUP','{$guid}','supplier','Supplier',        1,3,'../contact/?content_id=','sup', NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#PN', '{$guid}','supplier','Part Number',      1,3,'',                      'text',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#PR', '{$guid}','supplier','Price',            1,3,'',                      'text',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#URL','{$guid}','supplier','Supplier URL',     1,3,'',                      'text',NULL)";
 
-	// Quantity sources — selectable types multi=0, movement multi=1
-	// entry_date on liberty_xref timestamps each MOV row automatically
-	// stockassembly uses 'bom' template (stock package override); stockcomponent uses 'text'
+	// Quantity sources — selectable types multi=0
+	// stockassembly uses 'bom'/'bompck' templates (BOM grid); stockcomponent uses 'text'/'value'
 	$sglTpl = ( $guid === 'stockassembly' ) ? 'bom'    : 'text';
 	$pckTpl = ( $guid === 'stockassembly' ) ? 'bompck' : 'value';
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('SGL','{$guid}','quantity','Single unit',     0,3,'','{$sglTpl}',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('PCK','{$guid}','quantity','Pack',             0,3,'','{$pckTpl}',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('SHT','{$guid}','quantity','Sheet (H x W)',    0,3,'','{$sglTpl}',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('VOL','{$guid}','quantity','Volume',           0,3,'','{$sglTpl}',NULL)";
+}
 
-	// Values sources — starter catalogue, all multi=0, add more via admin
+// Values sources — stockcomponent only; starter catalogue, all multi=0, add more via admin
+foreach( [ 'stockcomponent' ] as $guid ) {
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('RES','{$guid}','values','Resistance',       0,3,'','text',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('CAP','{$guid}','values','Capacitance',      0,3,'','text',NULL)";
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('VLT','{$guid}','values','Voltage',          0,3,'','text',NULL)";
@@ -128,8 +133,7 @@ foreach( [ 'stockcomponent', 'stockassembly' ] as $guid ) {
 	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('PKG','{$guid}','values','Package/Footprint', 0,3,'','text',NULL)";
 }
 
-// stockassembly kitlocker group — price and datasheet URL from KitLocker
-$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`) VALUES ('kitlocker','stockassembly','KitLocker Details',1,3,'')";
+// stockassembly kitlocker items — KitLocker-specific fields
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('KLID', 'stockassembly','kitlocker','Kitlocker ID Code',       1,3,'','text',NULL)";
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('KLPR', 'stockassembly','kitlocker','Kitlocker Price',         2,3,'','text',NULL)";
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('KL3M', 'stockassembly','kitlocker','Kitlocker 3 Month Sales', 3,3,'','text',NULL)";
