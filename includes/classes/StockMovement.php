@@ -347,13 +347,15 @@ class StockMovement extends LibertyContent {
 				$orderDateStr = trim( $data[2] ?? '' );
 				$recvDateStr  = trim( $data[3] ?? '' );
 				if( $ref !== '' ) {
-					$existingXrefId = $this->mDb->getOne(
-						"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref`
+					$existingRow = $this->mDb->getRow(
+						"SELECT `xref_id`, `item` FROM `".BIT_DB_PREFIX."liberty_xref`
 						 WHERE `content_id` = ? AND `item` IN ('REQN','TRANS','ORDER') ORDER BY `xorder`",
 						[ $this->mContentId ]
 					);
-					$refHash = [ 'content_id' => $this->mContentId, 'item' => 'TRANS', 'xkey' => $ref, 'edit' => $from ];
-					$existingXrefId ? $refHash['xref_id'] = $existingXrefId : $refHash['fAddXref'] = 1;
+					// Preserve existing type if already set; default to TRANS for new rows
+					$refItem = $existingRow['item'] ?? 'TRANS';
+					$refHash = [ 'content_id' => $this->mContentId, 'item' => $refItem, 'xkey' => $ref, 'edit' => $from ];
+					$existingRow ? $refHash['xref_id'] = $existingRow['xref_id'] : $refHash['fAddXref'] = 1;
 					$this->storeXref( $refHash );
 				}
 				// Order date (col 3) → xref.start_date
