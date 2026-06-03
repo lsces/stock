@@ -26,7 +26,7 @@
 </div>
 {if $allow_add && $gContent->isValid() && $gContent->hasUpdatePermission() && $source ne 'history'}
 	<div>
-		{smartlink ititle="Add record" ipackage="liberty" ifile="add_xref.php" booticon="icon-note-add" content_id=$gContent->mInfo.content_id group=$group}
+		{smartlink ititle="Add component" ipackage="stock" ifile="add_component.php" booticon="icon-note-add" content_id=$gContent->mInfo.content_id}
 	</div>
 {/if}
 {/legend}

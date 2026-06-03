@@ -74,6 +74,10 @@ $galleryTree = $gStockAssembly->generateList( $getHash, [ 'name' => 'assembly_co
 $gBitSmarty->assign( 'galleryTree', $galleryTree );
 $gBitSmarty->assign( 'requested_gallery', !empty($_REQUEST['assembly_content_id']) ? $_REQUEST['assembly_content_id'] : null );
 
+if( !$gContent->isValid() && !empty( $_REQUEST['title'] ) ) {
+	$gContent->mInfo['title'] = trim( $_REQUEST['title'] );
+}
+
 $gContent->mInfo['stockcomponent_types'] = $gContent->getXrefGroupList();
 
 $gContent->invokeServices( 'content_edit_function' );
