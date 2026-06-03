@@ -45,14 +45,14 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 			$gBitSmarty->assign( 'csvSkipped', $csvResult['skipped'] );
 			$gBitSmarty->assign( 'csvErrors',  $csvResult['errors'] );
 		} else {
-			header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
+			header( 'Location: '.$gContent->getDisplayUrl() );
 			die;
 		}
 	}
 
 } elseif( !empty( $_REQUEST['fReceived'] ) && $gContent->isValid() ) {
 	$gContent->markReceived();
-	header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
+	header( 'Location: '.$gContent->getDisplayUrl() );
 	die;
 
 } elseif( !empty( $_REQUEST['upload_csv'] ) && $gContent->isValid() ) {
