@@ -244,8 +244,10 @@ class StockMovement extends LibertyContent {
 
 		$sortMode = $pListHash['sort_mode'] ?? '';
 		$orderby = match( $sortMode ) {
-			'event_time_asc'  => ' ORDER BY lc.event_time ASC',
-			'event_time_desc' => ' ORDER BY lc.event_time DESC',
+			'event_time_asc'       => ' ORDER BY lc.event_time ASC',
+			'event_time_desc'      => ' ORDER BY lc.event_time DESC',
+			'ref_start_date_asc'   => ' ORDER BY (SELECT FIRST 1 x.start_date FROM '.BIT_DB_PREFIX.'liberty_xref x WHERE x.content_id=lc.content_id AND x.item IN (\'REQN\',\'TRANS\',\'ORDER\') ORDER BY x.xorder) ASC',
+			'ref_start_date_desc'  => ' ORDER BY (SELECT FIRST 1 x.start_date FROM '.BIT_DB_PREFIX.'liberty_xref x WHERE x.content_id=lc.content_id AND x.item IN (\'REQN\',\'TRANS\',\'ORDER\') ORDER BY x.xorder) DESC',
 			default => !empty( $sortMode )
 				? ' ORDER BY '.$this->mDb->convertSortmode( $sortMode )
 				: ' ORDER BY lc.last_modified DESC',
