@@ -595,6 +595,13 @@ class StockAssembly extends StockBase {
 	* @param array pAssemblyId id of gallery to link
 	* @return string the url to display the gallery.
 	*/
+	public function getEditUrl( $pContentId = null, $pMixed = null ): string {
+		if( $this->verifyId( $this->mContentId ) ) {
+			return STOCK_PKG_URL.'edit_assembly.php?content_id='.$this->mContentId;
+		}
+		return STOCK_PKG_URL.'edit_assembly.php';
+	}
+
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		$ret = '';
 		global $gBitSystem;

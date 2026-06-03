@@ -287,6 +287,13 @@ class StockMovement extends LibertyContent {
 		return static::getDisplayUrlFromHash( $this->mInfo );
 	}
 
+	public function getEditUrl( $pContentId = null, $pMixed = null ): string {
+		if( $this->verifyId( $this->mContentId ) ) {
+			return STOCK_PKG_URL.'edit_movement.php?content_id='.$this->mContentId;
+		}
+		return STOCK_PKG_URL.'edit_movement.php';
+	}
+
 	public static function getServiceKey(): string {
 		return 'stock';
 	}
