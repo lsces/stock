@@ -70,23 +70,53 @@ if( empty( $klidMap ) ) {
 		}
 
 		$groupContentId = (int)$klidMap[$groupKey];
+		$contentId      = 0;
 
-		// Find existing assembly by its own KLID xref
-		$contentId = (int)$gBitDb->getOne(
-			"SELECT lx.content_id FROM `".BIT_DB_PREFIX."liberty_xref` lx
-			 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.content_id=lx.content_id
-			 WHERE lx.item=? AND lx.xkey=? AND lc.content_type_guid=?",
-			[ 'KLID', $klid, STOCKASSEMBLY_CONTENT_TYPE_GUID ]
-		);
+		if( $title === $klid ) {
+			// Title unchanged — find by KLID xref, fall back to title if xref not yet stored
+			$contentId = (int)$gBitDb->getOne(
+				"SELECT lx.content_id FROM `".BIT_DB_PREFIX."liberty_xref` lx
+				 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.content_id=lx.content_id
+				 WHERE lx.item=? AND lx.xkey=? AND lc.content_type_guid=?",
+				[ 'KLID', $klid, STOCKASSEMBLY_CONTENT_TYPE_GUID ]
+			);
+			if( !$contentId ) {
+				$contentId = (int)$gBitDb->getOne(
+					"SELECT lc.content_id FROM `".BIT_DB_PREFIX."liberty_content` lc
+					 WHERE lc.content_type_guid=? AND lc.title=?",
+					[ STOCKASSEMBLY_CONTENT_TYPE_GUID, $title ]
+				);
+			}
+		} else {
+			// Title is a tidier replacement for the old title (= col1/KLID).
+			// Find the keeper by new title; find the old stale record by old title.
+			$contentId = (int)$gBitDb->getOne(
+				"SELECT lc.content_id FROM `".BIT_DB_PREFIX."liberty_content` lc
+				 WHERE lc.content_type_guid=? AND lc.title=?",
+				[ STOCKASSEMBLY_CONTENT_TYPE_GUID, $title ]
+			);
+			$oldContentId = (int)$gBitDb->getOne(
+				"SELECT lc.content_id FROM `".BIT_DB_PREFIX."liberty_content` lc
+				 WHERE lc.content_type_guid=? AND lc.title=?",
+				[ STOCKASSEMBLY_CONTENT_TYPE_GUID, $klid ]
+			);
+			if( $contentId && $oldContentId && $oldContentId !== $contentId ) {
+				// Both exist — expunge the stale col1 record
+				$stale = new StockAssembly( null, $oldContentId );
+				$stale->load();
+				$stale->expunge();
+			} elseif( !$contentId && $oldContentId ) {
+				// Only old record exists — rename it to the tidy title
+				$contentId = $oldContentId;
+			}
+		}
 
 		if( $contentId ) {
-			// Update title and description
+			// Update title/description and wipe old kitlocker xrefs
 			$assembly = new StockAssembly( null, $contentId );
 			$assembly->load();
 			$pHash = [ 'content_id' => $contentId, 'title' => $title, 'edit' => $data, 'format_guid' => 'bithtml' ];
 			$assembly->store( $pHash );
-
-			// Wipe old kitlocker xrefs
 			$gBitDb->query(
 				"DELETE FROM `".BIT_DB_PREFIX."liberty_xref`
 				 WHERE content_id=? AND item IN ('KLID','KLPR','KLSGL','KL3M','KLURL')",
@@ -94,7 +124,7 @@ if( empty( $klidMap ) ) {
 			);
 			$updated++;
 		} else {
-			// Create new assembly
+			// No existing record — create fresh
 			$assembly = new StockAssembly();
 			$pHash = [ 'title' => $title, 'edit' => $data, 'format_guid' => 'bithtml' ];
 			if( !$assembly->store( $pHash ) ) {
@@ -103,21 +133,21 @@ if( empty( $klidMap ) ) {
 				continue;
 			}
 			$contentId = $assembly->mContentId;
+			$loaded++;
+		}
 
-			// Link to parent group
-			$alreadyLinked = (int)$gBitDb->getOne(
-				"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."stock_assembly_map`
-				 WHERE assembly_content_id=? AND item_content_id=?",
+		// Ensure parent group link exists
+		$alreadyLinked = (int)$gBitDb->getOne(
+			"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."stock_assembly_map`
+			 WHERE assembly_content_id=? AND item_content_id=?",
+			[ $groupContentId, $contentId ]
+		);
+		if( !$alreadyLinked ) {
+			$gBitDb->query(
+				"INSERT INTO `".BIT_DB_PREFIX."stock_assembly_map`
+				 (assembly_content_id, item_content_id, item_position) VALUES (?,?,NULL)",
 				[ $groupContentId, $contentId ]
 			);
-			if( !$alreadyLinked ) {
-				$gBitDb->query(
-					"INSERT INTO `".BIT_DB_PREFIX."stock_assembly_map`
-					 (assembly_content_id, item_content_id, item_position) VALUES (?,?,NULL)",
-					[ $groupContentId, $contentId ]
-				);
-			}
-			$loaded++;
 		}
 
 		// Store kitlocker xrefs
