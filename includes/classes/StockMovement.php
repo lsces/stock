@@ -64,9 +64,13 @@ class StockMovement extends LibertyContent {
 		$selectSql = $joinSql = '';
 		$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
 
+		$X = BIT_DB_PREFIX;
 		$sql = "SELECT lc.* $selectSql
 					, uue.`login` AS `modifier_user`, uue.`real_name` AS `modifier_real_name`
 					, uuc.`login` AS `creator_user`,  uuc.`real_name` AS `creator_real_name`
+					, (SELECT FIRST 1 x.`start_date` FROM `{$X}liberty_xref` x
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   ORDER BY x.`xorder`) AS ref_start_date
 				FROM `".BIT_DB_PREFIX."liberty_content` lc
 					LEFT JOIN `".BIT_DB_PREFIX."users_users` uue ON uue.`user_id` = lc.`modifier_user_id`
 					LEFT JOIN `".BIT_DB_PREFIX."users_users` uuc ON uuc.`user_id` = lc.`user_id`
@@ -157,7 +161,7 @@ class StockMovement extends LibertyContent {
 
 	public function markReceived(): bool {
 		if( !$this->isValid() ) return false;
-		$now = $this->mDb->NOW();
+		$now = time();
 		$this->mDb->query(
 			"UPDATE `".BIT_DB_PREFIX."liberty_content` SET `event_time` = ? WHERE `content_id` = ?",
 			[ $now, $this->mContentId ]

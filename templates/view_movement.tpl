@@ -15,10 +15,14 @@
 		<dl class="dl-horizontal">
 			<dt>{tr}Type{/tr}</dt>
 			<dd>{$gContent->getDirection()|escape}</dd>
-			<dt>{tr}Received{/tr}</dt>
-			<dd>{if $gContent->isReceived()}{$gContent->mInfo.event_time|bit_short_date}{else}{tr}Pending{/tr}{/if}</dd>
 			<dt>{tr}Created{/tr}</dt>
 			<dd>{$gContent->mInfo.created|bit_short_datetime} {tr}by{/tr} {$gContent->mInfo.creator|escape}</dd>
+			{if $gContent->mInfo.ref_start_date}
+			<dt>{tr}Ordered{/tr}</dt>
+			<dd>{$gContent->mInfo.ref_start_date|bit_short_date}</dd>
+			{/if}
+			<dt>{tr}Received{/tr}</dt>
+			<dd>{if $gContent->isReceived()}{$gContent->mInfo.event_time|bit_short_date}{else}{tr}Pending{/tr}{/if}</dd>
 			{if $gContent->mInfo.last_modified neq $gContent->mInfo.created}
 				<dt>{tr}Modified{/tr}</dt>
 				<dd>{$gContent->mInfo.last_modified|bit_short_datetime} {tr}by{/tr} {$gContent->mInfo.editor|escape}</dd>
