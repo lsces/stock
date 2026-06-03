@@ -71,6 +71,17 @@ class StockMovement extends LibertyContent {
 					, (SELECT FIRST 1 x.`start_date` FROM `{$X}liberty_xref` x
 					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
 					   ORDER BY x.`xorder`) AS ref_start_date
+					, (SELECT FIRST 1 xi.`cross_ref_title` FROM `{$X}liberty_xref` x
+					   JOIN `{$X}liberty_xref_item` xi ON xi.`item` = x.`item` AND xi.`content_type_guid` = 'stockmovement'
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   ORDER BY x.`xorder`) AS ref_type_title
+					, (SELECT FIRST 1 x.`xref` FROM `{$X}liberty_xref` x
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   ORDER BY x.`xorder`) AS ref_contact_id
+					, (SELECT FIRST 1 lc2.`title` FROM `{$X}liberty_xref` x
+					   JOIN `{$X}liberty_content` lc2 ON lc2.`content_id` = x.`xref`
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   ORDER BY x.`xorder`) AS ref_contact_name
 				FROM `".BIT_DB_PREFIX."liberty_content` lc
 					LEFT JOIN `".BIT_DB_PREFIX."users_users` uue ON uue.`user_id` = lc.`modifier_user_id`
 					LEFT JOIN `".BIT_DB_PREFIX."users_users` uuc ON uuc.`user_id` = lc.`user_id`
@@ -354,7 +365,14 @@ class StockMovement extends LibertyContent {
 					);
 					// Preserve existing type if already set; default to TRANS for new rows
 					$refItem = $existingRow['item'] ?? 'TRANS';
+					// Look up contact by SCREF short name
+					$contactId = $from !== '' ? (int)$this->mDb->getOne(
+						"SELECT `content_id` FROM `".BIT_DB_PREFIX."liberty_xref`
+						 WHERE `item`='SCREF' AND `data`=?",
+						[ $from ]
+					) : 0;
 					$refHash = [ 'content_id' => $this->mContentId, 'item' => $refItem, 'xkey' => $ref, 'edit' => $from ];
+					if( $contactId ) $refHash['xref'] = $contactId;
 					$existingRow ? $refHash['xref_id'] = $existingRow['xref_id'] : $refHash['fAddXref'] = 1;
 					$this->storeXref( $refHash );
 				}

@@ -14,7 +14,16 @@
 
 		<dl class="dl-horizontal">
 			<dt>{tr}Type{/tr}</dt>
-			<dd>{$gContent->getDirection()|escape}</dd>
+			<dd>{$gContent->mInfo.ref_type_title|default:$gContent->getDirection()|escape}</dd>
+			{if $gContent->mInfo.ref_contact_name}
+			<dt>{tr}Supplier{/tr}</dt>
+			<dd>
+				<a href="{$smarty.const.CONTACT_PKG_URL}display.php?content_id={$gContent->mInfo.ref_contact_id}">{$gContent->mInfo.ref_contact_name|escape}</a>
+			</dd>
+			{elseif $gContent->mInfo.reference.0.data}
+			<dt>{tr}From{/tr}</dt>
+			<dd>{$gContent->mInfo.reference.0.data|escape}</dd>
+			{/if}
 			<dt>{tr}Created{/tr}</dt>
 			<dd>{$gContent->mInfo.created|bit_short_datetime} {tr}by{/tr} {$gContent->mInfo.creator|escape}</dd>
 			{if $gContent->mInfo.ref_start_date}
@@ -27,19 +36,25 @@
 				<dt>{tr}Modified{/tr}</dt>
 				<dd>{$gContent->mInfo.last_modified|bit_short_datetime} {tr}by{/tr} {$gContent->mInfo.editor|escape}</dd>
 			{/if}
+			{if $gContent->mInfo.data}
+			<dt>{tr}Note{/tr}</dt>
+			<dd>{$gContent->mInfo.data|escape}</dd>
+			{/if}
 		</dl>
 
 		{assign var=movXrefGroups value=$gContent->getXrefGroupList()}
 		{if $movXrefGroups}
 			{jstabs}
-				{section name=xrefGroup loop=$movXrefGroups}
-					{include file=$gContent->getXrefListTemplate($movXrefGroups[xrefGroup].template)
-						source=$movXrefGroups[xrefGroup].source
-						source_title=$movXrefGroups[xrefGroup].title
-						group=$movXrefGroups[xrefGroup].sort_order
-						allow_add=false
-						allow_edit=false}
-				{/section}
+				{foreach from=$movXrefGroups item=xrefGroup}
+					{if $xrefGroup.x_group neq 'reference'}
+						{include file=$gContent->getXrefListTemplate($xrefGroup.template)
+							source=$xrefGroup.source
+							source_title=$xrefGroup.title
+							group=$xrefGroup.sort_order
+							allow_add=false
+							allow_edit=false}
+					{/if}
+				{/foreach}
 			{/jstabs}
 		{/if}
 

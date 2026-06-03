@@ -21,23 +21,67 @@
 				{forminput}
 					<input type="text" class="form-control input-xlarge" name="title" id="title"
 						value="{$gContent->getTitle()|escape}" maxlength="160" />
-					{formhelp note="Movement reference — e.g. REQ-2026-001"}
 				{/forminput}
 			</div>
 
-			{if !$gContent->isValid() && $refTypes}
+			{if $refTypes}
 			<div class="form-group">
 				{formlabel label="Movement Type" mandatory="y"}
 				{forminput}
 					{foreach from=$refTypes key=item item=label}
-						<label class="radio">
+						<label class="radio-inline">
 							<input type="radio" name="movement_type" value="{$item|escape}"
-								{if $smarty.foreach.default.first} checked="checked"{/if} /> {$label|escape}
+								{if $refRow.item eq $item} checked="checked"
+								{elseif !$refRow && $smarty.foreach.default.first} checked="checked"{/if} /> {$label|escape}
 						</label>
 					{/foreach}
 				{/forminput}
 			</div>
 			{/if}
+
+			<div class="form-group">
+				{formlabel label="From" for="ref_from"}
+				{forminput}
+					<input type="hidden" name="ref_contact_id" id="ref_contact_id"
+						value="{$gContent->mInfo.ref_contact_id|default:''|escape}" />
+					<input type="text" class="form-control" name="ref_from" id="ref_from"
+						autocomplete="off" list="contact_suggestions"
+						value="{if $gContent->mInfo.ref_contact_name}{$gContent->mInfo.ref_contact_name|escape}{else}{$refRow.data|default:''|escape}{/if}"
+						maxlength="160" placeholder="Type to search contacts…" />
+					<datalist id="contact_suggestions"></datalist>
+				{/forminput}
+			</div>
+
+			<div class="form-group">
+				{formlabel label="Ref Key" for="ref_key"}
+				{forminput}
+					<input type="text" class="form-control" name="ref_key" id="ref_key"
+						value="{$refRow.xkey|default:''|escape}" maxlength="160" />
+				{/forminput}
+			</div>
+
+			<div class="form-group">
+				{formlabel label="Ordered" for="ordered_date"}
+				{forminput}
+					<input type="text" class="form-control input-small" name="ordered_date" id="ordered_date"
+						placeholder="dd/mm/yyyy" value="{$orderedDateVal|escape}" maxlength="10" />
+				{/forminput}
+			</div>
+
+			<div class="form-group">
+				{formlabel label="Received" for="received_date"}
+				{forminput}
+					<input type="text" class="form-control input-small" name="received_date" id="received_date"
+						placeholder="dd/mm/yyyy" value="{$receivedDateVal|escape}" maxlength="10" />
+				{/forminput}
+			</div>
+
+			<div class="form-group">
+				{formlabel label="Note" for="edit"}
+				{forminput}
+					<textarea class="form-control" name="edit" id="edit" rows="2">{$gContent->mInfo.data|default:''|escape}</textarea>
+				{/forminput}
+			</div>
 
 			{if !$gContent->isValid()}
 			<div class="form-group">
@@ -52,12 +96,6 @@
 			<div class="form-group submit">
 				<input type="submit" class="btn btn-primary" name="fSave" value="{tr}Save{/tr}" />
 				{if $gContent->isValid()}
-					{if !$gContent->isReceived()}
-						<input type="submit" class="btn btn-success" name="fReceived" value="{tr}Mark Received{/tr}"
-							onclick="return confirm('{tr}Mark this movement as received?{/tr}')" />
-					{else}
-						<span class="label label-success">{tr}Received{/tr}</span>
-					{/if}
 					<input type="submit" class="btn btn-danger pull-right" name="delete" value="{tr}Delete{/tr}" />
 				{/if}
 			</div>
@@ -66,7 +104,6 @@
 		{if $gContent->isValid()}
 
 			{* ── Upload CSV ── *}
-			{if !$gContent->isReceived()}
 			<h4>{tr}Upload CSV{/tr}</h4>
 			{form enctype="multipart/form-data" ipackage="stock" ifile="edit_movement.php"}
 				<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}" />
@@ -75,7 +112,6 @@
 					<input type="submit" class="btn btn-default" name="upload_csv" value="{tr}Upload{/tr}" />
 				</div>
 			{/form}
-			{/if}
 
 			{* ── Upload results ── *}
 			{if isset($csvLoaded)}
@@ -90,7 +126,7 @@
 				{/if}
 			{/if}
 
-			{* ── Xref tabs — items and references ── *}
+			{* ── Xref tabs — quantity BOM only ── *}
 			{if $gContent->mInfo.movement_xref_groups}
 				{jstabs}
 					{section name=xrefGroup loop=$gContent->mInfo.movement_xref_groups}
@@ -108,4 +144,31 @@
 
 	</div><!-- end .body -->
 </div><!-- end .stock -->
+<script>
+(function($) {
+	var timer, contacts = [];
+	$('#ref_from').on('input', function() {
+		var q = $(this).val();
+		clearTimeout(timer);
+		if (q.length < 2) { $('#contact_suggestions').empty(); contacts = []; return; }
+		timer = setTimeout(function() {
+			$.getJSON('{$contactLookupUrl}', {ldelim}q: q{rdelim}, function(data) {
+				contacts = data;
+				var dl = $('#contact_suggestions').empty();
+				$.each(data, function(i, row) {
+					var label = row.title + (row.scref ? ' (' + row.scref + ')' : '');
+					dl.append($('<option>').val(label).attr('data-id', row.content_id));
+				});
+			});
+		}, 250);
+	}).on('change', function() {
+		var val = $(this).val(), found = null;
+		$.each(contacts, function(i, row) {
+			var label = row.title + (row.scref ? ' (' + row.scref + ')' : '');
+			if (label === val || row.title === val || row.scref === val) { found = row; return false; }
+		});
+		$('#ref_contact_id').val(found ? found.content_id : '');
+	});
+}(jQuery));
+</script>
 {/strip}

@@ -32,12 +32,51 @@ $refTypes = $gBitDb->getAssoc(
 	 ORDER BY xi.`item`"
 );
 
+// Helper: parse dd/mm/yy or dd/mm/yyyy → Unix timestamp, or 0
+function parseMovementDate( string $s ): int {
+	$parts = explode( '/', trim( $s ) );
+	if( count( $parts ) !== 3 ) return 0;
+	$year = (int)$parts[2] < 100 ? 2000 + (int)$parts[2] : (int)$parts[2];
+	return (int)mktime( 0, 0, 0, (int)$parts[1], (int)$parts[0], $year );
+}
+
 if( !empty( $_REQUEST['fSave'] ) ) {
 	$isNew = !$gContent->isValid();
 	if( $gContent->store( $_REQUEST ) ) {
-		if( $isNew && !empty( $_REQUEST['movement_type'] ) && isset( $refTypes[$_REQUEST['movement_type']] ) ) {
-			$typeHash = [ 'content_id' => $gContent->mContentId, 'item' => $_REQUEST['movement_type'], 'fAddXref' => 1 ];
-			$gContent->storeXref( $typeHash );
+		// Reference xref — create or update type/key/from
+		if( !empty( $_REQUEST['movement_type'] ) && isset( $refTypes[$_REQUEST['movement_type']] ) ) {
+			$existingRef = $gBitDb->getRow(
+				"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref`
+				 WHERE `content_id`=? AND `item` IN ('REQN','TRANS','ORDER') ORDER BY `xorder`",
+				[ $gContent->mContentId ]
+			);
+			$refHash = [
+				'content_id' => $gContent->mContentId,
+				'item'       => $_REQUEST['movement_type'],
+				'xkey'       => trim( $_REQUEST['ref_key'] ?? '' ),
+				'edit'       => trim( $_REQUEST['ref_from'] ?? '' ),
+			];
+			if( !empty( $_REQUEST['ref_contact_id'] ) && is_numeric( $_REQUEST['ref_contact_id'] ) ) {
+				$refHash['xref'] = (int)$_REQUEST['ref_contact_id'];
+			}
+			$existingRef ? $refHash['xref_id'] = $existingRef['xref_id'] : $refHash['fAddXref'] = 1;
+			$gContent->storeXref( $refHash );
+		}
+		// Ordered date → xref.start_date
+		if( !empty( $_REQUEST['ordered_date'] ) && ($ts = parseMovementDate( $_REQUEST['ordered_date'] )) ) {
+			$gBitDb->query(
+				"UPDATE `".BIT_DB_PREFIX."liberty_xref` SET `start_date`=?
+				 WHERE `content_id`=? AND `item` IN ('REQN','TRANS','ORDER')",
+				[ date( 'Y-m-d H:i:s', $ts ), $gContent->mContentId ]
+			);
+		}
+		// Received date → lc.event_time
+		if( !empty( $_REQUEST['received_date'] ) && ($ts = parseMovementDate( $_REQUEST['received_date'] )) ) {
+			$gBitDb->query(
+				"UPDATE `".BIT_DB_PREFIX."liberty_content` SET `event_time`=? WHERE `content_id`=?",
+				[ $ts, $gContent->mContentId ]
+			);
+			$gContent->mInfo['event_time'] = $ts;
 		}
 		if( $isNew && !empty( $_FILES['csv_file']['tmp_name'] ) && $_FILES['csv_file']['error'] === UPLOAD_ERR_OK ) {
 			$csvResult = $gContent->importCsv( $qtyTypes );
@@ -88,8 +127,25 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 }
 
 if( $gContent->isValid() ) {
-	$gContent->mInfo['movement_xref_groups'] = $gContent->getXrefGroupList();
+	// Only quantity group in tabs; reference is handled directly in the form
+	$gContent->mInfo['movement_xref_groups'] = array_values( array_filter(
+		$gContent->getXrefGroupList(),
+		fn( $g ) => $g['x_group'] !== 'reference'
+	) );
 }
+
+// Pre-populate reference row for the form
+$refRow = !empty( $gContent->mInfo['reference'] ) ? reset( $gContent->mInfo['reference'] ) : [];
+$gBitSmarty->assign( 'refRow', $refRow );
+
+// Pre-format dates as dd/mm/yyyy for form fields
+$orderedDateVal  = !empty( $gContent->mInfo['ref_start_date'] )
+	? date( 'd/m/Y', strtotime( $gContent->mInfo['ref_start_date'] ) ) : '';
+$receivedDateVal = !empty( $gContent->mInfo['event_time'] ) && $gContent->mInfo['event_time'] > 0
+	? date( 'd/m/Y', (int)$gContent->mInfo['event_time'] ) : '';
+$gBitSmarty->assign( 'orderedDateVal',   $orderedDateVal );
+$gBitSmarty->assign( 'receivedDateVal',  $receivedDateVal );
+$gBitSmarty->assign( 'contactLookupUrl', CONTACT_PKG_URL.'includes/lookup_contact.php' );
 
 $gBitSmarty->assign( 'refTypes', $refTypes );
 $gBitSmarty->assign( 'errors',   $gContent->mErrors );
