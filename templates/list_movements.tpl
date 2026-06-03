@@ -74,7 +74,7 @@
 		</table>
 
 		<nav>
-			{pagination}
+			{pagination ref_type=$filterType find=$smarty.request.find|default:'' component_content_id=$componentContentId|default:'' assembly_content_id=$assemblyContentId|default:''}
 		</nav>
 
 	</section>

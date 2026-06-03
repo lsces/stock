@@ -246,6 +246,15 @@ class StockMovement extends LibertyContent {
 			$whereSql = substr_replace( $whereSql, ' WHERE ', 0, 4 );
 		}
 
+		$pListHash['cant'] = (int)$this->mDb->getOne(
+			"SELECT COUNT(DISTINCT lc.`content_id`)
+			 FROM `".BIT_DB_PREFIX."liberty_content` lc
+				INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON uu.`user_id` = lc.`user_id`
+				$joinSql
+			 $whereSql",
+			$bindVars
+		);
+
 		$X = BIT_DB_PREFIX;
 		$cmpQtySelect = $this->verifyId( $pListHash['component_content_id'] ?? 0 )
 			? ", xcmp.`item` AS cmp_qty_type, CAST(xcmp.`xkey` AS DOUBLE PRECISION) AS cmp_qty"
