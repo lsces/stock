@@ -238,9 +238,14 @@ class StockMovement extends LibertyContent {
 
 		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
 
-		$orderby = !empty( $pListHash['sort_mode'] )
-			? " ORDER BY ".$this->mDb->convertSortmode( $pListHash['sort_mode'] )
-			: ' ORDER BY lc.`last_modified` DESC';
+		$sortMode = $pListHash['sort_mode'] ?? '';
+		$orderby = match( $sortMode ) {
+			'event_time_asc'  => ' ORDER BY lc.event_time ASC',
+			'event_time_desc' => ' ORDER BY lc.event_time DESC',
+			default => !empty( $sortMode )
+				? ' ORDER BY '.$this->mDb->convertSortmode( $sortMode )
+				: ' ORDER BY lc.last_modified DESC',
+		};
 
 		if( !empty( $whereSql ) ) {
 			$whereSql = substr_replace( $whereSql, ' WHERE ', 0, 4 );
@@ -267,7 +272,10 @@ class StockMovement extends LibertyContent {
 						 ORDER BY x.`xorder`) AS ref_type,
 						(SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x
 						 WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
-						 ORDER BY x.`xorder`) AS ref_key
+						 ORDER BY x.`xorder`) AS ref_key,
+						(SELECT FIRST 1 x.`start_date` FROM `{$X}liberty_xref` x
+						 WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+						 ORDER BY x.`xorder`) AS ref_start_date
 						$cmpQtySelect
 						$selectSql
 				FROM `{$X}liberty_content` lc

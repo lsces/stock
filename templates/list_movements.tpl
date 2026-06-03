@@ -42,7 +42,8 @@
 					<th>{tr}Type{/tr}</th>
 					<th>{tr}Ref{/tr}</th>
 					{if $componentContentId}<th class="text-right">{tr}Qty{/tr}</th>{/if}
-					<th>{tr}Received{/tr}</th>
+					<th>{tr}Ordered{/tr}</th>
+					<th>{smartlink ititle="Received" isort="event_time_desc" ifile="list_movements.php" ipackage="stock"}</th>
 					<th>{smartlink ititle="Date" isort="created_desc"}</th>
 					<th>{tr}Creator{/tr}</th>
 					{if $gBitUser->hasPermission('p_stock_create')}<th></th>{/if}
@@ -57,6 +58,7 @@
 						{if $componentContentId}
 							<td class="text-right">{$mov.cmp_qty|string_format:"%.0f"} {$mov.cmp_qty_type|escape}</td>
 						{/if}
+						<td>{if $mov.ref_start_date}{$mov.ref_start_date|bit_short_date}{else}—{/if}</td>
 						<td>{if $mov.event_time}{$mov.event_time|bit_short_date}{else}—{/if}</td>
 						<td>{$mov.created|bit_short_date}</td>
 						<td>{$mov.real_name|default:$mov.login|escape}</td>
@@ -68,7 +70,7 @@
 						{/if}
 					</tr>
 				{foreachelse}
-					<tr><td colspan="7" class="norecords">{tr}No movements found.{/tr}</td></tr>
+					<tr><td colspan="8" class="norecords">{tr}No movements found.{/tr}</td></tr>
 				{/foreach}
 			</tbody>
 		</table>
