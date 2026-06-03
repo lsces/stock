@@ -23,20 +23,24 @@ $gBitSystem->verifyPermission( 'p_stock_admin' );
 
 require_once STOCK_PKG_CLASS_PATH.'StockAssembly.php';
 
-$csvFile          = __DIR__.'/data/KitlockerGroups.csv';
-$parentAssemblyId = 21;
-$loaded           = $skipped = $linked = 0;
-$errors           = [];
+$csvFile     = __DIR__.'/data/KitlockerGroups.csv';
+$loaded      = $skipped = $linked = 0;
+$errors      = [];
 
-// Load parent assembly and verify it actually exists in the DB
-$parent = new StockAssembly( $parentAssemblyId, null );
-$parent->load();
-if( !$parent->isValid() || empty( $parent->mContentId ) ) {
-	$errors[] = "Parent assembly $parentAssemblyId not found or has no content_id.";
+// Find the kitlocker parent assembly by title
+$parentContentId = (int)$gBitDb->getOne(
+	"SELECT lc.content_id FROM `".BIT_DB_PREFIX."liberty_content` lc
+	 WHERE lc.content_type_guid='stockassembly' AND LOWER(lc.title)='kitlocker'"
+);
+
+$parent = $parentContentId ? new StockAssembly( null, $parentContentId ) : new StockAssembly();
+if( $parentContentId ) $parent->load();
+
+if( !$parentContentId || !$parent->isValid() || empty( $parent->mContentId ) ) {
+	$errors[] = "Parent assembly 'kitlocker' not found — create it first.";
 } elseif( !file_exists( $csvFile ) ) {
 	$errors[] = "File not found: $csvFile";
 } else {
-	$parentContentId = $parent->mContentId;
 	$fh = fopen( $csvFile, 'r' );
 	$rowNum = 0;
 	while( ($cols = fgetcsv( $fh, 0, ',', '"', '' )) !== false ) {
