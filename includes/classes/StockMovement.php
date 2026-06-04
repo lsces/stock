@@ -368,7 +368,7 @@ class StockMovement extends LibertyContent {
 					// Look up contact by SCREF short name
 					$contactId = $from !== '' ? (int)$this->mDb->getOne(
 						"SELECT `content_id` FROM `".BIT_DB_PREFIX."liberty_xref`
-						 WHERE `item`='SCREF' AND `data`=?",
+						 WHERE `item`='SCREF' AND `xkey`=?",
 						[ $from ]
 					) : 0;
 					$refHash = [ 'content_id' => $this->mContentId, 'item' => $refItem, 'xkey' => $ref, 'edit' => $from ];
