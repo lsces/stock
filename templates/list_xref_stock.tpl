@@ -35,7 +35,7 @@
 						<td>{$gContent->mInfo.$source[xref].last_update_date|bit_short_date}</td>
 						<td>
 							{if $gBitUser->hasPermission('p_stock_update')}
-								{smartlink ititle="Edit" ifile="edit_xref.php" booticon="fa-pen-to-square" content_id=$gContent->mInfo.content_id xref_id=$gContent->mInfo.$source[xref].xref_id}
+								{smartlink ititle="Edit" ifile="edit_xref.php" biticon="document-properties" content_id=$gContent->mInfo.content_id xref_id=$gContent->mInfo.$source[xref].xref_id}
 							{/if}
 						</td>
 					</tr>
@@ -49,7 +49,7 @@
 	</div>
 	{if $gBitUser->hasPermission('p_stock_update') && $source ne 'history'}
 		<div>
-			{smartlink ititle="Add record" ifile="add_xref.php" booticon="fa-plus" content_id=$gContent->mInfo.content_id group=$group}
+			{smartlink ititle="Add record" ifile="add_xref.php" biticon="list-add" content_id=$gContent->mInfo.content_id group=$group}
 		</div>
 	{/if}
 	{/legend}

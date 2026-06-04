@@ -27,7 +27,7 @@ $pluginParams = [
 	'syntax'        => '{component id= }',
 	'plugin_type'   => DATA_PLUGIN,
 
-	'booticon'       => '{booticon iname="icon-tag" iexplain="Component"}',
+	'booticon'       => '{biticon ipackage="icons" iname="emblem-favorite" iexplain="Component"}',
 	'taginsert'     => '{component id= nolink=}',
 
 	'help_function' => 'data_component_help',

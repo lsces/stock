@@ -43,7 +43,7 @@
 								<a href="{$gal.display_url|escape}">{$gal.title|escape}</a>
 							{/if}
 							{if $gal.is_hidden|default:'n' == 'y' || $gal.is_private|default:'n' == 'y' || $gal.access_answer|default:false}
-								{booticon iname="icon-lock" ipackage="icons" iexplain="Restricted"}
+								{biticon ipackage="icons" iname="lock" ipackage="icons" iexplain="Restricted"}
 							{/if}
 							{if $gal.data}
 								<br/><small class="text-muted">{$gal.data|truncate:250|escape}</small>

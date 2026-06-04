@@ -51,10 +51,10 @@
 						<td class="text-right">{$galItem->mInfo.hits|default:"{tr}none{/tr}"}</td>
 					{/if}
 					<td class="actionicon">
-						<a href="{$galItem->getDisplayUrl()}">{booticon iname="fa-folder-open" iexplain="View"}</a>
+						<a href="{$galItem->getDisplayUrl()}">{biticon ipackage="icons" iname="folder-open" iexplain="View"}</a>
 						{if $gContent->isOwner($galItem->mInfo) || $gBitUser->isAdmin()}
-							<a href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit"}</a>
-							<a href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$galItem->mInfo.content_id}&amp;delete=1">{booticon iname="fa-trash" iexplain="Remove"}</a>
+							<a href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$galItem->mInfo.content_id}">{biticon ipackage="icons" iname="document-properties" iexplain="Edit"}</a>
+							<a href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$galItem->mInfo.content_id}&amp;delete=1">{biticon ipackage="icons" iname="edit-delete" iexplain="Remove"}</a>
 						{/if}
 					</td>
 				</tr>

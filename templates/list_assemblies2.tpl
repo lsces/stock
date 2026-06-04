@@ -9,7 +9,7 @@
 
 	<section class="body">
 		<ul class="list-inline sortby">
-			<li>{booticon iname="icon-circle-arrow-right" ipackage="icons" iexplain="sort by" iforce="icon"}</li>
+			<li>{biticon ipackage="icons" iname="go-next" ipackage="icons" iexplain="sort by" iforce="icon"}</li>
 			{if $gBitSystem->isFeatureActive('stock_list_title')}
 				<li>{smartlink ititle="Name" isort="title"}</li>
 			{/if}
@@ -41,7 +41,7 @@
 									{/if}
 								</a>
 								{if $gal.is_hidden|default:'n' == 'y' || $gal.is_private|default:'n' == 'y' || $gal.access_answer|default:false}
-									{booticon iname="icon-lock" ipackage="icons" iexplain="Restricted"}
+									{biticon ipackage="icons" iname="lock" ipackage="icons" iexplain="Restricted"}
 								{/if}
 							</h3>
 						</div>

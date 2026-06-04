@@ -35,7 +35,7 @@
 					<span class="text-muted"> — {$galItem->mInfo.data|truncate:120|escape}</span>
 				{/if}
 				{if $gContent->isOwner($galItem->mInfo) || $gBitUser->isAdmin()}
-					<a class="actionicon" href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit"}</a>
+					<a class="actionicon" href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$galItem->mInfo.content_id}">{biticon ipackage="icons" iname="document-properties" iexplain="Edit"}</a>
 				{/if}
 			</li>
 		{foreachelse}
