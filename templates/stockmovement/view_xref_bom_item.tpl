@@ -16,7 +16,7 @@
 		<td>
 			<span class="actionicon">
 				{if $gContent->hasUpdatePermission() && $source ne 'history'}
-					{smartlink ititle="Edit" ipackage="liberty" ifile="edit_xref.php" biticon="document-properties" content_id=$gContent->mInfo.content_id xref_id=$gContent->mInfo.$source[xref].xref_id}
+					{smartlink ititle="Edit" ipackage="liberty" ifile="edit_xref.php" biticon="edit" content_id=$gContent->mInfo.content_id xref_id=$gContent->mInfo.$source[xref].xref_id}
 				{/if}
 				{if $gContent->hasExpungePermission()}
 					{smartlink ititle="Delete" ipackage="liberty" ifile="edit_xref.php" biticon="user-trash" content_id=$gContent->mInfo.content_id xref_id=$gContent->mInfo.$source[xref].xref_id expunge=1}

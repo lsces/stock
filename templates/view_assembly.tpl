@@ -2,7 +2,7 @@
 {if $gContent->hasUpdatePermission()}
 	<div class="floaticon">
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='icon' serviceHash=$gContent->mInfo}
-		<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="document-properties" iexplain="Edit Assembly"}</a>
+		<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit Assembly"}</a>
 		<a title="{tr}Component Order{/tr}" href="{$smarty.const.STOCK_PKG_URL}component_order.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="view-sort-ascending" iexplain="Component Order"}</a>
 		<a title="{tr}View Stock{/tr}" href="{$smarty.const.STOCK_PKG_URL}list_stock.php?assembly_content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="package-x-generic" iexplain="View Stock"}</a>
 		<a title="{tr}View Movements{/tr}" href="{$smarty.const.STOCK_PKG_URL}list_movements.php?assembly_content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="go-next" iexplain="View Movements"}</a>

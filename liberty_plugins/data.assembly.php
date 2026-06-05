@@ -27,7 +27,7 @@ $pluginParams = [
 	'syntax'        => '{assembly id= }',
 	'plugin_type'   => DATA_PLUGIN,
 
-	'booticon'       => '{biticon ipackage="icons" iname="text-x-generic" iexplain="Assembly"}',
+	'booticon'       => '{biticon ipackage="icons" iname="view-list-text" iexplain="Assembly"}',
 	'taginsert'     => '{assembly id= nolink=}',
 
 	'help_function' => 'data_assembly_help',
