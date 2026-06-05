@@ -39,7 +39,7 @@
 				<td class="actionicon">
 					{if $gContent->isOwner( $galItem->mInfo ) || $gBitUser->isAdmin()}
 						<a href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$galItem->mInfo.content_id}">{biticon ipackage="icons" iname="document-properties" iexplain="Edit"}</a>
-						<a href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$galItem->mInfo.content_id}&amp;delete=1">{biticon ipackage="icons" iname="edit-delete" iexplain="Remove"}</a>
+						<a href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$galItem->mInfo.content_id}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Remove"}</a>
 					{/if}
 				</td>
 			</tr>
