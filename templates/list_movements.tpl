@@ -45,7 +45,7 @@
 					<th>{smartlink ititle="Received" isort="event_time" ifile="list_movements.php" ipackage="stock"}</th>
 					<th>{smartlink ititle="Date" isort="created_desc"}</th>
 					<th>{tr}Creator{/tr}</th>
-					{if $gBitUser->hasPermission('p_stock_create')}<th></th>{/if}
+					{if $gBitUser->hasPermission('p_stock_update')}<th></th>{/if}
 				</tr>
 			</thead>
 			<tbody>
@@ -60,7 +60,7 @@
 						<td>{if $mov.event_time}{$mov.event_time|bit_short_date}{else}—{/if}</td>
 						<td>{$mov.created|bit_short_date}</td>
 						<td>{$mov.real_name|default:$mov.login|escape}</td>
-						{if $gBitUser->hasPermission('p_stock_create')}
+						{if $gBitUser->hasPermission('p_stock_update')}
 							<td>
 								<a href="{$smarty.const.STOCK_PKG_URL}edit_movement.php?content_id={$mov.content_id}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
 							</td>

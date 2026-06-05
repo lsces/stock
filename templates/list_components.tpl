@@ -2,6 +2,9 @@
 <div class="listing stock">
 	<header>
 		<div class="floaticon">
+			{if $gBitUser->hasPermission('p_stock_create')}
+				<a href="{$smarty.const.STOCK_PKG_URL}edit_component.php">{biticon ipackage="icons" iname="kt-add-filters" iexplain="Create Component"}</a>
+			{/if}
 			{minifind prompt="Components"}
 		</div>
 		<h1>{tr}Components{/tr}{if $gQueryUserId} {tr}by{/tr} {displayname user_id=$gQueryUserId}{/if}</h1>
@@ -31,6 +34,7 @@
 					{if $gBitSystem->isFeatureActive('stock_item_list_date')}<th>{tr}Created{/tr}</th>{/if}
 					{if $gBitSystem->isFeatureActive('stock_item_list_creator')}<th>{tr}Creator{/tr}</th>{/if}
 					{if $gBitSystem->isFeatureActive('stock_item_list_hits')}<th>{tr}Hits{/tr}</th>{/if}
+					{if $gBitUser->hasPermission('p_stock_update')}<th></th>{/if}
 				</tr>
 			</thead>
 			<tbody>
@@ -41,6 +45,7 @@
 						{if $gBitSystem->isFeatureActive('stock_item_list_date')}<td>{$comp.created|bit_short_date}</td>{/if}
 						{if $gBitSystem->isFeatureActive('stock_item_list_creator')}<td>{displayname hash=$comp nolink=true}</td>{/if}
 						{if $gBitSystem->isFeatureActive('stock_item_list_hits')}<td>{$comp.hits}</td>{/if}
+						{if $gBitUser->hasPermission('p_stock_update')}<td><a href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$comp.content_id}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a></td>{/if}
 					</tr>
 				{foreachelse}
 					<tr><td colspan="5" class="norecords">{tr}No components found.{/tr}</td></tr>

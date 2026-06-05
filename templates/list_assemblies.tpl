@@ -2,6 +2,9 @@
 <div class="listing stock">
 	<header>
 		<div class="floaticon">
+			{if $gBitUser->hasPermission('p_stock_create')}
+				<a href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php">{biticon ipackage="icons" iname="view-list-icons" iexplain="Create Assembly"}</a>
+			{/if}
 			{minifind prompt="Assemblies"}
 		</div>
 		<h1>{tr}Assemblies{/tr}{if $gQueryUserId} {tr}by{/tr} {displayname user_id=$gQueryUserId}{/if}</h1>
@@ -87,6 +90,10 @@
 						{/if}-->
 
 						{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gal}
+
+						{if $gBitUser->hasPermission('p_stock_update')}
+							<a href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php?content_id={$gal.content_id}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
+						{/if}
 
 						</div>
 					</div>
