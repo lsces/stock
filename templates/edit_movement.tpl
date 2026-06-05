@@ -95,7 +95,7 @@
 
 			<div class="form-group submit">
 				<input type="submit" class="btn btn-primary" name="fSave" value="{tr}Save{/tr}" />
-				{if $gContent->isValid()}
+				{if $gContent->isValid() && $gBitUser->hasPermission('p_stock_expunge')}
 					<input type="submit" class="btn btn-danger pull-right" name="delete" value="{tr}Delete{/tr}" />
 				{/if}
 			</div>
