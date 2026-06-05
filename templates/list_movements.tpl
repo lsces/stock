@@ -3,7 +3,7 @@
 	<header>
 		<div class="floaticon">
 			{if $gBitUser->hasPermission('p_stock_create')}
-				<a class="btn btn-default btn-sm" href="{$smarty.const.STOCK_PKG_URL}edit_movement.php">{tr}Add Movement{/tr}</a>
+				<a href="{$smarty.const.STOCK_PKG_URL}edit_movement.php">{biticon ipackage="icons" iname="view-task-add" iexplain="Add Movement"}</a>
 			{/if}
 		</div>
 		<h1>{tr}Movements{/tr}{if $componentTitle} — {$componentTitle|escape}{/if}</h1>
@@ -62,8 +62,7 @@
 						<td>{$mov.real_name|default:$mov.login|escape}</td>
 						{if $gBitUser->hasPermission('p_stock_create')}
 							<td>
-								<a class="btn btn-xs btn-default"
-									href="{$smarty.const.STOCK_PKG_URL}edit_movement.php?content_id={$mov.content_id}">{tr}Edit{/tr}</a>
+								<a href="{$smarty.const.STOCK_PKG_URL}edit_movement.php?content_id={$mov.content_id}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
 							</td>
 						{/if}
 					</tr>
