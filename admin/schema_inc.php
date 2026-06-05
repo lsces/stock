@@ -62,12 +62,10 @@ $gBitInstaller->registerPreferences( STOCK_PKG_NAME, [
 
 // ### Default User Permissions
 $gBitInstaller->registerUserPermissions( STOCK_PKG_NAME, [
-	[ 'p_stock_list_assemblies', 'Can list stock assemblies',                    'basic',      STOCK_PKG_NAME ],
-	[ 'p_stock_view',            'Can view stock assemblies and components',      'basic',      STOCK_PKG_NAME ],
-	[ 'p_stock_create',          'Can create stock assemblies and components',    'registered', STOCK_PKG_NAME ],
-	[ 'p_stock_update',          'Can update stock assemblies and components',    'editors',    STOCK_PKG_NAME ],
-	[ 'p_stock_admin',           'Can administer stock',                         'editors',    STOCK_PKG_NAME ],
-	[ 'p_stock_create_public_gal','Can create public assemblies',                'editors',    STOCK_PKG_NAME ],
+	[ 'p_stock_view',   'Can view stock assemblies and components',   'registered', STOCK_PKG_NAME ],
+	[ 'p_stock_create', 'Can create stock assemblies and components', 'editors',    STOCK_PKG_NAME ],
+	[ 'p_stock_update', 'Can update stock assemblies and components', 'editors',    STOCK_PKG_NAME ],
+	[ 'p_stock_admin',  'Can administer stock',                       'admin',      STOCK_PKG_NAME ],
 ] );
 
 // ### Register content types
