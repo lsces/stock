@@ -126,17 +126,17 @@
 				{/if}
 			{/if}
 
-			{* ── Xref tabs — quantity BOM only ── *}
-			{if $gContent->mInfo.movement_xref_groups}
+			{* ── Xref tabs — quantity BOM only; reference handled above in form ── *}
+			{if $gXrefInfo->mGroups}
 				{jstabs}
-					{section name=xrefGroup loop=$gContent->mInfo.movement_xref_groups}
-						{include file=$gContent->getXrefListTemplate($gContent->mInfo.movement_xref_groups[xrefGroup].template)
-							source=$gContent->mInfo.movement_xref_groups[xrefGroup].source
-							source_title=$gContent->mInfo.movement_xref_groups[xrefGroup].title
-							group=$gContent->mInfo.movement_xref_groups[xrefGroup].sort_order
-							allow_add=true
-							allow_edit=true}
-					{/section}
+					{foreach $gXrefInfo->mGroups as $xrefGroup}
+						{if $xrefGroup->mXGroup neq 'reference'}
+							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+								xrefGroup=$xrefGroup
+								allow_add=true
+								allow_edit=true}
+						{/if}
+					{/foreach}
 				{/jstabs}
 			{/if}
 

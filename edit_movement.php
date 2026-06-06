@@ -127,11 +127,8 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 }
 
 if( $gContent->isValid() ) {
-	// Only quantity group in tabs; reference is handled directly in the form
-	$gContent->mInfo['movement_xref_groups'] = array_values( array_filter(
-		$gContent->getXrefGroupList(),
-		fn( $g ) => $g['x_group'] !== 'reference'
-	) );
+	$gContent->loadXrefInfo();
+	$gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 }
 
 // Pre-populate reference row for the form
