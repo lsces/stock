@@ -1,10 +1,11 @@
 <?php
 /**
+ * Abstract base for StockAssembly and StockComponent.
+ *
+ * Provides shared assembly-hierarchy navigation (parent lookup, breadcrumb building),
+ * assembly membership queries, and supplier xref enrichment with contact titles.
+ *
  * @package stock
- */
-
-/**
- * required setup
  */
 namespace Bitweaver\Stock;
 
@@ -13,15 +14,13 @@ use Bitweaver\Liberty\LibertyContent;
 defined( 'STOCKASSEMBLY_CONTENT_TYPE_GUID' )  || define( 'STOCKASSEMBLY_CONTENT_TYPE_GUID',  'stockassembly' );
 defined( 'STOCKCOMPONENT_CONTENT_TYPE_GUID' ) || define( 'STOCKCOMPONENT_CONTENT_TYPE_GUID', 'stockcomponent' );
 
-/**
- * @package stock
- */
 #[\AllowDynamicProperties]
 abstract class StockBase extends LibertyContent
 {
-	// Path of gallery images to get breadcrumbs
+	/** @var string Slash-separated content_id ancestry path; set by setGalleryPath(). */
 	public $mAssemblyPath;
 
+	/** @return string  Service key used by LibertyContent service hooks (always 'stock'). */
 	abstract public static function getServiceKey();
 
 	public function __sleep() {
@@ -33,6 +32,10 @@ abstract class StockBase extends LibertyContent
 		parent::__construct();
 	}
 
+	/**
+	 * Load xref groups then enrich the 'supplier' group by resolving each contact
+	 * content_id (xref column) to the contact's lc.title.
+	 */
 	public function loadXrefInfo(): void {
 		parent::loadXrefInfo();
 		if( empty( $this->mXrefInfo ) ) return;
@@ -52,6 +55,14 @@ abstract class StockBase extends LibertyContent
 		unset( $row );
 	}
 
+	/**
+	 * Enrich a single xref display row with resolved title data.
+	 *
+	 * Base implementation handles the 'supplier' group (contact title).
+	 * Subclasses override to add component title / pack size for BOM rows.
+	 *
+	 * @param array $pXrefInfo  Xref display row; modified in place.
+	 */
 	public function enrichXrefDisplay( array &$pXrefInfo ): void {
 		if( !empty( $pXrefInfo['xref'] ) && ( $pXrefInfo['x_group'] ?? '' ) === 'supplier' ) {
 			if( $contact = $this->mDb->getRow(
@@ -63,7 +74,12 @@ abstract class StockBase extends LibertyContent
 		}
 	}
 
-	// Gets a list of galleries which this item is attached to
+	/**
+	 * Return the parent assemblies this item belongs to, with prev/next sibling pointers.
+	 *
+	 * @param  int|null $pContentId  Defaults to $this->mContentId.
+	 * @return array|null            Assoc array keyed by content_id, or null if none.
+	 */
 	public function getParentAssemblies( $pContentId=null ) {
 		if( !$this->verifyId( $pContentId ) ) {
 			$pContentId = $this->mContentId;
@@ -106,20 +122,30 @@ abstract class StockBase extends LibertyContent
 		return $ret;
 	}
 
+	/** Populate $this->mInfo['parent_galleries'] via getParentAssemblies(). */
 	public function loadParentAssemblies() {
 		if( $this->isValid() ) {
 			$this->mInfo['parent_galleries'] = $this->getParentAssemblies();
 		}
 	}
 
+	/** @param string $pPath  Slash-separated ancestry path; trailing slash is stripped. */
 	public function setGalleryPath( $pPath ) {
 		$this->setField( 'gallery_path', rtrim( $pPath, '/' ) );
 	}
 
+	/** @return int|null  content_id of the thumbnail item, or null if none loaded. */
 	public function getThumbnailContentId() {
 		// PURE VIRTUAL
 	}
 
+	/**
+	 * Load thumbnail image data into $this->mInfo['preview_content'].
+	 * Base implementation is a no-op; subclasses override.
+	 *
+	 * @param string   $pSize       Thumbnail size hint ('small', 'medium', etc.).
+	 * @param int|null $pContentId  Override which content to use as thumbnail source.
+	 */
 	public function loadThumbnail( $pSize='small', $pContentId=null ) {
 		// Default does nothing
 	}
@@ -153,6 +179,16 @@ not ready for primetime
 	}
 */
 
+	/**
+	 * Return an ordered map of content_id → title for all ancestor assemblies.
+	 *
+	 * Walks stock_assembly_map upward (max 10 hops), caches the path via
+	 * setGalleryPath(), then falls back to loading from the cached path on
+	 * subsequent calls.
+	 *
+	 * @param  bool  $pIncludeSelf  Append this assembly's own entry when TRUE.
+	 * @return array                content_id → title, ordered root → parent.
+	 */
 	public function getBreadcrumbLinks( $pIncludeSelf = false ) {
 		$ret = [];
 		if( !$this->getField( 'gallery_path' ) ) {
@@ -206,6 +242,14 @@ not ready for primetime
 		return $ret;
 	}
 
+	/**
+	 * Sync this item's assembly membership to match $pAssemblyArray.
+	 *
+	 * Adds to assemblies not yet in the map; removes from assemblies no longer listed.
+	 * Checks p_stock_upload permission before adding to each assembly.
+	 *
+	 * @param int[] $pAssemblyArray  List of assembly content_ids to be a member of.
+	 */
 	public function addToAssemblies( $pAssemblyArray ) {
 		global $gBitSystem;
 		if( $this->isValid() ) {
@@ -256,6 +300,7 @@ not ready for primetime
 		}
 	}
 
+	/** @return bool TRUE when the 'is_public' preference is set to 'y'. */
 	public function isPublic() {
 		if( $this->isValid() ) {
 			return $this->getPreference( 'is_public' ) == 'y';
@@ -263,6 +308,13 @@ not ready for primetime
 		return false;
 	}
 
+	/**
+	 * Check whether an item is a member (direct or recursive) of an assembly.
+	 *
+	 * @param  int      $pAssemblyContentId  Assembly to test membership in.
+	 * @param  int|null $pItemContentId      Item to test; defaults to $this->mContentId.
+	 * @return bool
+	 */
 	public function isInAssembly( $pAssemblyContentId, $pItemContentId = null) {
 		if( !$this->verifyId( $pItemContentId ) ) {
 			$pItemContentId = $this->mContentId;

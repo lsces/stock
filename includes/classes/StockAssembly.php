@@ -1,10 +1,13 @@
 <?php
 /**
+ * A BOM / kit / assembly — a named group of components with quantities.
+ *
+ * Stored as a pure liberty_content record (content_type_guid='stockassembly').
+ * Components are linked via stock_assembly_map with an item_position for ordering.
+ * BOM quantities live in liberty_xref (x_group='quantity', items SGL/PCK/SHT/VOL).
+ * Assemblies can be nested; breadcrumb/tree queries use a Firebird recursive CTE.
+ *
  * @package stock
- */
-
-/**
- * required setup
  */
 namespace Bitweaver\Stock;
 
@@ -18,18 +21,19 @@ define( 'STOCK_PAGINATION_AUTO_FLOW', 'auto_flow' );
 define( 'STOCK_PAGINATION_POSITION_NUMBER', 'position_number' );
 define( 'STOCK_PAGINATION_SIMPLE_LIST', 'simple_list' );
 
-
-/**
- * @package stock
- */
 #[\AllowDynamicProperties]
 class StockAssembly extends StockBase {
-	public $mItems;			// Array of StockComponent class instances which belong to this gallery
+	/** @var StockComponent[]  Components belonging to this assembly, keyed by content_id. */
+	public $mItems;
 	public $mPaginationLookup;
 	public $mPreviewImage;
 	public $pRecursiveDelete;
 	protected $mXrefTypeKey = 'stockassembly_types';
 
+	/**
+	 * @param int|null $pAssemblyId  Legacy param — use $pContentId instead.
+	 * @param int|null $pContentId   liberty_content.content_id to load.
+	 */
 	public function __construct($pAssemblyId = null, $pContentId = null) {
 		parent::__construct();
 		$this->mContentTypeGuid = STOCKASSEMBLY_CONTENT_TYPE_GUID;
@@ -66,10 +70,19 @@ class StockAssembly extends StockBase {
 		return parent::__sleep();
 	}
 
+	/** @return bool TRUE when mContentId is a valid positive integer. */
 	public function isValid() {
 		return @$this->verifyId( $this->mContentId );
 	}
 
+	/**
+	 * Enrich a BOM xref row with component title, description, and pack size.
+	 *
+	 * Calls parent for supplier enrichment, then adds xref_title, xref_data,
+	 * pack_size, and pack_size_ext from the linked component's liberty_content + PCK xref.
+	 *
+	 * @param array $pXrefInfo  Xref display row; modified in place.
+	 */
 	public function enrichXrefDisplay( array &$pXrefInfo ): void {
 		parent::enrichXrefDisplay( $pXrefInfo );
 		if( !empty( $pXrefInfo['xref'] ) ) {
@@ -88,6 +101,10 @@ class StockAssembly extends StockBase {
 		}
 	}
 
+	/**
+	 * Load xref groups then enrich the 'quantity' BOM group — sorts by xorder and
+	 * resolves each component content_id to title, description, and pack size.
+	 */
 	public function loadXrefInfo(): void {
 		parent::loadXrefInfo();
 		if( empty( $this->mXrefInfo ) ) return;
@@ -114,6 +131,11 @@ class StockAssembly extends StockBase {
 		unset( $row );
 	}
 
+	/**
+	 * @param  array $pLookupHash       Must contain 'content_id'.
+	 * @param  bool  $pLoadFromCache    Whether to use LibertyContent's object cache.
+	 * @return static|null              Loaded object, or null if not found.
+	 */
 	public static function lookup( $pLookupHash, $pLoadFromCache=true ) {
 		global $gBitDb;
 		$ret = null;
@@ -130,6 +152,13 @@ class StockAssembly extends StockBase {
 		return $ret;
 	}
 
+	/**
+	 * Load assembly record into $this->mInfo, including pagination config and component count.
+	 *
+	 * @param  int|null   $pContentId    Unused; mContentId must be set before calling.
+	 * @param  array|null $pPluginParams Unused.
+	 * @return bool        TRUE on success, FALSE if no record found or mContentId invalid.
+	 */
 	public function load( $pContentId = null, $pPluginParams = null ) {
 		global $gBitSystem;
 		$bindVars = [];
@@ -185,6 +214,15 @@ class StockAssembly extends StockBase {
 		return !empty( $this->mInfo );
 	}
 
+	/**
+	 * Load a page of component items into $this->mItems.
+	 *
+	 * Respects the assembly's pagination layout preference. Pass $pListHash['page'] = -1
+	 * to load all items without paging.
+	 *
+	 * @param  array $pListHash  Pagination params; cant is set from $this->mInfo['num_components'].
+	 * @return bool|null         TRUE if items were loaded, FALSE/null otherwise.
+	 */
 	public function loadComponents( &$pListHash = [] ) {
 		global $gLibertySystem, $gBitSystem, $gBitUser;
 		if( !$this->isValid() ) {
@@ -259,6 +297,11 @@ class StockAssembly extends StockBase {
 		return \count ( $this->mItems ) > 0;
 	}
 
+	/**
+	 * Return all component rows for this assembly without pagination.
+	 *
+	 * @return array|null  content_id-keyed rows, or null if not valid.
+	 */
 	public function getComponentList() {
 		global $gLibertySystem, $gBitSystem, $gBitUser;
 		$ret = null;
@@ -305,6 +348,12 @@ class StockAssembly extends StockBase {
 		return $ret;
 	}
 
+	/**
+	 * Return the page number (floor of item_position) for a given item.
+	 *
+	 * @param  int      $pItemContentId
+	 * @return int|null  Page number, or null if item not in this assembly.
+	 */
 	public function getItemPage( $pItemContentId ) {
 		$ret = null;
 		if( empty( $this->mPaginationLookup ) ) {
@@ -326,6 +375,7 @@ class StockAssembly extends StockBase {
 		return $ret;
 	}
 
+	/** @return int  Number of items in stock_assembly_map for this assembly. */
 	public function getComponentCount() {
 		$ret = 0;
 
@@ -345,6 +395,12 @@ class StockAssembly extends StockBase {
 		return $ret;
 	}
 
+	/**
+	 * Validate $pParamHash before storing — requires a non-empty title.
+	 *
+	 * @param  array $pParamHash  Modified in place to set content_type_guid.
+	 * @return bool
+	 */
 	public function verifyGalleryData(&$pParamHash) {
 		if( empty($pParamHash['title']) ) {
 			$this->mErrors[] = "You must specify a title for this assembly";
@@ -447,6 +503,12 @@ class StockAssembly extends StockBase {
 		return false;
 	}
 
+	/**
+	 * Persist assembly data inside a transaction via LibertyContent::store().
+	 *
+	 * @param  array $pParamHash  Data to persist; modified in place.
+	 * @return bool
+	 */
 	public function store( array &$pParamHash ): bool {
 		if( $this->verifyGalleryData( $pParamHash ) ) {
 			$this->StartTrans();
@@ -462,6 +524,12 @@ class StockAssembly extends StockBase {
 		return count($this->mErrors) == 0;
 	}
 
+	/**
+	 * Return all stock_assembly_map rows for this assembly with lc.title included.
+	 *
+	 * @param  string $pSortMode  'item_position_asc' (default), 'item_position_desc', 'title_asc', 'title_desc'.
+	 * @return array              item_content_id-keyed rows.
+	 */
 	public function getComponentMapList( string $pSortMode = 'item_position_asc' ): array {
 		$ret = [];
 		if( $this->verifyId( $this->mContentId ) ) {
@@ -487,6 +555,12 @@ class StockAssembly extends StockBase {
 		return $ret;
 	}
 
+	/**
+	 * Remove an item from this assembly's stock_assembly_map.
+	 *
+	 * @param  int  $pContentId  item_content_id to remove.
+	 * @return bool TRUE on success, FALSE if not valid or item id invalid.
+	 */
 	public function removeItem( $pContentId ) {
 		$ret = false;
 		if( $this->isValid() && @$this->verifyId( $pContentId ) ) {
@@ -499,10 +573,15 @@ class StockAssembly extends StockBase {
 	}
 
 	/**
-	* Adds a new item (image or gallery) to this gallery. We check to make sure we are not a member
-	* of this gallery and this gallery is not a member of the new item to avoid infinite recursion scenarios
-	* @return bool wheter or not the item was added
-	*/
+	 * Add an item to this assembly, guarding against circular membership.
+	 *
+	 * Checks that neither this assembly is already in the item nor the item is
+	 * already in this assembly, to prevent infinite recursion in tree queries.
+	 *
+	 * @param  int      $pContentId  Item content_id to add.
+	 * @param  int|null $pPosition   item_position value; null lets the DB default.
+	 * @return bool     TRUE if added, FALSE if the guard check failed.
+	 */
 	public function addItem( $pContentId, $pPosition=null ) {
 		global $gBitSystem;
 		$ret = false;
@@ -516,6 +595,12 @@ class StockAssembly extends StockBase {
 		return $ret;
 	}
 
+	/**
+	 * Delete this assembly and recursively expunge any child assemblies not
+	 * shared with other parents. Removes all stock_assembly_map rows for this assembly.
+	 *
+	 * @return bool Always TRUE (errors recorded in $this->mErrors).
+	 */
 	public function expunge(): bool {
 		if( $this->isValid() ) {
 			$this->StartTrans();
@@ -554,14 +639,14 @@ class StockAssembly extends StockBase {
 
 
 	/**
-	* Returns the layout of the gallery accounting for various defaults
-	* @return string the layout string preference
-	*/
+	 * @return string  Pagination layout preference (one of STOCK_PAGINATION_* constants).
+	 */
 	public function getLayout() {
 		global $gBitSystem;
 		return $this->getPreference( 'assembly_pagination', $gBitSystem->getConfig( 'default_assembly_pagination', STOCK_PAGINATION_FIXED_GRID ) );
 	}
 
+	/** @return array  Map of STOCK_PAGINATION_* constant → human-readable label. */
 	public static function getAllLayouts() {
 		return [
 			STOCK_PAGINATION_FIXED_GRID      => 'Fixed Grid',
@@ -571,27 +656,17 @@ class StockAssembly extends StockBase {
 		];
 	}
 
-	/**
-	* Returns include file that will setup the object for rendering
-	* @return string the fully specified path to file to be included
-	*/
+	/** @return string  Absolute path to the display_stock_assembly_inc.php setup file. */
 	public function getRenderFile() {
 		return STOCK_PKG_INCLUDE_PATH.'display_stock_assembly_inc.php';
 	}
 
-	/**
-	* Returns template file used for display
-	* @return string the fully specified path to file to be included
-	*/
+	/** @return string  Smarty bitpackage: path to the assembly view template. */
 	public function getRenderTemplate() {
 		return 'bitpackage:stock/view_assembly.tpl';
 	}
 
-	/**
-	* Function that returns link to display a piece of content
-	* @param array pAssemblyId id of gallery to link
-	* @return string the url to display the gallery.
-	*/
+	/** @return string  URL to edit_assembly.php for this assembly. */
 	public function getEditUrl( $pContentId = null, $pMixed = null ): string {
 		if( $this->verifyId( $this->mContentId ) ) {
 			return STOCK_PKG_URL.'edit_assembly.php?content_id='.$this->mContentId;
@@ -599,6 +674,10 @@ class StockAssembly extends StockBase {
 		return STOCK_PKG_URL.'edit_assembly.php';
 	}
 
+	/**
+	 * @param  array $pParamHash  Must contain 'content_id'.
+	 * @return string             URL to view_assembly.php (or pretty URL).
+	 */
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		$ret = '';
 		global $gBitSystem;
@@ -611,6 +690,16 @@ class StockAssembly extends StockBase {
 		return $ret;
 	}
 
+	/**
+	 * Return the full assembly hierarchy as a nested tree.
+	 *
+	 * On Firebird uses a recursive CTE; falls back to a flat list with
+	 * splitConnectByTree() for other databases. Optionally marks which assemblies
+	 * contain a given item via $pListHash['contain_item'].
+	 *
+	 * @param  array $pListHash  Filter hash; 'contain_item' marks in-gallery status.
+	 * @return array             Nested array: each node has 'content' and 'children'.
+	 */
 	public function getTree( $pListHash ) {
 		global $gBitDb;
 
@@ -725,6 +814,7 @@ class StockAssembly extends StockBase {
 		return $ret;
 	}
 
+	/** Recursively sort a tree array by title using getTreeSortCmp(). */
 	public function getTreeSort( &$pTree ) {
 		if( $pTree ) {
 			foreach( array_keys( $pTree ) as $k ) {
@@ -863,6 +953,16 @@ class StockAssembly extends StockBase {
 		return $ret;
 	}
 
+	/**
+	 * Return a paged, keyed list of assemblies.
+	 *
+	 * Recognised filter keys: root_only, contain_item, user_id, find, parent_content_id,
+	 * show_public, show_empty, sort_mode, no_thumbnails, thumbnail_size.
+	 * Sets $pListHash['cant'] on return.
+	 *
+	 * @param  array $pListHash  Filter and pagination params; modified in place.
+	 * @return array             content_id-keyed result rows.
+	 */
 	public function getList( &$pListHash ) {
 		global $gBitUser,$gBitSystem, $gBitDbType;
 
@@ -996,10 +1096,12 @@ class StockAssembly extends StockBase {
 		return $data;
 	}
 
+	/** @return string  Font-Awesome icon HTML for use in service menus. */
 	public static function getServiceIcon() {
 		return '<i class="fa fal fa-camera"></i>';
 	}
 
+	/** @return string Always 'stock'. */
 	public static function getServiceKey() {
 		return 'stock';
 	}

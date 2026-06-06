@@ -1,22 +1,25 @@
 <?php
 /**
+ * A single stock component — a physical part, material, or consumable.
+ *
+ * Stored as a pure liberty_content record (content_type_guid='stockcomponent').
+ * Components are linked into assemblies via stock_assembly_map and carry quantity
+ * type xrefs (SGL/PCK/SHT/VOL) used by BOM and movement calculations.
+ *
  * @package stock
- */
-
-/**
- * required setup
  */
 namespace Bitweaver\Stock;
 
 use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\BitBase;
 
-/**
- * @package stock
- */
 class StockComponent extends StockBase {
 	protected $mXrefTypeKey = 'stockcomponent_types';
 
+	/**
+	 * @param int|null $pComponentId  Legacy param — use $pContentId instead.
+	 * @param int|null $pContentId    liberty_content.content_id to load.
+	 */
 	public function __construct($pComponentId = null, $pContentId = null) {
 		parent::__construct();
 		$this->mContentTypeGuid = STOCKCOMPONENT_CONTENT_TYPE_GUID;
@@ -40,6 +43,10 @@ class StockComponent extends StockBase {
 		$this->mAdminContentPerm  = 'p_stock_admin';
 	}
 
+	/**
+	 * @param  array $pLookupHash  Must contain 'content_id'.
+	 * @return static|null         Loaded object, or null if not found.
+	 */
 	public static function lookup( $pLookupHash ) {
 		$ret = null;
 		$lookupContentId = null;
@@ -52,6 +59,11 @@ class StockComponent extends StockBase {
 		return $ret;
 	}
 
+	/**
+	 * Load component data into $this->mInfo from liberty_content.
+	 *
+	 * @return int|null  Row count (> 0) on success, or null if mContentId is not set.
+	 */
 	public function load() {
 		if( $this->isValid() ) {
 			$selectSql = $joinSql = $whereSql = '';
@@ -81,6 +93,12 @@ class StockComponent extends StockBase {
 		return null;
 	}
 
+	/**
+	 * Validate $pParamHash before storing — requires a non-empty title.
+	 *
+	 * @param  array $pParamHash  Data to validate; modified in place.
+	 * @return bool
+	 */
 	protected function verifyComponentData( array &$pParamHash ): bool {
 		$pParamHash['content_type_guid'] = STOCKCOMPONENT_CONTENT_TYPE_GUID;
 		if( $this->isValid() ) {
@@ -92,6 +110,12 @@ class StockComponent extends StockBase {
 		return count( $this->mErrors ) == 0;
 	}
 
+	/**
+	 * Persist component data inside a transaction via LibertyContent::store().
+	 *
+	 * @param  array $pParamHash  Data to persist; modified in place.
+	 * @return bool
+	 */
 	public function store( array &$pParamHash ): bool {
 		if( $this->verifyComponentData( $pParamHash ) ) {
 			$this->StartTrans();
@@ -106,6 +130,11 @@ class StockComponent extends StockBase {
 		return count( $this->mErrors ) == 0;
 	}
 
+	/**
+	 * Delete the component, removing it from all assemblies first.
+	 *
+	 * @return bool Always TRUE (errors are recorded in $this->mErrors).
+	 */
 	public function expunge(): bool {
 		if( $this->isValid() ) {
 			$this->StartTrans();
@@ -120,10 +149,20 @@ class StockComponent extends StockBase {
 		return true;
 	}
 
+	/** @return bool TRUE when mContentId is a valid positive integer. */
 	public function isValid() {
 		return @$this->verifyId( $this->mContentId );
 	}
 
+	/**
+	 * Return a paged, keyed list of components.
+	 *
+	 * Recognised filter keys: user_id, assembly_content_id, search, sort_mode.
+	 * Sets $pListHash['cant'] on return.
+	 *
+	 * @param  array $pListHash  Filter and pagination params; modified in place.
+	 * @return array             content_id-keyed result rows.
+	 */
 	public function getList( &$pListHash ) {
 		global $gBitUser, $gBitSystem;
 
@@ -184,10 +223,15 @@ class StockComponent extends StockBase {
 		return $ret;
 	}
 
+	/** @return string  Smarty bitpackage: path to the component view template. */
 	public function getRenderTemplate() {
 		return 'bitpackage:stock/view_component.tpl';
 	}
 
+	/**
+	 * @param  array $pParamHash  Must contain 'content_id'.
+	 * @return string             URL to view_component.php (or pretty URL).
+	 */
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		global $gBitSystem;
 		$ret = '';
@@ -200,10 +244,12 @@ class StockComponent extends StockBase {
 		return $ret;
 	}
 
+	/** @return string  Display URL for this component. */
 	public function getDisplayUrl() {
 		return static::getDisplayUrlFromHash( $this->mInfo );
 	}
 
+	/** @return string  URL to edit_component.php for this component. */
 	public function getEditUrl( $pContentId = null, $pMixed = null ): string {
 		if( $this->verifyId( $this->mContentId ) ) {
 			return STOCK_PKG_URL.'edit_component.php?content_id='.$this->mContentId;
@@ -211,6 +257,12 @@ class StockComponent extends StockBase {
 		return STOCK_PKG_URL.'edit_component.php';
 	}
 
+	/**
+	 * @param  array  $pParamHash  Must contain 'content_id'; used to build the URL.
+	 * @param  string $pTitle      Link text; falls back to getTitleFromHash() if empty.
+	 * @param  null   $pAnchor    Unused.
+	 * @return string             HTML anchor, or plain-text title if stock is inactive.
+	 */
 	public static function getDisplayLinkFromHash( &$pParamHash, $pTitle='', $pAnchor=null ) {
 		global $gBitSystem;
 		$pTitle = trim( $pTitle );
@@ -223,6 +275,11 @@ class StockComponent extends StockBase {
 		return htmlspecialchars( $pTitle );
 	}
 
+	/**
+	 * @param  array $pHash     mInfo-style hash; must contain 'content_type_guid'.
+	 * @param  bool  $pDefault  When TRUE, falls back to content type name + content_id.
+	 * @return string
+	 */
 	public static function getTitleFromHash( &$pHash, $pDefault=true ) {
 		if( !empty( $pHash ) ) {
 			$ret = trim( parent::getTitleFromHash( $pHash, $pDefault ) );
@@ -238,10 +295,12 @@ class StockComponent extends StockBase {
 		return 'empty_component';
 	}
 
+	/** @return string|null  Component title, or null if not yet loaded. */
 	public function getTitle() {
 		return $this->isValid() ? static::getTitleFromHash( $this->mInfo ) : null;
 	}
 
+	/** @return bool  TRUE if the first parent assembly allows comments. */
 	public function isCommentable() {
 		global $gGallery;
 		if( is_object( $gGallery ) ) {
@@ -258,6 +317,7 @@ class StockComponent extends StockBase {
 		return $ret;
 	}
 
+	/** @return string Always 'stock'. */
 	public static function getServiceKey() {
 		return 'stock';
 	}

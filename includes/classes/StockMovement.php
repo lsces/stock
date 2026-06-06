@@ -1,8 +1,17 @@
 <?php
 /**
+ * A stock movement — an inbound order/transfer or outbound requisition.
+ *
+ * Stored as a pure liberty_content record (content_type_guid='stockmovement').
+ * Direction is inferred from the reference xref item: REQN = outbound,
+ * TRANS/ORDER = inbound. Status (open vs received) is stored in lc.event_time:
+ * 0 = open, positive Unix timestamp = received.
+ *
+ * Component lines live in liberty_xref (x_group='quantity', items SGL/PCK/SHT/VOL).
+ * The reference xref (x_group='reference') carries the from/ref/date/contact data.
+ *
  * @package stock
  */
-
 namespace Bitweaver\Stock;
 
 use Bitweaver\BitBase;
@@ -10,13 +19,14 @@ use Bitweaver\Liberty\LibertyContent;
 
 defined( 'STOCKMOVEMENT_CONTENT_TYPE_GUID' ) || define( 'STOCKMOVEMENT_CONTENT_TYPE_GUID', 'stockmovement' );
 
-/**
- * @package stock
- */
 #[\AllowDynamicProperties]
 class StockMovement extends LibertyContent {
 	protected $mXrefTypeKey = 'stockmovement_types';
 
+	/**
+	 * @param int|null $pMovementId  Legacy param — use $pContentId instead.
+	 * @param int|null $pContentId   liberty_content.content_id to load.
+	 */
 	public function __construct( $pMovementId = null, $pContentId = null ) {
 		parent::__construct();
 		$this->mContentTypeGuid = STOCKMOVEMENT_CONTENT_TYPE_GUID;
@@ -40,10 +50,16 @@ class StockMovement extends LibertyContent {
 		$this->mAdminContentPerm  = 'p_stock_admin';
 	}
 
+	/** @return bool TRUE when mContentId is a valid positive integer. */
 	public function isValid(): bool {
 		return (bool)$this->verifyId( $this->mContentId );
 	}
 
+	/**
+	 * @param  array $pLookupHash      Must contain 'content_id'.
+	 * @param  bool  $pLoadFromCache   Whether to use LibertyContent's object cache.
+	 * @return static|null             Loaded object, or null if not found.
+	 */
 	public static function lookup( $pLookupHash, $pLoadFromCache = true ) {
 		$lookupContentId = null;
 		if( !empty( $pLookupHash['content_id'] ) && is_numeric( $pLookupHash['content_id'] ) ) {
@@ -55,6 +71,14 @@ class StockMovement extends LibertyContent {
 		return null;
 	}
 
+	/**
+	 * Load movement record into $this->mInfo, including reference xref scalars
+	 * (ref_type, ref_key, ref_start_date, ref_contact_id, ref_contact_name, ref_from_data).
+	 *
+	 * @param  int|null   $pContentId    Override mContentId for this load.
+	 * @param  array|null $pPluginParams Passed through to getServicesSql().
+	 * @return bool        TRUE on success, FALSE if not found or mContentId invalid.
+	 */
 	public function load( $pContentId = null, $pPluginParams = null ) {
 		if( $pContentId ) $this->mContentId = (int)$pContentId;
 		if( !$this->verifyId( $this->mContentId ) ) return false;
@@ -105,6 +129,13 @@ class StockMovement extends LibertyContent {
 		return !empty( $this->mInfo );
 	}
 
+	/**
+	 * Persist movement data inside a transaction via LibertyContent::store().
+	 * Requires a non-empty title (the movement reference).
+	 *
+	 * @param  array $pParamHash  Data to persist; modified in place.
+	 * @return bool
+	 */
 	public function store( array &$pParamHash ): bool {
 		$pParamHash['content_type_guid'] = STOCKMOVEMENT_CONTENT_TYPE_GUID;
 		if( empty( $pParamHash['title'] ) ) {
@@ -123,6 +154,11 @@ class StockMovement extends LibertyContent {
 		return count( $this->mErrors ) == 0;
 	}
 
+	/**
+	 * Delete this movement. LibertyContent::expunge() handles xref cleanup.
+	 *
+	 * @return bool Always TRUE (errors recorded in $this->mErrors).
+	 */
 	public function expunge(): bool {
 		if( $this->isValid() ) {
 			$this->StartTrans();
@@ -136,6 +172,10 @@ class StockMovement extends LibertyContent {
 		return true;
 	}
 
+	/**
+	 * Load xref groups then enrich the 'quantity' group — resolves each component
+	 * content_id to xref_title and xref_data (component description).
+	 */
 	public function loadXrefInfo(): void {
 		parent::loadXrefInfo();
 		if( empty( $this->mXrefInfo ) ) return;
@@ -156,7 +196,11 @@ class StockMovement extends LibertyContent {
 		unset( $row );
 	}
 
-	// Direction inferred from reference xref: REQN = out, TRANS/ORDER = in
+	/**
+	 * Infer movement direction from the reference xref item code.
+	 *
+	 * @return string  'O' (outbound/REQN) or 'I' (inbound/TRANS or ORDER).
+	 */
 	public function getDirection(): string {
 		$refType = $this->mInfo['ref_type'] ?? null;
 		if( $refType === 'REQN' )                           return 'O';
@@ -164,11 +208,16 @@ class StockMovement extends LibertyContent {
 		return 'O';
 	}
 
-	// Movement is received/fulfilled when lc.event_time is set
+	/** @return bool  TRUE when lc.event_time is non-zero (movement has been received). */
 	public function isReceived(): bool {
 		return !empty( $this->mInfo['event_time'] );
 	}
 
+	/**
+	 * Set lc.event_time to the current Unix timestamp, marking this movement as received.
+	 *
+	 * @return bool FALSE if the movement is not valid; TRUE otherwise.
+	 */
 	public function markReceived(): bool {
 		if( !$this->isValid() ) return false;
 		$now = time();
@@ -180,8 +229,17 @@ class StockMovement extends LibertyContent {
 		return true;
 	}
 
-	// Append movement quantity xrefs from an assembly BOM (liberty_xref), scaled by $pKitCount.
-	// Appends to any existing items — safe to call multiple times for multi-assembly requisitions.
+	/**
+	 * Append quantity xrefs from an assembly BOM into this movement, scaled by kit count.
+	 *
+	 * Reads SGL/PCK/SHT/VOL xrefs from the assembly and inserts them as new movement
+	 * quantity lines, starting xorder after any existing items. Safe to call multiple
+	 * times (e.g. for multi-assembly requisitions) — lines are only appended.
+	 *
+	 * @param  int   $pAssemblyContentId  Source assembly content_id.
+	 * @param  float $pKitCount           Multiplier applied to each BOM quantity.
+	 * @return bool  FALSE if movement or assembly id is invalid.
+	 */
 	public function explodeFromAssembly( int $pAssemblyContentId, float $pKitCount = 1 ): bool {
 		if( !$this->isValid() || !$this->verifyId( $pAssemblyContentId ) ) {
 			return false;
@@ -219,6 +277,17 @@ class StockMovement extends LibertyContent {
 		return true;
 	}
 
+	/**
+	 * Return a paged, keyed list of movements.
+	 *
+	 * Recognised filter keys: ref_type (REQN/TRANS/ORDER), assembly_content_id,
+	 * component_content_id, user_id, find, sort_mode.
+	 * When component_content_id is set, cmp_qty_type and cmp_qty are included per row.
+	 * Sets $pListHash['cant'] on return.
+	 *
+	 * @param  array $pListHash  Filter and pagination params; modified in place.
+	 * @return array             content_id-keyed result rows.
+	 */
 	public function getList( array &$pListHash ): array {
 		global $gBitUser;
 		LibertyContent::prepGetList( $pListHash );
@@ -309,6 +378,10 @@ class StockMovement extends LibertyContent {
 		return $ret;
 	}
 
+	/**
+	 * @param  array $pParamHash  Must contain 'content_id'.
+	 * @return string             URL to view_movement.php, or '' if id invalid.
+	 */
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		if( BitBase::verifyId( $pParamHash['content_id'] ?? 0 ) ) {
 			return STOCK_PKG_URL.'view_movement.php?content_id='.$pParamHash['content_id'];
@@ -316,10 +389,12 @@ class StockMovement extends LibertyContent {
 		return '';
 	}
 
+	/** @return string  Display URL for this movement. */
 	public function getDisplayUrl(): string {
 		return static::getDisplayUrlFromHash( $this->mInfo );
 	}
 
+	/** @return string  URL to edit_movement.php for this movement. */
 	public function getEditUrl( $pContentId = null, $pMixed = null ): string {
 		if( $this->verifyId( $this->mContentId ) ) {
 			return STOCK_PKG_URL.'edit_movement.php?content_id='.$this->mContentId;
@@ -327,10 +402,23 @@ class StockMovement extends LibertyContent {
 		return STOCK_PKG_URL.'edit_movement.php';
 	}
 
+	/** @return string Always 'stock'. */
 	public static function getServiceKey(): string {
 		return 'stock';
 	}
 
+	/**
+	 * Process an uploaded CSV file into this movement's reference and quantity xrefs.
+	 *
+	 * Row 1: from (SCREF), ref, order_date (dd/mm/yy), received_date (dd/mm/yy optional).
+	 * Rows 2+: component_title, quantity, [qty_type override (SGL/PCK/SHT/VOL)].
+	 *
+	 * The reference row updates or creates the REQN/TRANS/ORDER xref. Order date sets
+	 * xref.start_date; received date sets lc.event_time. Unknown components are skipped.
+	 *
+	 * @param  string[] $pQtyTypes  Allowed qty type codes (e.g. ['SGL','PCK','SHT','VOL']).
+	 * @return array{loaded:int, skipped:int, errors:string[]}
+	 */
 	public function importCsv( array $pQtyTypes ): array {
 		$result = [ 'loaded' => 0, 'skipped' => 0, 'errors' => [] ];
 		$file   = $_FILES['csv_file'] ?? null;
