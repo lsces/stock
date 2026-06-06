@@ -34,7 +34,8 @@ if( is_object( $gGallery ) && $gGallery->isCommentable() ) {
 
 $gContent->addHit();
 
-$gContent->mInfo['stockcomponent_types'] = $gContent->getXrefGroupList();
+$gContent->loadXrefInfo();
+$gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 
 // Stock levels for this component, calculated from movement xrefs
 if( $gContent->isValid() ) {

@@ -21,4 +21,7 @@ if( !$gContent->isValid() ) {
 
 $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );
 
+$gContent->loadXrefInfo();
+$gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
+
 $gBitSystem->display( 'bitpackage:stock/view_movement.tpl', $gContent->getTitle() );

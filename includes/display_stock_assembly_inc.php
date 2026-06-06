@@ -14,7 +14,8 @@ $listHash['max_records'] = $gContent->mInfo["images_per_page"] ?? $max_records;
 
 $gContent->loadComponents( $listHash );
 $gContent->loadParentAssemblies();
-$gContent->mInfo['stockassembly_types'] = $gContent->getXrefGroupList();
+$gContent->loadXrefInfo();
+$gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 $gContent->addHit();
 
 $gBitSmarty->assign( 'listInfo', $listHash['listInfo'] );

@@ -30,15 +30,14 @@
 				{/forminput}
 			</div>
 
-			{if $gContent->mInfo.stockassembly_types}
+			{if $gXrefInfo->mGroups}
 				{jstabs}
-					{section name=xrefGroup loop=$gContent->mInfo.stockassembly_types}
-						{include file=$gContent->getXrefListTemplate($gContent->mInfo.stockassembly_types[xrefGroup].template)
-							source=$gContent->mInfo.stockassembly_types[xrefGroup].source
-							source_title=$gContent->mInfo.stockassembly_types[xrefGroup].title
-							group=$gContent->mInfo.stockassembly_types[xrefGroup].sort_order
-							allow_add=true}
-					{/section}
+					{foreach $gXrefInfo->mGroups as $xrefGroup}
+						{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+							xrefGroup=$xrefGroup
+							allow_add=true
+							allow_edit=true}
+					{/foreach}
 				{/jstabs}
 			{/if}
 

@@ -1,31 +1,32 @@
-{assign var=xrefcnt value=$gContent->mInfo.$source|default:[]|@count}
-{assign var=xrefAllowEdit value=$allow_edit|default:true}
-{jstab title="$source_title ($xrefcnt)"}
-{legend legend=$source_title}
+{assign var=xrefAllowEdit value=$allow_edit|default:false}
+{assign var=isHistory value=($xrefGroup->mXGroup eq 'history')}
+{jstab title="`$xrefGroup->mTitle` ({$xrefGroup->mXrefs|@count})"}
+{legend legend=$xrefGroup->mTitle}
 <div class="form-group table-responsive">
-	<table>
+	<table class="table">
 		<thead>
 			<tr>
-				<th>{tr}Supplier{/tr}</th>
-				<th>{tr}Part No.{/tr}</th>
-				<th>{tr}Price{/tr}</th>
-				<th>{tr}Note{/tr}</th>
+				<th style="width:30%">{tr}Supplier{/tr}</th>
+				<th style="width:20%">{tr}Part No.{/tr}</th>
+				<th style="width:20%">{tr}Price{/tr}</th>
+				<th style="width:30%">{tr}Note{/tr}</th>
 				{if $xrefAllowEdit}<th>{tr}Added{/tr}</th><th>{tr}Updated{/tr}</th><th>{tr}Edit{/tr}</th>{/if}
 			</tr>
 		</thead>
 		<tbody>
-			{section name=xref loop=$gContent->mInfo.$source}
-				{assign var=_rowTpl value=$gContent->mInfo.$source[xref].template}
-				{include file=$gContent->getXrefRecordTemplate($_rowTpl)}
-			{sectionelse}
+			{if $xrefGroup->mXrefs}
+				{foreach $xrefGroup->mXrefs as $xrefInfo}
+					{include file=$gContent->getXrefRecordTemplate($xrefInfo.template)}
+				{/foreach}
+			{else}
 				<tr class="norecords">
-					<td colspan="7">{tr}No supplier records found{/tr}</td>
+					<td colspan="{if $xrefAllowEdit}7{else}4{/if}">{tr}No supplier records found{/tr}</td>
 				</tr>
-			{/section}
+			{/if}
 		</tbody>
 	</table>
 </div>
-{if $allow_add && $gContent->isValid() && $gContent->hasUpdatePermission() && $source ne 'history'}
+{if $allow_add && $gContent->isValid() && $gContent->hasUpdatePermission() && !$isHistory}
 	<div>
 		{smartlink ititle="Add supplier" ipackage="stock" ifile="add_supplier.php" biticon="list-add" content_id=$gContent->mInfo.content_id}
 	</div>

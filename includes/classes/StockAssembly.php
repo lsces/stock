@@ -88,6 +88,32 @@ class StockAssembly extends StockBase {
 		}
 	}
 
+	public function loadXrefInfo(): void {
+		parent::loadXrefInfo();
+		if( empty( $this->mXrefInfo ) ) return;
+		$bomGroup = $this->mXrefInfo->mGroups['quantity'] ?? null;
+		if( !$bomGroup || empty( $bomGroup->mXrefs ) ) return;
+		usort( $bomGroup->mXrefs, fn($a,$b) => ( $a['xorder'] <=> $b['xorder'] ) ?: strcmp( $a['item'], $b['item'] ) );
+		$componentIds = array_values( array_unique( array_filter( array_column( $bomGroup->mXrefs, 'xref' ) ) ) );
+		if( !$componentIds ) return;
+		$components = $this->mDb->getAssoc(
+			"SELECT lc.`content_id`, lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`, pck.`xkey_ext` AS `pack_size_ext`
+			 FROM `".BIT_DB_PREFIX."liberty_content` lc
+			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PCK'
+			 WHERE lc.`content_id` IN (".implode( ',', array_fill( 0, count( $componentIds ), '?' ) ).")",
+			$componentIds
+		);
+		foreach( $bomGroup->mXrefs as &$row ) {
+			if( !empty( $row['xref'] ) && isset( $components[$row['xref']] ) ) {
+				$row['xref_title']    = $components[$row['xref']]['title'];
+				$row['xref_data']     = $components[$row['xref']]['data'];
+				$row['pack_size']     = $components[$row['xref']]['pack_size'];
+				$row['pack_size_ext'] = $components[$row['xref']]['pack_size_ext'];
+			}
+		}
+		unset( $row );
+	}
+
 	public function loadXrefList(): void {
 		parent::loadXrefList();
 		if( !empty( $this->mInfo['quantity'] ) ) {

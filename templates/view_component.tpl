@@ -26,14 +26,12 @@
 		{/if}
 
 		{jstabs}
-			{if $gContent->mInfo.stockcomponent_types}
-				{section name=xrefGroup loop=$gContent->mInfo.stockcomponent_types}
-					{include file=$gContent->getXrefListTemplate($gContent->mInfo.stockcomponent_types[xrefGroup].template)
-						source=$gContent->mInfo.stockcomponent_types[xrefGroup].source
-						source_title=$gContent->mInfo.stockcomponent_types[xrefGroup].title
-						group=$gContent->mInfo.stockcomponent_types[xrefGroup].sort_order
+			{if $gXrefInfo->mGroups}
+				{foreach $gXrefInfo->mGroups as $xrefGroup}
+					{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+						xrefGroup=$xrefGroup
 						allow_edit=false}
-				{/section}
+				{/foreach}
 			{/if}
 
 			{jstab title="{tr}Stock{/tr}"}

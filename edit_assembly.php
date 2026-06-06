@@ -162,7 +162,8 @@ if( $gContent->isValid() ) {
 	$gBitSmarty->assign( 'sortMode', $sortMode );
 }
 
-$gContent->mInfo['stockassembly_types'] = $gContent->getXrefGroupList();
+$gContent->loadXrefInfo();
+$gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 
 $gContent->invokeServices( 'content_edit_function' );
 

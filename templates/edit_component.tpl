@@ -27,15 +27,14 @@
 
 			{include file="bitpackage:liberty/edit_services_inc.tpl" serviceFile="content_edit_mini_tpl"}
 
-			{if $gContent->mInfo.stockcomponent_types}
+			{if $gXrefInfo->mGroups}
 				{jstabs}
-					{section name=xrefGroup loop=$gContent->mInfo.stockcomponent_types}
-						{include file=$gContent->getXrefListTemplate($gContent->mInfo.stockcomponent_types[xrefGroup].template)
-							source=$gContent->mInfo.stockcomponent_types[xrefGroup].source
-							source_title=$gContent->mInfo.stockcomponent_types[xrefGroup].title
-							group=$gContent->mInfo.stockcomponent_types[xrefGroup].sort_order
-							allow_add=true}
-					{/section}
+					{foreach $gXrefInfo->mGroups as $xrefGroup}
+						{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+							xrefGroup=$xrefGroup
+							allow_add=true
+							allow_edit=true}
+					{/foreach}
 				{/jstabs}
 			{/if}
 

@@ -42,15 +42,12 @@
 			{/if}
 		</dl>
 
-		{assign var=movXrefGroups value=$gContent->getXrefGroupList()}
-		{if $movXrefGroups}
+		{if $gXrefInfo->mGroups}
 			{jstabs}
-				{foreach from=$movXrefGroups item=xrefGroup}
-					{if $xrefGroup.x_group neq 'reference'}
-						{include file=$gContent->getXrefListTemplate($xrefGroup.template)
-							source=$xrefGroup.source
-							source_title=$xrefGroup.title
-							group=$xrefGroup.sort_order
+				{foreach $gXrefInfo->mGroups as $xrefGroup}
+					{if $xrefGroup->mXGroup neq 'reference'}
+						{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+							xrefGroup=$xrefGroup
 							allow_add=false
 							allow_edit=false}
 					{/if}

@@ -131,6 +131,26 @@ class StockMovement extends LibertyContent {
 		return true;
 	}
 
+	public function loadXrefInfo(): void {
+		parent::loadXrefInfo();
+		if( empty( $this->mXrefInfo ) ) return;
+		$bomGroup = $this->mXrefInfo->mGroups['quantity'] ?? null;
+		if( !$bomGroup || empty( $bomGroup->mXrefs ) ) return;
+		$componentIds = array_values( array_unique( array_filter( array_column( $bomGroup->mXrefs, 'xref' ) ) ) );
+		if( !$componentIds ) return;
+		$components = $this->mDb->getAssoc(
+			"SELECT lc.`content_id`, lc.`title`, lc.`data` FROM `".BIT_DB_PREFIX."liberty_content` lc WHERE lc.`content_id` IN (".implode( ',', array_fill( 0, count( $componentIds ), '?' ) ).")",
+			$componentIds
+		);
+		foreach( $bomGroup->mXrefs as &$row ) {
+			if( !empty( $row['xref'] ) && isset( $components[$row['xref']] ) ) {
+				$row['xref_title'] = $components[$row['xref']]['title'];
+				$row['xref_data']  = $components[$row['xref']]['data'];
+			}
+		}
+		unset( $row );
+	}
+
 	public function loadXrefList(): void {
 		parent::loadXrefList();
 		if( !empty( $this->mInfo['quantity'] ) ) {
