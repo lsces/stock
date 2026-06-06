@@ -6,10 +6,10 @@
 	<table class="table">
 		<thead>
 			<tr>
-				<th style="width:30%">{tr}Supplier{/tr}</th>
-				<th style="width:20%">{tr}Part No.{/tr}</th>
-				<th style="width:20%">{tr}Price{/tr}</th>
-				<th style="width:30%">{tr}Note{/tr}</th>
+				<th>{tr}Supplier{/tr}</th>
+				<th>{tr}Part No.{/tr}</th>
+				<th>{tr}Price{/tr}</th>
+				<th>{tr}Note{/tr}</th>
 				{if $xrefAllowEdit}<th>{tr}Added{/tr}</th><th>{tr}Updated{/tr}</th><th>{tr}Edit{/tr}</th>{/if}
 			</tr>
 		</thead>
