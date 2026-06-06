@@ -4,7 +4,7 @@
  * First row is a header and is skipped. Existing components (by title) are skipped
  * unless clear=y is passed.
  *
- * Place your CSV at: stock/import/data/simple_components_2.csv
+ * Place your CSV at: storage/stock/simple_components_2.csv
  * Append ?clear=y to the URL to delete and re-import all rows.
  *
  * @package stock
@@ -21,7 +21,7 @@ $gBitSystem->verifyPermission( 'p_stock_admin' );
 
 require_once __DIR__.'/ImportSimpleComponent.php';
 
-$csvFile = __DIR__.'/data/simple_components_2.csv';
+$csvFile = STOCK_IMPORT_PATH . 'simple_components_2.csv';
 $doClear = ( ( $_REQUEST['clear'] ?? '' ) === 'y' );
 $loaded  = 0;
 $skipped = 0;

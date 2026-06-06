@@ -14,6 +14,7 @@ define( 'STOCK_PKG_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path
 define( 'STOCK_PKG_INCLUDE_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/includes/');
 define( 'STOCK_PKG_CLASS_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/includes/classes/');
 define( 'STOCK_PKG_ADMIN_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/admin/');
+define( 'STOCK_IMPORT_PATH', STORAGE_PKG_PATH . 'stock/' );
 
 $gBitSystem->registerPackage( $pRegisterHash );
 

@@ -3,7 +3,7 @@
  * Load assemblies from a simple 4-column CSV (title, description, KLPR, KLURL).
  * No header row. Existing assemblies (by title) are skipped unless clear=y.
  *
- * Place your CSV at: stock/import/data/simple_assemblies.csv
+ * Place your CSV at: storage/stock/simple_assemblies.csv
  * Append ?clear=y to the URL to delete and re-import all rows.
  *
  * @package stock
@@ -20,7 +20,7 @@ $gBitSystem->verifyPermission( 'p_stock_admin' );
 
 require_once __DIR__.'/ImportSimpleAssembly.php';
 
-$csvFile  = __DIR__.'/data/simple_assemblies.csv';
+$csvFile  = STOCK_IMPORT_PATH . 'simple_assemblies.csv';
 $doClear  = ( ( $_REQUEST['clear'] ?? '' ) === 'y' );
 $loaded   = 0;
 $skipped  = 0;
