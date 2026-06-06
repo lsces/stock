@@ -33,28 +33,6 @@ abstract class StockBase extends LibertyContent
 		parent::__construct();
 	}
 
-	public function loadXrefList(): void {
-		parent::loadXrefList();
-		if( !empty( $this->mInfo['supplier'] ) ) {
-			$contactIds = array_values( array_unique( array_filter( array_column( $this->mInfo['supplier'], 'xref' ) ) ) );
-			if( $contactIds ) {
-				$placeholders = implode( ',', array_fill( 0, count( $contactIds ), '?' ) );
-				$contacts = $this->mDb->getAssoc(
-					"SELECT lc.`content_id`, lc.`title`
-					 FROM `".BIT_DB_PREFIX."liberty_content` lc
-					 WHERE lc.`content_id` IN ($placeholders)",
-					$contactIds
-				);
-				foreach( $this->mInfo['supplier'] as &$row ) {
-					if( !empty( $row['xref'] ) && isset( $contacts[$row['xref']] ) ) {
-						$row['xref_title'] = $contacts[$row['xref']];
-					}
-				}
-				unset( $row );
-			}
-		}
-	}
-
 	public function loadXrefInfo(): void {
 		parent::loadXrefInfo();
 		if( empty( $this->mXrefInfo ) ) return;

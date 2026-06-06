@@ -75,7 +75,6 @@ class StockComponent extends StockBase {
 				$this->mInfo['creator'] = $this->mInfo['creator_real_name'] ?? $this->mInfo['creator_user'];
 				$this->mInfo['editor']  = $this->mInfo['modifier_real_name'] ?? $this->mInfo['modifier_user'];
 				LibertyContent::load();
-				$this->loadXrefList();
 			}
 			return count( $this->mInfo );
 		}

@@ -22,8 +22,8 @@
 				</thead>
 				<tbody>
 				{assign var=lastGroup value=-1}
-				{if $gContent->mInfo.quantity}
-					{foreach from=$gContent->mInfo.quantity item=row}
+				{if $gXrefInfo->mGroups.quantity && $gXrefInfo->mGroups.quantity->mXrefs}
+					{foreach from=$gXrefInfo->mGroups.quantity->mXrefs item=row}
 						{math equation="floor(x/1000)" x=$row.xorder|default:0 assign=thisGroup}
 						{if $thisGroup != $lastGroup}
 						<tr class="active">

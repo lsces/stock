@@ -82,6 +82,12 @@ class StockMovement extends LibertyContent {
 					   JOIN `{$X}liberty_content` lc2 ON lc2.`content_id` = x.`xref`
 					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
 					   ORDER BY x.`xorder`) AS ref_contact_name
+					, (SELECT FIRST 1 x.`item` FROM `{$X}liberty_xref` x
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   ORDER BY x.`xorder`) AS ref_type
+					, (SELECT FIRST 1 x.`data` FROM `{$X}liberty_xref` x
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   ORDER BY x.`xorder`) AS ref_from_data
 				FROM `".BIT_DB_PREFIX."liberty_content` lc
 					LEFT JOIN `".BIT_DB_PREFIX."users_users` uue ON uue.`user_id` = lc.`modifier_user_id`
 					LEFT JOIN `".BIT_DB_PREFIX."users_users` uuc ON uuc.`user_id` = lc.`user_id`
@@ -95,7 +101,6 @@ class StockMovement extends LibertyContent {
 			$this->mInfo['creator'] = $rs['creator_real_name'] ?? $rs['creator_user'];
 			$this->mInfo['editor']  = $rs['modifier_real_name'] ?? $rs['modifier_user'];
 			LibertyContent::load();
-			$this->loadXrefList();
 		}
 		return !empty( $this->mInfo );
 	}
@@ -151,37 +156,11 @@ class StockMovement extends LibertyContent {
 		unset( $row );
 	}
 
-	public function loadXrefList(): void {
-		parent::loadXrefList();
-		if( !empty( $this->mInfo['quantity'] ) ) {
-			$componentIds = array_values( array_unique( array_filter( array_column( $this->mInfo['quantity'], 'xref' ) ) ) );
-			if( $componentIds ) {
-				$placeholders = implode( ',', array_fill( 0, count( $componentIds ), '?' ) );
-				$components   = $this->mDb->getAssoc(
-					"SELECT lc.`content_id`, lc.`title`, lc.`data`
-					 FROM `".BIT_DB_PREFIX."liberty_content` lc
-					 WHERE lc.`content_id` IN ($placeholders)",
-					$componentIds
-				);
-				foreach( $this->mInfo['quantity'] as &$row ) {
-					if( !empty( $row['xref'] ) && isset( $components[$row['xref']] ) ) {
-						$row['xref_title'] = $components[$row['xref']]['title'];
-						$row['xref_data']  = $components[$row['xref']]['data'];
-					}
-				}
-				unset( $row );
-			}
-		}
-	}
-
 	// Direction inferred from reference xref: REQN = out, TRANS/ORDER = in
 	public function getDirection(): string {
-		if( !empty( $this->mInfo['reference'] ) ) {
-			foreach( $this->mInfo['reference'] as $row ) {
-				if( $row['item'] === 'REQN' )                         return 'O';
-				if( in_array( $row['item'], [ 'TRANS', 'ORDER' ] ) ) return 'I';
-			}
-		}
+		$refType = $this->mInfo['ref_type'] ?? null;
+		if( $refType === 'REQN' )                           return 'O';
+		if( in_array( $refType, [ 'TRANS', 'ORDER' ] ) )   return 'I';
 		return 'O';
 	}
 

@@ -132,12 +132,6 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 			fclose($fh);
 		}
 	}
-	// Clear stale xref buckets so loadXrefList() re-reads from DB for the display below
-	foreach( [ 'supplier', 'quantity', 'values', 'kitlocker', 'history' ] as $_xg ) {
-		unset( $gContent->mInfo[$_xg] );
-	}
-	$gContent->loadXrefList();
-
 	$gBitSmarty->assign( 'csvLoaded',  $csvLoaded );
 	$gBitSmarty->assign( 'csvSkipped', $csvSkipped );
 	$gBitSmarty->assign( 'csvErrors',  $csvErrors );

@@ -114,34 +114,6 @@ class StockAssembly extends StockBase {
 		unset( $row );
 	}
 
-	public function loadXrefList(): void {
-		parent::loadXrefList();
-		if( !empty( $this->mInfo['quantity'] ) ) {
-			usort( $this->mInfo['quantity'], fn($a,$b) => ($a['xorder'] <=> $b['xorder']) ?: strcmp($a['item'], $b['item']) );
-
-			$componentIds = array_values( array_unique( array_filter( array_column( $this->mInfo['quantity'], 'xref' ) ) ) );
-			if( $componentIds ) {
-				$placeholders = implode( ',', array_fill( 0, count( $componentIds ), '?' ) );
-				$components = $this->mDb->getAssoc(
-					"SELECT lc.`content_id`, lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`, pck.`xkey_ext` AS `pack_size_ext`
-					 FROM `".BIT_DB_PREFIX."liberty_content` lc
-					 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PCK'
-					 WHERE lc.`content_id` IN ($placeholders)",
-					$componentIds
-				);
-				foreach( $this->mInfo['quantity'] as &$row ) {
-					if( !empty( $row['xref'] ) && isset( $components[$row['xref']] ) ) {
-						$row['xref_title'] = $components[$row['xref']]['title'];
-						$row['xref_data']  = $components[$row['xref']]['data'];
-						$row['pack_size']     = $components[$row['xref']]['pack_size'];
-					$row['pack_size_ext'] = $components[$row['xref']]['pack_size_ext'];
-					}
-				}
-				unset( $row );
-			}
-		}
-	}
-
 	public static function lookup( $pLookupHash, $pLoadFromCache=true ) {
 		global $gBitDb;
 		$ret = null;
@@ -185,7 +157,6 @@ class StockAssembly extends StockBase {
 			$this->mContentId       = $rs['content_id'];
 			$this->mContentTypeGuid = $rs['content_type_guid'];
 			LibertyContent::load();
-			$this->loadXrefList();
 
 			$this->mInfo['creator'] = $rs['creator_real_name'] ?? $rs['creator_user'];
 			$this->mInfo['editor']  = $rs['modifier_real_name'] ?? $rs['modifier_user'];

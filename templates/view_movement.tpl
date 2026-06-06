@@ -20,9 +20,9 @@
 			<dd>
 				<a href="{$smarty.const.CONTACT_PKG_URL}display.php?content_id={$gContent->mInfo.ref_contact_id}">{$gContent->mInfo.ref_contact_name|escape}</a>
 			</dd>
-			{elseif $gContent->mInfo.reference.0.data}
+			{elseif $gContent->mInfo.ref_from_data}
 			<dt>{tr}From{/tr}</dt>
-			<dd>{$gContent->mInfo.reference.0.data|escape}</dd>
+			<dd>{$gContent->mInfo.ref_from_data|escape}</dd>
 			{/if}
 			<dt>{tr}Created{/tr}</dt>
 			<dd>{$gContent->mInfo.created|bit_short_datetime} {tr}by{/tr} {$gContent->mInfo.creator|escape}</dd>

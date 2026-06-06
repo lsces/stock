@@ -38,11 +38,9 @@ if( !empty( $_REQUEST['cancel'] ) ) {
 			$xrefObj->store( $pHash );
 		}
 	}
-	// Reload so fresh xorder data is displayed
-	foreach( [ 'supplier', 'quantity', 'values', 'kitlocker', 'history' ] as $_xg ) {
-		unset( $gContent->mInfo[$_xg] );
-	}
-	$gContent->loadXrefList();
 }
+
+$gContent->loadXrefInfo();
+$gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 
 $gBitSystem->display( 'bitpackage:stock/component_order.tpl', KernelTools::tra('Parts List').': '.$gContent->getTitle(), [ 'display_mode' => 'display' ] );
