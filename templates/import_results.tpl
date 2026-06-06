@@ -8,6 +8,9 @@
 
 		<p>
 			<strong>{$loaded}</strong> {tr}records imported{/tr}.
+			{if $updated}
+				<strong>{$updated}</strong> {tr}records updated{/tr}.
+			{/if}
 			{if $skipped}
 				<strong>{$skipped}</strong> {tr}rows skipped{/tr}.
 			{/if}
