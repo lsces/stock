@@ -66,9 +66,12 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 	$csvLoaded = $csvSkipped = 0;
 	$csvErrors = [];
 	if( !empty( $_FILES['csv_file']['tmp_name'] ) && is_uploaded_file( $_FILES['csv_file']['tmp_name'] ) ) {
+		$origName = preg_replace( '/[^a-zA-Z0-9_-]/', '_', pathinfo( $_FILES['csv_file']['name'], PATHINFO_FILENAME ) );
+		$savedBom = STOCK_IMPORT_PATH . $origName . '_bom_' . $gContent->mContentId . '.csv';
+		move_uploaded_file( $_FILES['csv_file']['tmp_name'], $savedBom );
 		// Valid BOM unit types (MOV is for movements, not BOM lines)
 		$validItems = [ 'SGL', 'PCK', 'SHT', 'VOL' ];
-		if( ($fh = fopen( $_FILES['csv_file']['tmp_name'], 'r' )) !== false ) {
+		if( ($fh = fopen( $savedBom, 'r' )) !== false ) {
 			$rowNum = 0;
 			while( ($cols = fgetcsv($fh, 0, ',', '"', '')) !== false ) {
 				$rowNum++;

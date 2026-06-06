@@ -99,6 +99,8 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 	if( !$file || $file['error'] !== UPLOAD_ERR_OK ) {
 		$gContent->mErrors[] = KernelTools::tra( 'No file uploaded or upload error.' );
 	} else {
+		$origName = preg_replace( '/[^a-zA-Z0-9_-]/', '_', pathinfo( $file['name'], PATHINFO_FILENAME ) );
+		copy( $file['tmp_name'], STOCK_IMPORT_PATH . $origName . '_move_' . $gContent->mContentId . '.csv' );
 		$csvResult = $gContent->importCsv( $qtyTypes );
 		$gBitSmarty->assign( 'csvLoaded',  $csvResult['loaded'] );
 		$gBitSmarty->assign( 'csvSkipped', $csvResult['skipped'] );
