@@ -37,7 +37,8 @@ abstract class StockBase extends LibertyContent
 	 * content_id (xref column) to the contact's lc.title.
 	 */
 	public function loadXrefInfo(): void {
-		parent::loadXrefInfo();
+		$this->mXrefInfo = new \Bitweaver\Liberty\LibertyXrefInfo( $this->mContentTypeGuid, 'stock' );
+		$this->mXrefInfo->load( $this->mContentId );
 		if( empty( $this->mXrefInfo ) ) return;
 		$supplierGroup = $this->mXrefInfo->mGroups['supplier'] ?? null;
 		if( !$supplierGroup || empty( $supplierGroup->mXrefs ) ) return;

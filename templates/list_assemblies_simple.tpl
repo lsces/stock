@@ -2,7 +2,7 @@
 <div class="listing stock">
 	<header>
 		<div class="floaticon">
-			{minifind prompt="Assemblies" content_id=$smarty.request.content_id}
+			{minifind prompt="Assemblies" gallery_id=$smarty.request.gallery_id}
 		</div>
 		<h1>{tr}Assemblies{/tr}{if $gQueryUserId} {tr}by{/tr} {displayname user_id=$gQueryUserId}{/if}</h1>
 	</header>
@@ -38,12 +38,12 @@
 						</td>
 						<td>
 							{if $gal.child_count > 0}
-								<a href="{$smarty.const.STOCK_PKG_URL}list_assemblies.php?content_id={$gal.content_id}">{$gal.title|escape}</a>
+								<a href="{$smarty.const.STOCK_PKG_URL}list_assemblies.php?gallery_id={$gal.content_id}">{$gal.title|escape}</a>
 							{else}
 								<a href="{$gal.display_url|escape}">{$gal.title|escape}</a>
 							{/if}
 							{if $gal.is_hidden|default:'n' == 'y' || $gal.is_private|default:'n' == 'y' || $gal.access_answer|default:false}
-								{biticon ipackage="icons" iname="lock" ipackage="icons" iexplain="Restricted"}
+								{biticon ipackage="icons" iname="lock" iexplain="Restricted"}
 							{/if}
 							{if $gal.data}
 								<br/><small class="text-muted">{$gal.data|truncate:250|escape}</small>
@@ -61,7 +61,7 @@
 		</table>
 
 		<nav>
-			{pagination content_id=$smarty.request.content_id}
+			{pagination gallery_id=$smarty.request.gallery_id}
 		</nav>
 
 	</section>

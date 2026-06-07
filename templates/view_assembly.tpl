@@ -1,16 +1,17 @@
 {assign var=galLayout value=$gContent->getLayout()}
-{if $gContent->hasUpdatePermission()}
-	<div class="floaticon">
+<div class="floaticon">
+	{if $gContent->hasUpdatePermission()}
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='icon' serviceHash=$gContent->mInfo}
 		<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit Assembly"}</a>
 		<a title="{tr}Component Order{/tr}" href="{$smarty.const.STOCK_PKG_URL}component_order.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="view-sort-ascending" iexplain="Component Order"}</a>
-		<a title="{tr}View Stock{/tr}" href="{$smarty.const.STOCK_PKG_URL}list_stock.php?assembly_content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="package-x-generic" iexplain="View Stock"}</a>
-		<a title="{tr}View Movements{/tr}" href="{$smarty.const.STOCK_PKG_URL}list_movements.php?assembly_content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="go-next" iexplain="View Movements"}</a>
-		{if $gContent->hasAdminPermission()}
-			<a title="{tr}Delete Assembly{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php?content_id={$gContent->mContentId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Assembly"}</a>
-		{/if}
-	</div>
-{/if}
+	{/if}
+	<a title="{tr}Print Parts List{/tr}" href="{$smarty.const.STOCK_PKG_URL}print_bom.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="document-print" iexplain="Print Parts List"}</a>
+	<a title="{tr}View Stock{/tr}" href="{$smarty.const.STOCK_PKG_URL}list_stock.php?assembly_content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="package-x-generic" iexplain="View Stock"}</a>
+	<a title="{tr}View Movements{/tr}" href="{$smarty.const.STOCK_PKG_URL}list_movements.php?assembly_content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="go-next" iexplain="View Movements"}</a>
+	{if $gContent->hasAdminPermission()}
+		<a title="{tr}Delete Assembly{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php?content_id={$gContent->mContentId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Assembly"}</a>
+	{/if}
+</div>
 {include file="`$smarty.const.STOCK_PKG_PATH`assembly_views/`$galLayout`/stock_`$galLayout`_inc.tpl"}
 
 {if $gXrefInfo->mGroups}

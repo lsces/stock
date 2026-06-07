@@ -1,6 +1,9 @@
 {strip}
 <div class="listing stock">
 	<header>
+		<div class="floaticon hidden-print">
+			<button type="button" class="btn btn-link" onclick="window.print()">{biticon ipackage="icons" iname="document-print" iexplain="Print"}</button>
+		</div>
 		<h1>{tr}Stock Levels{/tr}{if $assemblyTitle} — {$assemblyTitle|escape}{/if}</h1>
 	</header>
 

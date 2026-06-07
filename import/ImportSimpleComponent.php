@@ -33,7 +33,7 @@ function stockImportFindSupplier( string $name ): ?int {
 
 	$contentId = $gBitDb->getOne(
 		"SELECT `content_id` FROM `".BIT_DB_PREFIX."liberty_xref`
-		 WHERE `item` = 'SCREF' AND UPPER( `xkey_ext` ) = UPPER( ? )",
+		 WHERE `item` = 'SCREF' AND UPPER( `xkey` ) = UPPER( ? )",
 		[ trim( $name ) ]
 	);
 
@@ -115,44 +115,11 @@ function stockImportSimpleComponent( array $data, int $rowNum ): array {
 				'item'             => '#SUP',
 				'xorder'           => 1,
 				'xref'             => $supplierContentId,
+				'xkey'             => substr( $supplierPn,    0, 32  ),
+				'xkey_ext'         => substr( $supplierPrice, 0, 250 ),
+				'data'             => $supplierUrl ?: null,
 				'last_update_date' => $gBitDb->NOW(),
 			] );
-
-			if( !empty( $supplierPn ) ) {
-				$xrefId = $gBitDb->GenID( 'liberty_xref_seq' );
-				$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-					'xref_id'          => $xrefId,
-					'content_id'       => $contentId,
-					'item'             => '#PN',
-					'xorder'           => 1,
-					'xkey_ext'         => substr( $supplierPn, 0, 250 ),
-					'last_update_date' => $gBitDb->NOW(),
-				] );
-			}
-
-			if( !empty( $supplierPrice ) ) {
-				$xrefId = $gBitDb->GenID( 'liberty_xref_seq' );
-				$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-					'xref_id'          => $xrefId,
-					'content_id'       => $contentId,
-					'item'             => '#PR',
-					'xorder'           => 1,
-					'xkey'             => substr( $supplierPrice, 0, 32 ),
-					'last_update_date' => $gBitDb->NOW(),
-				] );
-			}
-
-			if( !empty( $supplierUrl ) ) {
-				$xrefId = $gBitDb->GenID( 'liberty_xref_seq' );
-				$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-					'xref_id'          => $xrefId,
-					'content_id'       => $contentId,
-					'item'             => '#URL',
-					'xorder'           => 1,
-					'xkey_ext'         => substr( $supplierUrl, 0, 250 ),
-					'last_update_date' => $gBitDb->NOW(),
-				] );
-			}
 		}
 	}
 

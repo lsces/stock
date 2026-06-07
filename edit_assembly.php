@@ -96,7 +96,7 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 
 				$compId = $gBitDb->getOne(
 					"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
-					 WHERE lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
+					 WHERE lc.`content_type_guid` = 'stockcomponent' AND lc.`title` = ?",
 					[ $componentTitle ]
 				);
 				if( !$compId ) {

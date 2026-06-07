@@ -1026,10 +1026,19 @@ class StockAssembly extends StockBase {
 			if( !empty( $pListHash['root_only'] ) ) {
 				$whereSql .= " AND NOT EXISTS (SELECT `assembly_content_id` FROM `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 WHERE tfgim2.`item_content_id`=lc.`content_id`)";
 			}
+			if( !empty( $pListHash['non_root_only'] ) ) {
+				$whereSql .= " AND EXISTS (SELECT `assembly_content_id` FROM `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 WHERE tfgim2.`item_content_id`=lc.`content_id`)";
+			}
 		} else {
 			// weed out empty galleries if we don't need them
 			if( empty( $pListHash['show_empty'] ) ) {
 				$mapJoin = "INNER JOIN `".BIT_DB_PREFIX."stock_assembly_map` fgim ON (fgim.`assembly_content_id`=lc.`content_id`)";
+			}
+			if( !empty( $pListHash['root_only'] ) ) {
+				// already handled above via LEFT OUTER JOIN + IS NULL
+			}
+			if( !empty( $pListHash['non_root_only'] ) ) {
+				$joinSql .= " INNER JOIN `".BIT_DB_PREFIX."stock_assembly_map` tfgim2nr ON (tfgim2nr.`item_content_id`=lc.`content_id`)";
 			}
 		}
 

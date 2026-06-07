@@ -13,7 +13,7 @@
 	<section class="body">
 		{if $gBitSystem->isFeatureActive('stock_item_list_creator') || $gBitSystem->isFeatureActive('stock_item_list_date') || $gBitSystem->isFeatureActive('stock_item_list_hits')}
 			<ul class="list-inline sortby">
-				<li>{biticon ipackage="icons" iname="go-next" ipackage="icons" iexplain="sort by" iforce="icon"}</li>
+				<li>{biticon ipackage="icons" iname="go-next" iexplain="sort by" iforce="icon"}</li>
 				{if $gBitSystem->isFeatureActive('stock_item_list_creator')}
 					<li>{smartlink ititle="Creator" isort=$gBitSystem->getConfig('users_display_name') icontrol=$listInfo}</li>
 				{/if}

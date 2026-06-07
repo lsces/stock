@@ -12,8 +12,8 @@ global $gBitSystem, $gBitSmarty, $gStockAssembly;
 
 $gStockAssembly = new StockAssembly();
 
-if( !empty( $_REQUEST['content_id'] ) && is_numeric( $_REQUEST['content_id'] ) ) {
-	$parentAssembly = new StockAssembly( (int)$_REQUEST['content_id'] );
+if( !empty( $_REQUEST['gallery_id'] ) && is_numeric( $_REQUEST['gallery_id'] ) ) {
+	$parentAssembly = new StockAssembly( (int)$_REQUEST['gallery_id'] );
 	$parentAssembly->load();
 	if( $parentAssembly->isValid() ) {
 		$_REQUEST['parent_content_id'] = $parentAssembly->mContentId;
@@ -21,8 +21,8 @@ if( !empty( $_REQUEST['content_id'] ) && is_numeric( $_REQUEST['content_id'] ) )
 		$gBitSmarty->assign( 'parentAssembly', $parentAssembly );
 	}
 } else {
-	$_REQUEST['root_only']  = true;
-	$_REQUEST['show_empty'] = true;
+	$_REQUEST['show_empty']    = true;
+	$_REQUEST['no_thumbnails'] = true;
 }
 
 if (!empty($_REQUEST['user_id']) && is_numeric($_REQUEST['user_id'])) {
