@@ -9,6 +9,7 @@
 			<input type="hidden" name="content_id" value="{$xrefInfo.content_id|escape}" />
 			<input type="hidden" name="xref_id"    value="{$xrefInfo.xref_id|escape}" />
 			<input type="hidden" name="item"       value="{$xrefInfo.item|escape}" />
+			<input type="hidden" name="xorder"     value="{$xrefInfo.xorder|escape}" />
 
 			{if $xrefInfo.xref_title}
 			<div class="form-group">

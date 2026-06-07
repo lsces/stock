@@ -16,7 +16,7 @@
 			<table class="table table-striped table-condensed">
 				<thead>
 					<tr>
-						<th style="width:4em;">{tr}#{/tr}</th>
+						<th style="width:7em;">{tr}Order{/tr}</th>
 						<th>{tr}Component{/tr}</th>
 						<th>{tr}Description{/tr}</th>
 						<th>{tr}Qty{/tr}</th>
@@ -37,7 +37,7 @@
 						{/if}
 						<tr>
 							<td>
-								<input type="text" class="form-control input-sm hidden-print" size="5"
+								<input type="text" class="form-control input-sm hidden-print" size="7"
 									name="xrefOrder[{$row.xref_id|escape}]"
 									value="{$row.xorder|escape}" />
 								<span class="visible-print-inline">{$posInGroup}</span>
