@@ -49,16 +49,12 @@
 			</div>
 		{/form}
 
-		{* ── Components section ── *}
 		{if $gContent->isValid()}
-			<hr/>
-			<h3>{tr}Components{/tr}</h3>
-
 			{* CSV upload results *}
 			{if isset($csvLoaded)}
 				<div class="alert alert-info">
 					{tr}Loaded{/tr}: <strong>{$csvLoaded}</strong>
-					{if $csvSkipped} &nbsp; {tr}Skipped (duplicate){/tr}: <strong>{$csvSkipped}</strong>{/if}
+					{if $csvSkipped} &nbsp; {tr}Skipped{/tr}: <strong>{$csvSkipped}</strong>{/if}
 				</div>
 				{if $csvErrors}
 					<ul class="text-warning">
@@ -67,45 +63,14 @@
 				{/if}
 			{/if}
 
-			{* Components table *}
-			{if $componentMap}
-				{form ipackage="stock" ifile="edit_assembly.php"}
-					<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}"/>
-					<table class="table table-condensed table-striped">
-						<thead>
-							<tr>
-								<th>{smartlink ititle="Pos" isort="item_position" ifile="edit_assembly.php" ipackage="stock" idefault=1 content_id=$gContent->mContentId}</th>
-								<th>{smartlink ititle="Component" isort="title" ifile="edit_assembly.php" ipackage="stock" content_id=$gContent->mContentId}</th>
-								<th></th>
-							</tr>
-						</thead>
-						<tbody>
-							{foreach from=$componentMap key=contentId item=comp}
-								<tr>
-									<td>{$comp.item_position|escape}</td>
-									<td>{$comp.title|escape}</td>
-									<td>
-										<input type="submit" class="btn btn-xs btn-default"
-											name="remove_component_{$contentId}" value="{tr}Remove{/tr}"/>
-									</td>
-								</tr>
-							{/foreach}
-						</tbody>
-					</table>
-				{/form}
-			{else}
-				<p class="muted">{tr}No components yet.{/tr}</p>
-			{/if}
-
 			{* ── Upload BOM CSV ── *}
-			<h4>{tr}Upload Parts List (BOM){/tr}</h4>
-			<p class="help-block">{tr}Columns: Component, Order, Quantity, Size (SGL/PCK/SHT/VOL — optional), Ref designators, Note{/tr}</p>
 			{form enctype="multipart/form-data" ipackage="stock" ifile="edit_assembly.php"}
 				<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}"/>
 				<div class="form-inline">
 					<input type="file" name="csv_file" accept=".csv,text/csv"/>
 					<input type="submit" class="btn btn-default" name="upload_bom_csv" value="{tr}Upload BOM{/tr}"/>
 				</div>
+				<p class="help-block">{tr}Columns: Component, Order, Quantity, Size (SGL/PCK/SHT/VOL), Ref designators{/tr}</p>
 			{/form}
 		{/if}
 
