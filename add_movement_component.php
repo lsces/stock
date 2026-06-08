@@ -1,0 +1,85 @@
+<?php
+/**
+ * Add a single component line to a stock movement BOM.
+ * Same flow as add_component.php but for stockmovement content.
+ *
+ * @package stock
+ */
+
+namespace Bitweaver\Stock;
+
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyXref;
+
+require_once '../kernel/includes/setup_inc.php';
+
+global $gBitSystem, $gBitSmarty, $gBitDb;
+
+include_once STOCK_PKG_INCLUDE_PATH.'movement_lookup_inc.php';
+
+if( !$gContent->isValid() ) {
+	$gBitSystem->fatalError( 'No valid movement specified.' );
+}
+$gContent->verifyUpdatePermission();
+
+$validItems = [ 'SGL' => 'Single unit', 'PCK' => 'Pack', 'SHT' => 'Sheet (H x W)', 'VOL' => 'Volume' ];
+$errors = [];
+
+if( !empty( $_REQUEST['fCancel'] ) ) {
+	header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
+	die;
+}
+
+if( !empty( $_REQUEST['fAddComponent'] ) ) {
+	$title = trim( $_REQUEST['component_title'] ?? '' );
+	$item  = strtoupper( trim( $_REQUEST['item'] ?? 'SGL' ) );
+	$xkey  = trim( $_REQUEST['xkey'] ?? '' );
+
+	if( !array_key_exists( $item, $validItems ) ) {
+		$item = 'SGL';
+	}
+
+	if( $title === '' ) {
+		$errors[] = KernelTools::tra( 'Component title is required.' );
+	} else {
+		$compId = (int)$gBitDb->getOne(
+			"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
+			 WHERE lc.`content_type_guid` = 'stockcomponent' AND lc.`title` = ?",
+			[ $title ]
+		);
+
+		if( !$compId ) {
+			header( 'Location: '.STOCK_PKG_URL.'edit_component.php?title='.urlencode( $title ) );
+			die;
+		}
+
+		$nextXorder = (int)$gBitDb->getOne(
+			"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')",
+			[ $gContent->mContentId ]
+		) ?: 1;
+
+		$xrefObj = new LibertyXref();
+		$xrefObj->mContentTypeGuid = 'stockmovement';
+		$pHash = [
+			'content_id' => $gContent->mContentId,
+			'item'       => $item,
+			'xorder'     => $nextXorder,
+			'xref'       => $compId,
+			'xkey'       => $xkey,
+			'xkey_ext'   => trim( $_REQUEST['xkey_ext'] ?? '' ) ?: null,
+			'edit'       => trim( $_REQUEST['edit'] ?? '' ) ?: null,
+		];
+		if( $xrefObj->store( $pHash ) ) {
+			header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
+			die;
+		}
+		$errors[] = KernelTools::tra( 'Failed to store BOM entry.' );
+	}
+}
+
+$gBitSmarty->assign( 'validItems', $validItems );
+$gBitSmarty->assign( 'errors',     $errors );
+$gBitSmarty->assign( 'lookupUrl',  STOCK_PKG_URL.'includes/lookup_component.php' );
+
+$gBitSystem->display( 'bitpackage:stock/add_movement_component.tpl', KernelTools::tra( 'Add Component' ).': '.$gContent->getTitle(), [ 'display_mode' => 'edit' ] );

@@ -3,6 +3,7 @@
 	<header>
 		<div class="floaticon">
 			{if $gBitUser->hasPermission('p_stock_create')}
+				<a href="{$smarty.const.STOCK_PKG_URL}add_requisition.php">{biticon ipackage="icons" iname="list-add" iexplain="Add Requisition"}</a>
 				<a href="{$smarty.const.STOCK_PKG_URL}edit_movement.php">{biticon ipackage="icons" iname="view-task-add" iexplain="Add Movement"}</a>
 			{/if}
 		</div>

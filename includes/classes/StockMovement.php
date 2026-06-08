@@ -194,6 +194,23 @@ class StockMovement extends LibertyContent {
 			}
 		}
 		unset( $row );
+
+		$assemblyGroup = $this->mXrefInfo->mGroups['assembly'] ?? null;
+		if( !$assemblyGroup || empty( $assemblyGroup->mXrefs ) ) return;
+		$assemblyIds = array_values( array_unique( array_filter( array_column( $assemblyGroup->mXrefs, 'xref' ) ) ) );
+		if( !$assemblyIds ) return;
+		$assemblies = $this->mDb->getAssoc(
+			"SELECT lc.`content_id`, lc.`title`, lc.`data` FROM `".BIT_DB_PREFIX."liberty_content` lc
+			 WHERE lc.`content_id` IN (".implode( ',', array_fill( 0, count( $assemblyIds ), '?' ) ).")",
+			$assemblyIds
+		);
+		foreach( $assemblyGroup->mXrefs as &$row ) {
+			if( !empty( $row['xref'] ) && isset( $assemblies[$row['xref']] ) ) {
+				$row['linked_title'] = $assemblies[$row['xref']]['title'];
+				$row['linked_desc']  = $assemblies[$row['xref']]['data'];
+			}
+		}
+		unset( $row );
 	}
 
 	/**

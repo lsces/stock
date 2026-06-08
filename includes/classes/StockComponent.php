@@ -189,6 +189,10 @@ class StockComponent extends StockBase {
 			$bindVars[] = $term;
 		}
 
+		if( !empty( $pListHash['kitlocker_only'] ) ) {
+			$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` kx WHERE kx.`content_id` = lc.`content_id` AND kx.`item` = 'KLID')";
+		}
+
 		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
 
 		$orderby = !empty( $pListHash['sort_mode'] )

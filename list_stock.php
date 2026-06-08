@@ -134,8 +134,24 @@ if( $assemblyContentId && isset( $assemblyList[$assemblyContentId] ) ) {
 	$assemblyTitle = $assemblyList[$assemblyContentId]['title'];
 }
 
+// KLID map for assembly autocomplete
+$asmIds = array_keys( $assemblyList );
+$asmKlidMap = [];
+if( $asmIds ) {
+	$klidRows = $gBitDb->getAll(
+		"SELECT x.`content_id`, x.`xkey` FROM `".BIT_DB_PREFIX."liberty_xref` x
+		 WHERE x.`item` = 'KLID' AND x.`content_id` IN (".implode( ',', array_fill( 0, count( $asmIds ), '?' ) ).")",
+		$asmIds
+	);
+	foreach( $klidRows as $r ) { $asmKlidMap[$r['content_id']] = $r['xkey']; }
+}
+$assemblyListJson = json_encode( array_values( array_map(
+	fn( $i ) => [ 'id' => (int)$i['content_id'], 'text' => $i['title'], 'klid' => $asmKlidMap[$i['content_id']] ?? '' ],
+	$assemblyList
+) ) );
+
 $gBitSmarty->assign( 'stockList',          $stockList );
-$gBitSmarty->assign( 'assemblyList',        $assemblyList );
+$gBitSmarty->assign( 'assemblyListJson',    $assemblyListJson );
 $gBitSmarty->assign( 'assemblyContentId',   $assemblyContentId );
 $gBitSmarty->assign( 'assemblyTitle',       $assemblyTitle );
 $gBitSmarty->assign( 'find',               $find );

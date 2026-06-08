@@ -12,15 +12,14 @@
 		{form ipackage="stock" ifile="list_stock.php" method="get"}
 			<div class="form-inline" style="margin-bottom:1em">
 				<div class="form-group">
-					<select name="assembly_content_id" class="form-control input-sm">
-						<option value="">{tr}All components{/tr}</option>
-						{foreach from=$assemblyList item=asm}
-							<option value="{$asm.content_id|escape}"
-								{if $assemblyContentId == $asm.content_id} selected="selected"{/if}>
-								{$asm.title|escape}
-							</option>
-						{/foreach}
-					</select>
+					<input type="hidden" name="assembly_content_id" id="ls_asm_id" value="{$assemblyContentId|default:''|escape}" />
+					<div style="position:relative;display:inline-block;vertical-align:top">
+						<input type="text" class="form-control input-sm" id="ls_asm_search"
+							autocomplete="off" placeholder="{tr}All components{/tr}"
+							value="{$assemblyTitle|escape}" />
+						<ul id="ls_asm_dropdown" class="dropdown-menu"
+							style="display:none;position:absolute;width:100%;z-index:1000;max-height:220px;overflow-y:auto"></ul>
+					</div>
 				</div>
 				<div class="form-group">
 					<input type="text" class="form-control input-sm" name="find"
@@ -99,3 +98,45 @@
 	</section>
 </div>
 {/strip}
+<script>
+(function($) {
+	var items   = {$assemblyListJson};
+	var $input  = $('#ls_asm_search');
+	var $hidden = $('#ls_asm_id');
+	var $dd     = $('#ls_asm_dropdown');
+
+	$input.on('input', function() {
+		var q = this.value.toLowerCase().trim();
+		$hidden.val('');
+		$dd.hide().empty();
+		if (!q) return;
+		var matched = items.filter(function(i) {
+			return i.text.toLowerCase().indexOf(q) !== -1 || (i.klid && i.klid.toLowerCase().indexOf(q) !== -1);
+		});
+		if (!matched.length) return;
+		matched.forEach(function(i) {
+			var label = i.text + (i.klid ? ' (' + i.klid + ')' : '');
+			$dd.append($('<li>').append($('<a>').attr('href','#').data('id', i.id).data('text', i.text).text(label)));
+		});
+		$dd.show();
+	});
+
+	$(document).on('mousedown', '#ls_asm_dropdown a', function(e) {
+		e.preventDefault();
+		$input.val($(this).data('text'));
+		$hidden.val($(this).data('id'));
+		$dd.hide().empty();
+	});
+
+	$input.on('blur', function() { setTimeout(function() { $dd.hide(); }, 150); });
+
+	$input.on('keydown', function(e) {
+		if (!$dd.is(':visible')) return;
+		var $links = $dd.find('a'), idx = $links.index($dd.find('li.active a'));
+		if (e.key === 'ArrowDown') { e.preventDefault(); $links.parent().removeClass('active'); $links.eq(idx + 1 < $links.length ? idx + 1 : 0).parent().addClass('active'); }
+		else if (e.key === 'ArrowUp') { e.preventDefault(); $links.parent().removeClass('active'); $links.eq(idx > 0 ? idx - 1 : $links.length - 1).parent().addClass('active'); }
+		else if (e.key === 'Enter') { var $a = $dd.find('li.active a'); if ($a.length) { e.preventDefault(); $a.trigger('mousedown'); } }
+		else if (e.key === 'Escape') { $dd.hide(); }
+	});
+}(jQuery));
+</script>

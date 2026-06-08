@@ -4,18 +4,46 @@
  *
  * CSV column layout (0-based, header row skipped by loader):
  *   0  Title        MERG product code / designation (used as lc.title)
- *   1  KLID         Kitlocker numeric ID code (stored as KLID xref on assemblies)
+ *   1  KLID         Kitlocker numeric ID code (stored as KLID xref on both types)
  *   2  Description  Long description (stored as content body)
- *   3  KLSGL        Kitlocker single-unit stock count (assemblies only → KLSGL xref)
- *   4  KL3M         3-month sales count (assemblies only → KL3M xref)
- *   5  Group        Group number 1–28 → KLG01–KLG28 stgrp xref (both types)
+ *   3  KLSGL        Kitlocker single-unit stock count (stored as KLSGL xref on both types)
+ *   4  KL3M         3-month sales count (stored as KL3M xref on both types)
+ *   5  Group        Group number 1–99 → KLG01–KLG99 stgrp xref (both types)
  *   6  Type         'A' = StockAssembly, 'C' = StockComponent
+ *
+ * On reload, existing records are not re-created but their kitlocker xrefs are upserted,
+ * so a fresh import run will tag components that were previously missing KLID etc.
  *
  * @package stock
  */
 
 use Bitweaver\Stock\StockAssembly;
 use Bitweaver\Stock\StockComponent;
+
+function stockKitlockerXrefUpsert( int $contentId, string $item, string $value ): void {
+	global $gBitDb;
+	$existingId = $gBitDb->getOne(
+		"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref`
+		 WHERE `content_id` = ? AND `item` = ?",
+		[ $contentId, $item ]
+	);
+	if( $existingId ) {
+		$gBitDb->associateUpdate(
+			BIT_DB_PREFIX.'liberty_xref',
+			[ 'xkey' => substr( $value, 0, 32 ), 'last_update_date' => $gBitDb->NOW() ],
+			[ 'xref_id' => $existingId ]
+		);
+	} else {
+		$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
+			'xref_id'          => $gBitDb->GenID( 'liberty_xref_seq' ),
+			'content_id'       => $contentId,
+			'item'             => $item,
+			'xkey'             => substr( $value, 0, 32 ),
+			'xorder'           => 0,
+			'last_update_date' => $gBitDb->NOW(),
+		] );
+	}
+}
 
 function stockExpungeKitlockerItemByTitle( string $title, string $type ): bool {
 	global $gBitDb;
@@ -53,65 +81,43 @@ function stockImportKitlockerItem( array $data, int $rowNum ): array {
 		return $result;
 	}
 
-	$guid = ( $type === 'A' ) ? 'stockassembly' : 'stockcomponent';
-
-	$exists = $gBitDb->getOne(
-		"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
-		 WHERE lc.`content_type_guid` = ? AND lc.`title` = ?",
-		[ $guid, $title ]
-	);
-	if( $exists ) {
-		$result['skipped']++;
-		$result['errors'][] = "Row $rowNum: '$title' already exists, skipped.";
-		return $result;
-	}
-
+	$guid  = ( $type === 'A' ) ? 'stockassembly' : 'stockcomponent';
 	$klid  = trim( $data[1] ?? '' );
 	$desc  = trim( $data[2] ?? '' );
 	$klsgl = trim( $data[3] ?? '' );
 	$kl3m  = trim( $data[4] ?? '' );
 	$group = (int)( $data[5] ?? 0 );
 
-	$obj   = ( $type === 'A' ) ? new StockAssembly() : new StockComponent();
-	$pHash = [
-		'title'       => $title,
-		'edit'        => $desc,
-		'format_guid' => 'bithtml',
-	];
-	if( !$obj->store( $pHash ) ) {
-		$result['skipped']++;
-		$result['errors'][] = "Row $rowNum: failed to store '$title'.";
-		return $result;
+	$contentId = (int)$gBitDb->getOne(
+		"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
+		 WHERE lc.`content_type_guid` = ? AND lc.`title` = ?",
+		[ $guid, $title ]
+	);
+
+	if( !$contentId ) {
+		$obj   = ( $type === 'A' ) ? new StockAssembly() : new StockComponent();
+		$pHash = [
+			'title'       => $title,
+			'edit'        => $desc,
+			'format_guid' => 'bithtml',
+		];
+		if( !$obj->store( $pHash ) ) {
+			$result['skipped']++;
+			$result['errors'][] = "Row $rowNum: failed to store '$title'.";
+			return $result;
+		}
+		$contentId = $obj->mContentId;
 	}
 
-	$contentId = $obj->mContentId;
-
-	// Group tag — shared across both types via 'stock' package-level stgrp
+	// Group tag — both types
 	if( $group >= 1 && $group <= 99 ) {
-		$xrefId = $gBitDb->GenID( 'liberty_xref_seq' );
-		$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-			'xref_id'          => $xrefId,
-			'content_id'       => $contentId,
-			'item'             => sprintf( 'KLG%02d', $group ),
-			'xorder'           => 0,
-			'last_update_date' => $gBitDb->NOW(),
-		] );
+		stockKitlockerXrefUpsert( $contentId, sprintf( 'KLG%02d', $group ), '' );
 	}
 
-	// Assembly-specific kitlocker xrefs
-	if( $type === 'A' ) {
-		foreach( [ 'KLID' => $klid, 'KLSGL' => $klsgl, 'KL3M' => $kl3m ] as $item => $value ) {
-			if( $value !== '' ) {
-				$xrefId = $gBitDb->GenID( 'liberty_xref_seq' );
-				$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-					'xref_id'          => $xrefId,
-					'content_id'       => $contentId,
-					'item'             => $item,
-					'xorder'           => 0,
-					'xkey'             => substr( $value, 0, 32 ),
-					'last_update_date' => $gBitDb->NOW(),
-				] );
-			}
+	// Kitlocker xrefs — same set for assemblies and components
+	foreach( [ 'KLID' => $klid, 'KLSGL' => $klsgl, 'KL3M' => $kl3m ] as $item => $value ) {
+		if( $value !== '' ) {
+			stockKitlockerXrefUpsert( $contentId, $item, $value );
 		}
 	}
 

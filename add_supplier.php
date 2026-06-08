@@ -6,7 +6,6 @@
 
 namespace Bitweaver\Stock;
 
-use Bitweaver\Contact\Contact;
 use Bitweaver\KernelTools;
 
 require_once '../kernel/includes/setup_inc.php';
@@ -48,11 +47,7 @@ if( !empty( $_REQUEST['fAddSupplier'] ) ) {
 	}
 }
 
-$contact = new Contact();
-$listHash = [ 'contact_type_guid' => ['$04'], 'sort_mode' => 'title_asc', 'max_records' => 500 ];
-$supplierList = $contact->getList( $listHash );
-
-$gBitSmarty->assign( 'supplierList', $supplierList );
+$gBitSmarty->assign( 'contactLookupUrl', CONTACT_PKG_URL.'includes/lookup_contact.php' );
 $gBitSmarty->assign( 'errors', $gContent->mErrors );
 
 $gBitSystem->display( 'bitpackage:stock/add_supplier.tpl', KernelTools::tra( 'Add Supplier' ), [ 'display_mode' => 'edit' ] );

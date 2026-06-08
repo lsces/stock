@@ -45,7 +45,7 @@
 		{if $gXrefInfo->mGroups}
 			{jstabs}
 				{foreach $gXrefInfo->mGroups as $xrefGroup}
-					{if $xrefGroup->mXGroup neq 'reference'}
+					{if $xrefGroup->mXGroup neq 'reference' && ($xrefGroup->mXGroup neq 'assembly' || $isReqn)}
 						{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
 							xrefGroup=$xrefGroup
 							allow_add=false

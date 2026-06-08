@@ -24,6 +24,7 @@
 				{/forminput}
 			</div>
 
+			{if !$isReqn}
 			{if $refTypes}
 			<div class="form-group">
 				{formlabel label="Movement Type" mandatory="y"}
@@ -31,8 +32,7 @@
 					{foreach from=$refTypes key=item item=label}
 						<label class="radio-inline">
 							<input type="radio" name="movement_type" value="{$item|escape}"
-								{if $refRow.item eq $item} checked="checked"
-								{elseif !$refRow && $smarty.foreach.default.first} checked="checked"{/if} /> {$label|escape}
+								{if ($gContent->mInfo.ref_type|default:'TRANS') eq $item} checked="checked"{/if} /> {$label|escape}
 						</label>
 					{/foreach}
 				{/forminput}
@@ -44,11 +44,14 @@
 				{forminput}
 					<input type="hidden" name="ref_contact_id" id="ref_contact_id"
 						value="{$gContent->mInfo.ref_contact_id|default:''|escape}" />
-					<input type="text" class="form-control" name="ref_from" id="ref_from"
-						autocomplete="off" list="contact_suggestions"
-						value="{if $gContent->mInfo.ref_contact_name}{$gContent->mInfo.ref_contact_name|escape}{else}{$refRow.data|default:''|escape}{/if}"
-						maxlength="160" placeholder="Type to search contacts…" />
-					<datalist id="contact_suggestions"></datalist>
+					<div style="position:relative">
+						<input type="text" class="form-control" name="ref_from" id="ref_from"
+							autocomplete="off"
+							value="{if $gContent->mInfo.ref_contact_name}{$gContent->mInfo.ref_contact_name|escape}{else}{$gContent->mInfo.ref_from_data|default:''|escape}{/if}"
+							maxlength="160" placeholder="Type to search contacts…" />
+						<ul id="contact_dropdown" class="dropdown-menu"
+							style="display:none;position:absolute;width:100%;z-index:1000;max-height:220px;overflow-y:auto"></ul>
+					</div>
 				{/forminput}
 			</div>
 
@@ -56,9 +59,10 @@
 				{formlabel label="Ref Key" for="ref_key"}
 				{forminput}
 					<input type="text" class="form-control" name="ref_key" id="ref_key"
-						value="{$refRow.xkey|default:''|escape}" maxlength="160" />
+						value="{$gContent->mInfo.ref_key|default:''|escape}" maxlength="160" />
 				{/forminput}
 			</div>
+			{/if}
 
 			<div class="form-group">
 				{formlabel label="Ordered" for="ordered_date"}
@@ -103,7 +107,21 @@
 
 		{if $gContent->isValid()}
 
-			{* ── Upload CSV ── *}
+			{if $gXrefInfo->mGroups}
+				{jstabs}
+					{foreach $gXrefInfo->mGroups as $xrefGroup}
+						{if $xrefGroup->mXGroup neq 'reference' && ($xrefGroup->mXGroup neq 'assembly' || $isReqn)}
+							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+								xrefGroup=$xrefGroup
+								allow_add=true
+								allow_edit=true}
+						{/if}
+					{/foreach}
+				{/jstabs}
+			{/if}
+
+			{if !$isReqn}
+			{* ── Upload CSV (orders/transfers only) ── *}
 			<h4>{tr}Upload CSV{/tr}</h4>
 			{form enctype="multipart/form-data" ipackage="stock" ifile="edit_movement.php"}
 				<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}" />
@@ -112,6 +130,7 @@
 					<input type="submit" class="btn btn-default" name="upload_csv" value="{tr}Upload{/tr}" />
 				</div>
 			{/form}
+			{/if}
 
 			{* ── Upload results ── *}
 			{if isset($csvLoaded)}
@@ -126,20 +145,6 @@
 				{/if}
 			{/if}
 
-			{* ── Xref tabs — quantity BOM only; reference handled above in form ── *}
-			{if $gXrefInfo->mGroups}
-				{jstabs}
-					{foreach $gXrefInfo->mGroups as $xrefGroup}
-						{if $xrefGroup->mXGroup neq 'reference'}
-							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
-								xrefGroup=$xrefGroup
-								allow_add=true
-								allow_edit=true}
-						{/if}
-					{/foreach}
-				{/jstabs}
-			{/if}
-
 		{/if}
 
 	</div><!-- end .body -->
@@ -147,27 +152,61 @@
 <script>
 (function($) {
 	var timer, contacts = [];
-	$('#ref_from').on('input', function() {
+	var $input = $('#ref_from');
+	var $hidden = $('#ref_contact_id');
+	var $dd = $('#contact_dropdown');
+
+	$input.on('input', function() {
 		var q = $(this).val();
 		clearTimeout(timer);
-		if (q.length < 2) { $('#contact_suggestions').empty(); contacts = []; return; }
+		$dd.hide().empty();
+		contacts = [];
+		if (q.length < 2) return;
 		timer = setTimeout(function() {
 			$.getJSON('{$contactLookupUrl}', {ldelim}q: q{rdelim}, function(data) {
 				contacts = data;
-				var dl = $('#contact_suggestions').empty();
+				if (!data.length) return;
 				$.each(data, function(i, row) {
 					var label = row.title + (row.scref ? ' (' + row.scref + ')' : '');
-					dl.append($('<option>').val(label).attr('data-id', row.content_id));
+					$dd.append($('<li>').append(
+						$('<a>').attr('href','#').data('id', row.content_id).data('label', label).text(label)
+					));
 				});
+				$dd.show();
 			});
 		}, 250);
-	}).on('change', function() {
-		var val = $(this).val(), found = null;
-		$.each(contacts, function(i, row) {
-			var label = row.title + (row.scref ? ' (' + row.scref + ')' : '');
-			if (label === val || row.title === val || row.scref === val) { found = row; return false; }
-		});
-		$('#ref_contact_id').val(found ? found.content_id : '');
+	});
+
+	$(document).on('mousedown', '#contact_dropdown a', function(e) {
+		e.preventDefault();
+		$input.val($(this).data('label'));
+		$hidden.val($(this).data('id'));
+		$dd.hide().empty();
+		contacts = [];
+	});
+
+	$input.on('blur', function() {
+		setTimeout(function() { $dd.hide(); }, 150);
+	});
+
+	$input.on('keydown', function(e) {
+		if (!$dd.is(':visible')) return;
+		var $items = $dd.find('a');
+		var idx = $dd.find('li.active a').length ? $items.index($dd.find('li.active a')) : -1;
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			$items.parent().removeClass('active');
+			$items.eq(idx + 1 < $items.length ? idx + 1 : 0).parent().addClass('active');
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			$items.parent().removeClass('active');
+			$items.eq(idx > 0 ? idx - 1 : $items.length - 1).parent().addClass('active');
+		} else if (e.key === 'Enter') {
+			var $active = $dd.find('li.active a');
+			if ($active.length) { e.preventDefault(); $active.trigger('mousedown'); }
+		} else if (e.key === 'Escape') {
+			$dd.hide();
+		}
 	});
 }(jQuery));
 </script>

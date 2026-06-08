@@ -107,6 +107,51 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 		$gBitSmarty->assign( 'csvErrors',  $csvResult['errors'] );
 	}
 
+} elseif( !empty( $_REQUEST['fAddAssembly'] ) && $gContent->isValid() ) {
+	$targetContentId = isset( $_REQUEST['assembly_content_id'] ) && is_numeric( $_REQUEST['assembly_content_id'] )
+	                   ? (int)$_REQUEST['assembly_content_id'] : 0;
+	$kitCount        = isset( $_REQUEST['kit_count'] ) && is_numeric( $_REQUEST['kit_count'] ) && (float)$_REQUEST['kit_count'] > 0
+	                   ? (float)$_REQUEST['kit_count'] : 1;
+	if( $targetContentId ) {
+		$targetRow = $gBitDb->getRow(
+			"SELECT `content_type_guid`, `title` FROM `".BIT_DB_PREFIX."liberty_content`
+			 WHERE `content_id` = ? AND `content_type_guid` IN ('stockassembly','stockcomponent')",
+			[ $targetContentId ]
+		);
+		if( $targetRow ) {
+			$assemblyHash = [
+				'content_id' => $gContent->mContentId,
+				'item'       => 'ASSEMBLY',
+				'xref'       => $targetContentId,
+				'xkey'       => (string)$kitCount,
+				'xkey_ext'   => $targetRow['title'],
+				'edit'       => $targetRow['content_type_guid'],
+				'fAddXref'   => 1,
+			];
+			$gContent->storeXref( $assemblyHash );
+			if( $targetRow['content_type_guid'] === 'stockassembly' ) {
+				$gContent->explodeFromAssembly( $targetContentId, $kitCount );
+			} else {
+				$nextXorder = (int)$gBitDb->getOne(
+					"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
+					 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')",
+					[ $gContent->mContentId ]
+				) ?: 1;
+				$qtyHash = [
+					'content_id' => $gContent->mContentId,
+					'item'       => 'SGL',
+					'xref'       => $targetContentId,
+					'xkey'       => (string)$kitCount,
+					'xorder'     => $nextXorder,
+					'fAddXref'   => 1,
+				];
+				$gContent->storeXref( $qtyHash );
+			}
+		}
+	}
+	header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
+	die;
+
 } elseif( !empty( $_REQUEST['delete'] ) ) {
 	$gBitSystem->verifyPermission( 'p_stock_admin' );
 	if( !empty( $_REQUEST['cancel'] ) ) {
@@ -133,10 +178,6 @@ if( $gContent->isValid() ) {
 	$gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 }
 
-// Pre-populate reference row for the form
-$refRow = !empty( $gContent->mInfo['reference'] ) ? reset( $gContent->mInfo['reference'] ) : [];
-$gBitSmarty->assign( 'refRow', $refRow );
-
 // Pre-format dates as dd/mm/yyyy for form fields
 $orderedDateVal  = !empty( $gContent->mInfo['ref_start_date'] )
 	? date( 'd/m/Y', strtotime( $gContent->mInfo['ref_start_date'] ) ) : '';
@@ -146,6 +187,31 @@ $gBitSmarty->assign( 'orderedDateVal',   $orderedDateVal );
 $gBitSmarty->assign( 'receivedDateVal',  $receivedDateVal );
 $gBitSmarty->assign( 'contactLookupUrl', CONTACT_PKG_URL.'includes/lookup_contact.php' );
 
+$isReqn = ( ( $gContent->mInfo['ref_type'] ?? '' ) === 'REQN' );
+if( $isReqn ) {
+	$assembly      = new StockAssembly();
+	$asmHash       = [ 'show_empty' => true, 'sort_mode' => 'title_asc', 'max_records' => 1000 ];
+	$assemblyList  = $assembly->getList( $asmHash );
+	$component     = new StockComponent();
+	$compHash      = [ 'kitlocker_only' => true, 'sort_mode' => 'title_asc', 'max_records' => 1000 ];
+	$componentList = $component->getList( $compHash );
+	$itemList = array_merge( array_values( $assemblyList ), array_values( $componentList ) );
+	usort( $itemList, fn( $a, $b ) => strcasecmp( $a['title'], $b['title'] ) );
+	$itemIds = array_column( $itemList, 'content_id' );
+	$klidMap = [];
+	if( $itemIds ) {
+		$klidRows = $gBitDb->getAll(
+			"SELECT x.`content_id`, x.`xkey` FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 WHERE x.`item` = 'KLID' AND x.`content_id` IN (".implode( ',', array_fill( 0, count( $itemIds ), '?' ) ).")",
+			$itemIds
+		);
+		foreach( $klidRows as $r ) { $klidMap[$r['content_id']] = $r['xkey']; }
+	}
+	$gBitSmarty->assign( 'itemListJson', json_encode(
+		array_map( fn( $i ) => [ 'id' => (int)$i['content_id'], 'text' => $i['title'], 'klid' => $klidMap[$i['content_id']] ?? '' ], $itemList )
+	) );
+}
+$gBitSmarty->assign( 'isReqn',   $isReqn );
 $gBitSmarty->assign( 'refTypes', $refTypes );
 $gBitSmarty->assign( 'errors',   $gContent->mErrors );
 
