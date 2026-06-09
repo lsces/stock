@@ -9,7 +9,7 @@
 
 	<section class="body">
 
-		{form ipackage="stock" ifile="list_stock.php" method="get"}
+		<form action="{$smarty.const.STOCK_PKG_URL}list_stock.php" method="get">
 			<div class="form-inline" style="margin-bottom:1em">
 				<div class="form-group">
 					<input type="hidden" name="assembly_content_id" id="ls_asm_id" value="{$assemblyContentId|default:''|escape}" />
@@ -36,17 +36,20 @@
 				{/if}
 				<div class="form-group">
 					<label class="checkbox-inline">
-						<input type="checkbox" name="show_zero" value="1"
-							{if $showZero} checked="checked"{/if} /> {tr}Show zero stock{/tr}
+						<input type="checkbox" name="shortages" value="1"
+							{if $showShortages} checked="checked"{/if} /> {tr}Shortages only{/tr}
 					</label>
 				</div>
 				<button type="submit" class="btn btn-default btn-sm">{tr}Go{/tr}</button>
+				{if $showShortages}
+				<button type="button" class="btn btn-default btn-sm" onclick="window.print()">{tr}Print{/tr}</button>
+				{/if}
 				{if $showBom && $gBitUser->hasPermission('p_stock_create')}
 					<a class="btn btn-warning btn-sm"
 						href="{$smarty.const.STOCK_PKG_URL}add_requisition.php?assembly_content_id={$assemblyContentId}&amp;kit_count={$kitCount}">{tr}Create Requisition{/tr}</a>
 				{/if}
 			</div>
-		{/form}
+		</form>
 
 		{if $stockList}
 		<table class="table table-hover table-condensed">
@@ -64,7 +67,7 @@
 			<tbody>
 				{assign var=lastBomGroup value=-1}
 				{foreach from=$stockList item=comp}
-					{if $showBom && $comp.bom_group !== $lastBomGroup}
+					{if $showBom && !$showShortages && $comp.bom_group !== $lastBomGroup}
 					<tr class="active">
 						<th colspan="10">{tr}Group{/tr} {$comp.bom_group}</th>
 					</tr>

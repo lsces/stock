@@ -13,7 +13,7 @@ global $gBitSystem, $gBitSmarty, $gBitDb;
 $gBitSystem->verifyPermission( 'p_stock_view' );
 
 $find              = trim( $_REQUEST['find'] ?? '' );
-$hideZero          = empty( $_REQUEST['show_zero'] );
+$showShortages     = !empty( $_REQUEST['shortages'] );
 $assemblyContentId = isset( $_REQUEST['assembly_content_id'] ) && is_numeric( $_REQUEST['assembly_content_id'] )
                      ? (int)$_REQUEST['assembly_content_id'] : null;
 $kitCount          = isset( $_REQUEST['kit_count'] ) && is_numeric( $_REQUEST['kit_count'] ) && (float)$_REQUEST['kit_count'] > 0
@@ -115,19 +115,23 @@ foreach( $rows as $row ) {
 		];
 	}
 
-	// In BOM view show all components; in general list respect hide-zero filter
-	if( $assemblyContentId || !$hideZero || $level != 0 ) {
-		$stockList[$cid]['stock'][$row['qty_type']] = [
-			'level'     => $level,
-			'bom_qty'   => $row['bom_qty'] !== null ? (float)$row['bom_qty'] : null,
-			'pack_size' => $row['pack_size'] !== null ? (float)$row['pack_size'] : null,
-		];
-	}
+	$stockList[$cid]['stock'][$row['qty_type']] = [
+		'level'     => $level,
+		'bom_qty'   => $row['bom_qty'] !== null ? (float)$row['bom_qty'] : null,
+		'pack_size' => $row['pack_size'] !== null ? (float)$row['pack_size'] : null,
+	];
 }
 
-// General list only: drop components with no stock rows after zero filter
-if( !$assemblyContentId && $hideZero ) {
-	$stockList = array_filter( $stockList, fn($c) => !empty( $c['stock'] ) );
+if( $showShortages ) {
+	$stockList = array_filter( $stockList, function( $comp ) use ( $kitCount, $assemblyContentId ) {
+		foreach( $comp['stock'] as $row ) {
+			$short = $assemblyContentId && $row['bom_qty'] !== null
+				? ( $row['level'] - $row['bom_qty'] * $kitCount ) < 0
+				: $row['level'] < 0;
+			if( $short ) return true;
+		}
+		return false;
+	} );
 }
 
 // Assembly selector list
@@ -162,8 +166,8 @@ $gBitSmarty->assign( 'assemblyListJson',    $assemblyListJson );
 $gBitSmarty->assign( 'assemblyContentId',   $assemblyContentId );
 $gBitSmarty->assign( 'assemblyTitle',       $assemblyTitle );
 $gBitSmarty->assign( 'find',               $find );
-$gBitSmarty->assign( 'showZero',           !$hideZero );
 $gBitSmarty->assign( 'showBom',            (bool)$assemblyContentId );
+$gBitSmarty->assign( 'showShortages',      $showShortages );
 $gBitSmarty->assign( 'kitCount',           $kitCount );
 
 $gBitSystem->display( 'bitpackage:stock/list_stock.tpl', 'Stock Levels', [ 'display_mode' => 'list' ] );
