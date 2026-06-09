@@ -36,6 +36,9 @@ if( $assemblyContentId ) {
 					 FROM `{$X}liberty_xref` sup
 					 WHERE sup.`content_id` = lc.`content_id` AND sup.`item` = '#SUP'
 					 ORDER BY sup.`xorder`) AS part_number,
+					(SELECT FIRST 1 CAST(pk.`xkey` AS DOUBLE PRECISION)
+					 FROM `{$X}liberty_xref` pk
+					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PCK') AS pack_size,
 					(SELECT SUM( CASE WHEN EXISTS (
 							SELECT 1 FROM `{$X}liberty_xref` r
 							WHERE r.`content_id` = mx.`content_id` AND r.`item` IN ('TRANS','ORDER')
@@ -71,6 +74,9 @@ if( $assemblyContentId ) {
 					 FROM `{$X}liberty_xref` sup
 					 WHERE sup.`content_id` = lc.`content_id` AND sup.`item` = '#SUP'
 					 ORDER BY sup.`xorder`) AS part_number,
+					(SELECT FIRST 1 CAST(pk.`xkey` AS DOUBLE PRECISION)
+					 FROM `{$X}liberty_xref` pk
+					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PCK') AS pack_size,
 					SUM( CASE WHEN EXISTS (
 						SELECT 1 FROM `{$X}liberty_xref` r
 						WHERE r.`content_id` = x.`content_id` AND r.`item` IN ('TRANS','ORDER')
@@ -112,8 +118,9 @@ foreach( $rows as $row ) {
 	// In BOM view show all components; in general list respect hide-zero filter
 	if( $assemblyContentId || !$hideZero || $level != 0 ) {
 		$stockList[$cid]['stock'][$row['qty_type']] = [
-			'level'   => $level,
-			'bom_qty' => $row['bom_qty'] !== null ? (float)$row['bom_qty'] : null,
+			'level'     => $level,
+			'bom_qty'   => $row['bom_qty'] !== null ? (float)$row['bom_qty'] : null,
+			'pack_size' => $row['pack_size'] !== null ? (float)$row['pack_size'] : null,
 		];
 	}
 }

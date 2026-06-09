@@ -59,7 +59,13 @@ if( $gContent->isValid() ) {
 	foreach( $rows as $row ) {
 		$stockLevels[$row['qty_type']] = (float)$row['stock_level'];
 	}
+	$ps = $gBitDb->getOne(
+		"SELECT CAST(x.`xkey` AS DOUBLE PRECISION) FROM `".BIT_DB_PREFIX."liberty_xref` x
+		 WHERE x.`content_id` = ? AND x.`item` = 'PCK'",
+		[ $gContent->mContentId ]
+	);
 	$gBitSmarty->assign( 'componentStockLevels', $stockLevels );
+	$gBitSmarty->assign( 'packSize', $ps ? (float)$ps : null );
 }
 
 require_once STOCK_PKG_INCLUDE_PATH.'display_stock_component_inc.php';

@@ -322,10 +322,10 @@ class StockMovement extends LibertyContent {
 			$joinSql  .= " INNER JOIN `".BIT_DB_PREFIX."liberty_xref` xasm ON xasm.`content_id` = lc.`content_id` AND xasm.`item` = 'ASSEMBLY' AND xasm.`xref` = ?";
 			$bindVars[] = (int)$pListHash['assembly_content_id'];
 		}
-		if( $this->verifyId( $pListHash['component_content_id'] ?? 0 ) ) {
-			$joinSql  .= " INNER JOIN `".BIT_DB_PREFIX."liberty_xref` xcmp ON xcmp.`content_id` = lc.`content_id`
-				AND xcmp.`item` IN ('SGL','PCK','SHT','VOL') AND xcmp.`xref` = ?";
-			$bindVars[] = (int)$pListHash['component_content_id'];
+		$cmpContentId = $this->verifyId( $pListHash['component_content_id'] ?? 0 ) ? (int)$pListHash['component_content_id'] : 0;
+		if( $cmpContentId ) {
+			$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` xcf
+				WHERE xcf.`content_id` = lc.`content_id` AND xcf.`item` IN ('SGL','PCK','SHT','VOL') AND xcf.`xref` = $cmpContentId)";
 		}
 		if( $this->verifyId( $pListHash['user_id'] ?? 0 ) ) {
 			$whereSql .= " AND lc.`user_id` = ?";
@@ -363,8 +363,12 @@ class StockMovement extends LibertyContent {
 		);
 
 		$X = BIT_DB_PREFIX;
-		$cmpQtySelect = $this->verifyId( $pListHash['component_content_id'] ?? 0 )
-			? ", xcmp.`item` AS cmp_qty_type, CAST(xcmp.`xkey` AS DOUBLE PRECISION) AS cmp_qty"
+		$cmpQtySelect = $cmpContentId
+			? ", (SELECT FIRST 1 x.`item` FROM `{$X}liberty_xref` x
+			      WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PCK','SHT','VOL') AND x.`xref` = $cmpContentId
+			      ORDER BY x.`xorder`) AS cmp_qty_type,
+			     (SELECT SUM(CAST(x.`xkey` AS DOUBLE PRECISION)) FROM `{$X}liberty_xref` x
+			      WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PCK','SHT','VOL') AND x.`xref` = $cmpContentId) AS cmp_qty"
 			: ", CAST(NULL AS VARCHAR(4)) AS cmp_qty_type, CAST(NULL AS DOUBLE PRECISION) AS cmp_qty";
 
 		$query = "SELECT lc.`content_id`, lc.`title`, lc.`created`, lc.`last_modified`, lc.`event_time`,

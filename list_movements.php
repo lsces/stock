@@ -19,11 +19,18 @@ $listHash     = $_REQUEST;
 $movementList = $movement->getList( $listHash );
 
 $componentTitle = '';
+$packSize       = null;
 if( $componentContentId ) {
 	$componentTitle = $gBitDb->getOne(
 		"SELECT `title` FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id` = ?",
 		[ $componentContentId ]
 	) ?: '';
+	$ps = $gBitDb->getOne(
+		"SELECT CAST(x.`xkey` AS DOUBLE PRECISION) FROM `".BIT_DB_PREFIX."liberty_xref` x
+		 WHERE x.`content_id` = ? AND x.`item` = 'PCK'",
+		[ $componentContentId ]
+	);
+	$packSize = $ps ? (float)$ps : null;
 }
 
 $gBitSmarty->assign( 'listInfo',           $listHash['listInfo'] );
@@ -32,5 +39,6 @@ $gBitSmarty->assign( 'filterType',         $_REQUEST['ref_type'] ?? '' );
 $gBitSmarty->assign( 'assemblyContentId',  isset( $_REQUEST['assembly_content_id'] ) && is_numeric( $_REQUEST['assembly_content_id'] ) ? (int)$_REQUEST['assembly_content_id'] : null );
 $gBitSmarty->assign( 'componentContentId', $componentContentId );
 $gBitSmarty->assign( 'componentTitle',     $componentTitle );
+$gBitSmarty->assign( 'packSize',           $packSize );
 
 $gBitSystem->display( 'bitpackage:stock/list_movements.tpl', 'Movements', [ 'display_mode' => 'list' ] );
