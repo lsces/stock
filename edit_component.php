@@ -81,6 +81,12 @@ if( !$gContent->isValid() && !empty( $_REQUEST['title'] ) ) {
 $gContent->loadXrefInfo();
 $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 
+$isKitlocker = $gContent->mContentId ? (bool)$gBitDb->getOne(
+	"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id`=? AND `item`='KLID'",
+	[ $gContent->mContentId ]
+) : false;
+$gBitSmarty->assign( 'isKitlocker', $isKitlocker );
+
 $gContent->invokeServices( 'content_edit_function' );
 
 $gBitSystem->display( 'bitpackage:stock/edit_component.tpl', KernelTools::tra('Edit Component: ').$gContent->getTitle(), [ 'display_mode' => 'edit' ] );

@@ -25,16 +25,28 @@
 				{/forminput}
 			</div>
 
-			{include file="bitpackage:liberty/edit_services_inc.tpl" serviceFile="content_edit_mini_tpl"}
-
 			{if $gXrefInfo->mGroups}
 				{jstabs}
+					{assign var=klGroup value=null}
+					{assign var=sgGroup value=null}
 					{foreach $gXrefInfo->mGroups as $xrefGroup}
-						{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
-							xrefGroup=$xrefGroup
-							allow_add=true
-							allow_edit=true}
+						{if $xrefGroup->mXGroup eq 'kitlocker'}
+							{assign var=klGroup value=$xrefGroup}
+						{elseif $xrefGroup->mXGroup eq 'stgrp'}
+							{assign var=sgGroup value=$xrefGroup}
+						{else}
+							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+								xrefGroup=$xrefGroup allow_add=true allow_edit=true}
+						{/if}
 					{/foreach}
+					{if $isKitlocker && $klGroup}
+						{include file=$gContent->getXrefListTemplate($klGroup->mTemplate)
+							xrefGroup=$klGroup allow_add=true allow_edit=true}
+					{/if}
+					{if $isKitlocker && $sgGroup}
+						{include file=$gContent->getXrefListTemplate($sgGroup->mTemplate)
+							xrefGroup=$sgGroup allow_add=true allow_edit=true}
+					{/if}
 				{/jstabs}
 			{/if}
 

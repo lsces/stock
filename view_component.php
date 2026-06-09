@@ -37,6 +37,12 @@ $gContent->addHit();
 $gContent->loadXrefInfo();
 $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 
+$isKitlocker = (bool)$gBitDb->getOne(
+	"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id`=? AND `item`='KLID'",
+	[ $gContent->mContentId ]
+);
+$gBitSmarty->assign( 'isKitlocker', $isKitlocker );
+
 // Stock levels for this component, calculated from movement xrefs
 if( $gContent->isValid() ) {
 	$X    = BIT_DB_PREFIX;

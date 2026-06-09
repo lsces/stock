@@ -1,12 +1,11 @@
 {strip}
 <div class="display stock">
-	<div class="floaticon">
-		{if $gBitUser->hasPermission('p_stock_create')}
-			<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_movement.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit Movement"}</a>
-		{/if}
-	</div>
-
 	<div class="header">
+		<div class="floaticon">
+			{if $gBitUser->hasPermission('p_stock_create')}
+				<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_movement.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit Movement"}</a>
+			{/if}
+		</div>
 		<h1>{$gContent->getTitle()|escape}</h1>
 	</div>
 

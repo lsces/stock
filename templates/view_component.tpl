@@ -4,34 +4,46 @@
 {/if}
 
 <div class="display stock">
-	{if empty($liberty_preview)}
+	{formfeedback hash=$feedback}
+	<div class="header">
+		{if empty($liberty_preview)}
 		<div class="floaticon">
-			{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='icon' serviceHash=$gContent->mInfo}
 			{if $gContent->hasUpdatePermission()}
 				<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit Component"}</a>
 				<a title="{tr}Delete{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$gContent->mContentId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Component"}</a>
 			{/if}
 		</div>
-	{/if}
-
-	{formfeedback hash=$feedback}
-	<div class="header">
+		{/if}
 		<h1>{$gContent->getTitle()|escape}</h1>
 	</div>
 
 	<div class="body">
-		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
 		{if $gContent->mInfo.data ne ''}
 			<p class="description">{$gContent->mInfo.parsed_data}</p>
 		{/if}
 
 		{jstabs}
 			{if $gXrefInfo->mGroups}
+				{assign var=klGroup value=null}
+				{assign var=sgGroup value=null}
 				{foreach $gXrefInfo->mGroups as $xrefGroup}
-					{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
-						xrefGroup=$xrefGroup
-						allow_edit=false}
+					{if $xrefGroup->mXGroup eq 'kitlocker'}
+						{assign var=klGroup value=$xrefGroup}
+					{elseif $xrefGroup->mXGroup eq 'stgrp'}
+						{assign var=sgGroup value=$xrefGroup}
+					{else}
+						{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+							xrefGroup=$xrefGroup allow_edit=false}
+					{/if}
 				{/foreach}
+				{if $isKitlocker && $klGroup}
+					{include file=$gContent->getXrefListTemplate($klGroup->mTemplate)
+						xrefGroup=$klGroup allow_edit=false}
+				{/if}
+				{if $isKitlocker && $sgGroup}
+					{include file=$gContent->getXrefListTemplate($sgGroup->mTemplate)
+						xrefGroup=$sgGroup allow_edit=false}
+				{/if}
 			{/if}
 
 			{jstab title="{tr}Stock{/tr}"}
@@ -59,8 +71,6 @@
 			{/jstab}
 		{/jstabs}
 	</div><!-- end .body -->
-
-	{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='view' serviceHash=$gContent->mInfo}
 
 	{if $gGallery && $gGallery->isCommentable()}
 		{include file="bitpackage:liberty/comments.tpl"}
