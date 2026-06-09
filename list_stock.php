@@ -161,6 +161,24 @@ $assemblyListJson = json_encode( array_values( array_map(
 	$assemblyList
 ) ) );
 
+if( $showShortages && isset( $_REQUEST['format'] ) && $_REQUEST['format'] === 'csv' ) {
+	header( 'Content-Type: text/csv; charset=utf-8' );
+	header( 'Content-Disposition: attachment; filename="shortages.csv"' );
+	$out = fopen( 'php://output', 'w' );
+	fputcsv( $out, [ 'Part No', 'Qty' ], ',', '"', '' );
+	foreach( $stockList as $comp ) {
+		if( empty( $comp['part_number'] ) ) continue;
+		foreach( $comp['stock'] as $qtype => $row ) {
+			$qty = $qtype === 'PCK' && $row['pack_size'] > 0
+				? abs( $row['level'] ) / $row['pack_size']
+				: abs( $row['level'] );
+			fputcsv( $out, [ $comp['part_number'], $qty ], ',', '"', '' );
+		}
+	}
+	fclose( $out );
+	exit;
+}
+
 $gBitSmarty->assign( 'stockList',          $stockList );
 $gBitSmarty->assign( 'assemblyListJson',    $assemblyListJson );
 $gBitSmarty->assign( 'assemblyContentId',   $assemblyContentId );

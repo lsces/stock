@@ -2,10 +2,30 @@
 <div class="listing stock">
 	<header>
 		<div class="floaticon">
+			<button type="button" class="btn btn-link" onclick="window.print()">{biticon ipackage="icons" iname="document-print" iexplain="Print"}</button>
 			{if $gBitUser->hasPermission('p_stock_create')}
 				<a href="{$smarty.const.STOCK_PKG_URL}add_requisition.php">{biticon ipackage="icons" iname="list-add" iexplain="Add Requisition"}</a>
 				<a href="{$smarty.const.STOCK_PKG_URL}edit_movement.php">{biticon ipackage="icons" iname="view-task-add" iexplain="Add Movement"}</a>
 			{/if}
+			<form class="minifind" action="{$smarty.const.STOCK_PKG_URL}list_movements.php" method="get">
+				{if $componentContentId}<input type="hidden" name="component_content_id" value="{$componentContentId|escape}" />{/if}
+				<div class="form-inline">
+					<div class="form-group">
+						<select name="ref_type" class="form-control input-sm">
+							<option value="">{tr}All types{/tr}</option>
+							<option value="REQN"{if $filterType eq 'REQN'} selected="selected"{/if}>{tr}Requisition (out){/tr}</option>
+							<option value="TRANS"{if $filterType eq 'TRANS'} selected="selected"{/if}>{tr}Transfer (in){/tr}</option>
+							<option value="ORDER"{if $filterType eq 'ORDER'} selected="selected"{/if}>{tr}Order (in){/tr}</option>
+						</select>
+					</div>
+					<div class="form-group">
+						<input type="text" class="form-control input-sm" name="find"
+							placeholder="{tr}reference...{/tr}"
+							value="{$smarty.request.find|escape}" />
+					</div>
+					<button type="submit" class="btn btn-default btn-sm">{tr}Go{/tr}</button>
+				</div>
+			</form>
 		</div>
 		<h1>{tr}Movements{/tr}{if $componentTitle} — {$componentTitle|escape}{/if}</h1>
 	</header>
@@ -14,27 +34,7 @@
 
 		{if $componentContentId}
 			<p><a class="btn btn-xs btn-default" href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$componentContentId}">&larr; {tr}Back to component{/tr}</a></p>
-			<input type="hidden" name="component_content_id" value="{$componentContentId}" />
 		{/if}
-
-		{form ipackage="stock" ifile="list_movements.php" method="get"}
-			<div class="form-inline" style="margin-bottom:1em">
-				<div class="form-group">
-					<select name="ref_type" class="form-control input-sm">
-						<option value="">{tr}All types{/tr}</option>
-						<option value="REQN"{if $filterType eq 'REQN'} selected="selected"{/if}>{tr}Requisition (out){/tr}</option>
-						<option value="TRANS"{if $filterType eq 'TRANS'} selected="selected"{/if}>{tr}Transfer (in){/tr}</option>
-						<option value="ORDER"{if $filterType eq 'ORDER'} selected="selected"{/if}>{tr}Order (in){/tr}</option>
-					</select>
-				</div>
-				<div class="form-group">
-					<input type="text" class="form-control input-sm" name="find"
-						placeholder="{tr}reference...{/tr}"
-						value="{$smarty.request.find|escape}" />
-				</div>
-				<button type="submit" class="btn btn-default btn-sm">{tr}Go{/tr}</button>
-			</div>
-		{/form}
 
 		<table class="table table-striped table-hover">
 			<thead>

@@ -3,14 +3,16 @@
 	<header>
 		<div class="floaticon hidden-print">
 			<button type="button" class="btn btn-link" onclick="window.print()">{biticon ipackage="icons" iname="document-print" iexplain="Print"}</button>
-		</div>
-		<h1>{tr}Stock Levels{/tr}{if $assemblyTitle} — {$assemblyTitle|escape}{/if}</h1>
-	</header>
-
-	<section class="body">
-
-		<form action="{$smarty.const.STOCK_PKG_URL}list_stock.php" method="get">
-			<div class="form-inline" style="margin-bottom:1em">
+			{if $showShortages}
+			<a class="btn btn-link"
+				href="{$smarty.const.STOCK_PKG_URL}list_stock.php?shortages=1{if $assemblyContentId}&amp;assembly_content_id={$assemblyContentId|escape:'url'}&amp;kit_count={$kitCount|escape:'url'}{/if}&amp;format=csv">{biticon ipackage="icons" iname="text-csv" iexplain="Download CSV"}</a>
+			{if $gBitUser->hasPermission('p_stock_create')}
+			<a class="btn btn-link"
+				href="{$smarty.const.STOCK_PKG_URL}add_order.php?shortages=1{if $assemblyContentId}&amp;assembly_content_id={$assemblyContentId|escape:'url'}&amp;kit_count={$kitCount|escape:'url'}{/if}{if $find}&amp;find={$find|escape:'url'}{/if}">{biticon ipackage="icons" iname="view-task-add" iexplain="Create Order"}</a>
+			{/if}
+			{/if}
+		<form class="minifind" action="{$smarty.const.STOCK_PKG_URL}list_stock.php" method="get">
+			<div class="form-inline">
 				<div class="form-group">
 					<input type="hidden" name="assembly_content_id" id="ls_asm_id" value="{$assemblyContentId|default:''|escape}" />
 					<div style="position:relative;display:inline-block;vertical-align:top">
@@ -41,15 +43,17 @@
 					</label>
 				</div>
 				<button type="submit" class="btn btn-default btn-sm">{tr}Go{/tr}</button>
-				{if $showShortages}
-				<button type="button" class="btn btn-default btn-sm" onclick="window.print()">{tr}Print{/tr}</button>
-				{/if}
 				{if $showBom && $gBitUser->hasPermission('p_stock_create')}
 					<a class="btn btn-warning btn-sm"
 						href="{$smarty.const.STOCK_PKG_URL}add_requisition.php?assembly_content_id={$assemblyContentId}&amp;kit_count={$kitCount}">{tr}Create Requisition{/tr}</a>
 				{/if}
 			</div>
 		</form>
+		</div>
+		<h1>{tr}Stock Levels{/tr}{if $assemblyTitle} — {$assemblyTitle|escape}{/if}</h1>
+	</header>
+
+	<section class="body">
 
 		{if $stockList}
 		<table class="table table-hover table-condensed">

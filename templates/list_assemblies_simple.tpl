@@ -2,6 +2,7 @@
 <div class="listing stock">
 	<header>
 		<div class="floaticon">
+			<button type="button" class="btn btn-link" onclick="window.print()">{biticon ipackage="icons" iname="document-print" iexplain="Print"}</button>
 			{minifind prompt="Assemblies" gallery_id=$smarty.request.gallery_id}
 		</div>
 		<h1>{tr}Assemblies{/tr}{if $gQueryUserId} {tr}by{/tr} {displayname user_id=$gQueryUserId}{/if}</h1>
