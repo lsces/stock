@@ -1,39 +1,33 @@
 {strip}
-{include file="bitpackage:stock/assembly_nav.tpl"}
-<div class="display stock container">
-	<div class="header col-xs-12">
-		{include file="bitpackage:stock/assembly_icons_inc.tpl"}
-		<h1>{$gContent->getTitle()|escape}</h1>
-	</div>
+<div class="listing stock">
+	<header>
+		<div class="floaticon">
+		</div>
+		<h1>{tr}Kitlocker{/tr}</h1>
+	</header>
 
-	<div class="body">
-		{formfeedback success=$stockSuccess error=$stockErrors warning=$stockWarnings}
-
-		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
-		{if $gContent->mInfo.data}
-			<p>{$gContent->mInfo.data|escape}</p>
-		{/if}
-
-		<table class="thumbnailblock">
-		{counter assign="itemCount" start="0" print=false}
-		{foreach from=$gContent->mItems item=galItem key=itemContentId}
-			{if $itemCount % 4 == 0}<tr>{/if}
-			<td style="width:25%; vertical-align:top;">
-				{box class="box {$galItem->mInfo.content_type_guid}"}
-					<h4><a href="{$galItem->getDisplayUrl()|escape}">{$galItem->mInfo.title|escape}</a></h4>
-					{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$galItem->mInfo type=mini}
-					{if $gBitSystem->isFeatureActive('stock_gallery_list_image_descriptions')}
-						<p>{$galItem->mInfo.data|escape}</p>
+	<section class="body">
+		<div class="row">
+			{foreach $stgrpItems as $item}
+			<div class="col-md-4 col-sm-6 col-xs-12">
+				<div class="panel panel-default">
+					<div class="panel-heading">
+						<a href="{$smarty.const.STOCK_PKG_URL}list_assemblies.php?stgrp={$item.item|escape:'url'}">{$item.cross_ref_title|escape}</a>
+					</div>
+					{if $item.data}
+					<div class="panel-body">
+						{$item.data|escape}
+					</div>
 					{/if}
-				{/box}
-			</td>
-			{counter name=itemCount}
-			{if $itemCount % 4 == 0}</tr>{/if}
-		{/foreach}
-		{if $itemCount % 4 != 0}</tr>{/if}
-		</table>
-
-		{pagination content_id=$gContent->mContentId}
-	</div><!-- end .body -->
-</div><!-- end .stock -->
+					<div class="panel-footer">
+						{tr}Count{/tr}: {$item.item_count}
+					</div>
+				</div>
+			</div>
+			{foreachelse}
+			<div class="col-xs-12"><p class="norecords">{tr}No kitlocker groups defined.{/tr}</p></div>
+			{/foreach}
+		</div>
+	</section>
+</div>
 {/strip}

@@ -88,7 +88,7 @@ $xrefItems = [];
 // ── 'stock' package-level groups — shared across stockassembly and stockcomponent ──
 // sort_order=1: stgrp (group tags, multi-valued KLGnn items)
 // sort_order=3: supplier (replaces per-type duplicates)
-$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('stgrp',   'stock','Stock Groups', 1,3,'','')";
+$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('stgrp',   'stock','Stock Groups', 1,3,'','kitlocker')";
 $xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('supplier', 'stock','Supplier',     3,3,'','sup')";
 
 // KLG01–KLG28 — Kitlocker group tags (multiple=0 per item; multiple items per record = multi-group tagging)

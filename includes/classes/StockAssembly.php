@@ -996,6 +996,11 @@ class StockAssembly extends StockBase {
 		}
 		$selectSql .= ", (SELECT COUNT(*) FROM `".BIT_DB_PREFIX."stock_assembly_map` sacmc WHERE sacmc.`assembly_content_id` = lc.`content_id`) AS `child_count`";
 
+		if( !empty( $pListHash['stgrp'] ) ) {
+			$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` sx WHERE sx.`content_id` = lc.`content_id` AND sx.`item` = ?)";
+			$bindVars[] = $pListHash['stgrp'];
+		}
+
 		// Putting in the below hack because mssql cannot select distinct on a text blob column.
 		$selectSql .= $gBitDbType == 'mssql' ? " ,CAST(lc.`data` AS VARCHAR(250)) as `data` " : " ,lc.`data` ";
 
