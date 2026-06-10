@@ -1,6 +1,8 @@
 {strip}
 <div class="edit stock">
-	<div class="header">
+	<header>
+		<div class="floaticon">
+		</div>
 		<h1>
 			{if $gContent->getTitle()}
 				{tr}Edit Assembly{/tr}: {$gContent->getTitle()|escape}
@@ -8,9 +10,14 @@
 				{tr}Create Assembly{/tr}
 			{/if}
 		</h1>
-	</div>
+		{if $gContent->isValid()}
+		<small><a href="{$smarty.const.STOCK_PKG_URL}view_assembly.php?content_id={$gContent->mContentId}">{$gContent->getTitle()|escape}</a></small>
+		{else}
+		<small><a href="{$smarty.const.STOCK_PKG_URL}list_assemblies.php">{tr}Assemblies{/tr}</a></small>
+		{/if}
+	</header>
 
-	<div class="body">
+	<section class="body">
 		{form id="editAssemblyForm" ipackage="stock" ifile="edit_assembly.php"}
 			{formfeedback error=$errors success=$stockSuccess}
 
@@ -50,7 +57,6 @@
 		{/form}
 
 		{if $gContent->isValid()}
-			{* CSV upload results *}
 			{if isset($csvLoaded)}
 				<div class="alert alert-info">
 					{tr}Loaded{/tr}: <strong>{$csvLoaded}</strong>
@@ -63,7 +69,6 @@
 				{/if}
 			{/if}
 
-			{* ── Upload BOM CSV ── *}
 			{form enctype="multipart/form-data" ipackage="stock" ifile="edit_assembly.php"}
 				<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}"/>
 				<div class="form-inline">
@@ -74,6 +79,6 @@
 			{/form}
 		{/if}
 
-	</div><!-- end .body -->
-</div><!-- end .stock -->
+	</section>
+</div>
 {/strip}

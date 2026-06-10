@@ -1,11 +1,7 @@
 {strip}
-{if empty($liberty_preview)}
-	{include file="bitpackage:stock/assembly_nav.tpl"}
-{/if}
-
 <div class="display stock">
 	{formfeedback hash=$feedback}
-	<div class="header">
+	<header>
 		{if empty($liberty_preview)}
 		<div class="floaticon">
 			{if $gContent->hasUpdatePermission()}
@@ -15,9 +11,12 @@
 		</div>
 		{/if}
 		<h1>{$gContent->getTitle()|escape}</h1>
-	</div>
+		{if empty($liberty_preview)}
+		<small><a href="{$smarty.const.STOCK_PKG_URL}list_components.php">{tr}Components{/tr}</a></small>
+		{/if}
+	</header>
 
-	<div class="body">
+	<section class="body">
 		{if $gContent->mInfo.data ne ''}
 			<p class="description">{$gContent->mInfo.parsed_data}</p>
 		{/if}
@@ -70,11 +69,11 @@
 			<a class="btn btn-default btn-xs" href="{$smarty.const.STOCK_PKG_URL}list_movements.php?component_content_id={$gContent->mContentId}">{tr}Stock history{/tr}</a>
 			{/jstab}
 		{/jstabs}
-	</div><!-- end .body -->
+	</section>
 
 	{if $gGallery && $gGallery->isCommentable()}
 		{include file="bitpackage:liberty/comments.tpl"}
 	{/if}
 
-</div><!-- end .stock -->
+</div>
 {/strip}

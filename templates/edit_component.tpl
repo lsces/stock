@@ -1,11 +1,17 @@
 {strip}
-
 <div class="edit stock">
-	<div class="header">
+	<header>
+		<div class="floaticon">
+		</div>
 		<h1>{if $gContent->mContentId}{tr}Edit Component{/tr}: {$gContent->getTitle()|escape}{else}{tr}Add New Component{/tr}{/if}</h1>
-	</div>
+		{if $gContent->isValid()}
+		<small><a href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$gContent->mContentId}">{$gContent->getTitle()|escape}</a></small>
+		{else}
+		<small><a href="{$smarty.const.STOCK_PKG_URL}list_components.php">{tr}Components{/tr}</a></small>
+		{/if}
+	</header>
 
-	<div class="body">
+	<section class="body">
 		{form}
 			{formfeedback error=$errors}
 
@@ -54,7 +60,6 @@
 				<input type="submit" class="btn btn-primary" name="save" value="{tr}Save Component{/tr}"/>
 			</div>
 		{/form}
-	</div><!-- end .body -->
-</div><!-- end .stock -->
-
+	</section>
+</div>
 {/strip}
