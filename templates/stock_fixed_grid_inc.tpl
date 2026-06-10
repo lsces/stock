@@ -13,10 +13,13 @@
 				<div class="panel panel-default">
 					<div class="panel-heading">
 						<a href="{$smarty.const.STOCK_PKG_URL}list_kitlocker.php?stgrp={$item.item|escape:'url'}">{$item.cross_ref_title|escape}</a>
+						{if $gBitUser->hasPermission('p_stock_admin')}
+						<a class="pull-right" title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_stgrp_item.php?item={$item.item|escape:'url'}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
+						{/if}
 					</div>
-					{if $item.data}
+					{if $item.parsed_data}
 					<div class="panel-body">
-						{$item.data|escape}
+						{$item.parsed_data}
 					</div>
 					{/if}
 					<div class="panel-footer">

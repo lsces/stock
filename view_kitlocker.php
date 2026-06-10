@@ -7,6 +7,7 @@
 namespace Bitweaver\Stock;
 
 use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyContent;
 
 require_once '../kernel/includes/setup_inc.php';
 
@@ -24,6 +25,14 @@ $stgrpItems = $gBitDb->getAll(
 	 WHERE xi.`x_group` = 'stgrp' AND xi.`content_type_guid` = 'stock'
 	 ORDER BY xi.`item`"
 );
+
+foreach( $stgrpItems as &$row ) {
+	if( !empty( $row['data'] ) ) {
+		$parseHash = [ 'data' => $row['data'], 'format_guid' => 'bithtml' ];
+		$row['parsed_data'] = LibertyContent::parseDataHash( $parseHash );
+	}
+}
+unset( $row );
 
 $gBitSmarty->assign( 'stgrpItems', $stgrpItems );
 
