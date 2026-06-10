@@ -97,10 +97,6 @@ $formImageLists = [
 ];
 $gBitSmarty->assign( 'formImageLists', $formImageLists );
 
-use Bitweaver\Stock\StockAssembly;
-
-$gBitSmarty->assign( 'galleryPaginationTypes', StockAssembly::getAllLayouts() );
-
 $sortOptions = [
 	''                      => KernelTools::tra( 'None' ),
 	'lc.title_desc'         => KernelTools::tra( 'Title' ).         ' - '.KernelTools::tra( 'descending' ),
@@ -129,9 +125,7 @@ if (!empty($_REQUEST['stockAdminSubmit'])) {
 		simple_set_toggle($item, STOCK_PKG_NAME);
 	}
 
-	foreach( [ 'default_assembly_pagination', 'rows_per_page', 'cols_per_page', 'total_per_page', 'lines_per_page', 'stock_gallery_default_sort_mode' ] as $key ) {
-		$gBitSystem->storeConfig($key, $_REQUEST[$key], STOCK_PKG_NAME);
-	}
+	$gBitSystem->storeConfig( 'stock_gallery_default_sort_mode', $_REQUEST['stock_gallery_default_sort_mode'] ?? '', STOCK_PKG_NAME );
 
 	foreach ($formImageLists as $item => $data) {
 		simple_set_toggle( $item, STOCK_PKG_NAME );

@@ -47,11 +47,6 @@ $gBitInstaller->registerPreferences( STOCK_PKG_NAME, [
 	[ STOCK_PKG_NAME, 'stock_item_list_creator',              'n'      ],
 	[ STOCK_PKG_NAME, 'stock_item_list_hits',                 'n'      ],
 	[ STOCK_PKG_NAME, 'stock_item_list_attid',                'n'      ],
-	// Pagination defaults
-	[ STOCK_PKG_NAME, 'default_gallery_pagination',           'position_number' ],
-	[ STOCK_PKG_NAME, 'rows_per_page',                        '5'      ],
-	[ STOCK_PKG_NAME, 'cols_per_page',                        '3'      ],
-	[ STOCK_PKG_NAME, 'total_per_page',                       '20'     ],
 	// Movement statuses
 	[ STOCK_PKG_NAME, 'stock_movement_statuses',         'draft,pending,complete,cancelled' ],
 	[ STOCK_PKG_NAME, 'stock_movement_status_draft',     'Draft'     ],

@@ -16,10 +16,6 @@ use Bitweaver\Liberty\LibertyContent;
 
 define('STOCKASSEMBLY_CONTENT_TYPE_GUID', 'stockassembly');
 
-define( 'STOCK_PAGINATION_FIXED_GRID', 'fixed_grid' );
-define( 'STOCK_PAGINATION_AUTO_FLOW', 'auto_flow' );
-define( 'STOCK_PAGINATION_POSITION_NUMBER', 'position_number' );
-define( 'STOCK_PAGINATION_SIMPLE_LIST', 'simple_list' );
 
 #[\AllowDynamicProperties]
 class StockAssembly extends StockBase {
@@ -190,25 +186,11 @@ class StockAssembly extends StockBase {
 			$this->mInfo['creator'] = $rs['creator_real_name'] ?? $rs['creator_user'];
 			$this->mInfo['editor']  = $rs['modifier_real_name'] ?? $rs['modifier_user'];
 
-			$this->mInfo['rows_per_page'] = $gBitSystem->getConfig( 'stock_gallery_default_rows_per_page', STOCK_DEFAULT_ROWS_PER_PAGE );
-			$this->mInfo['cols_per_page'] = $gBitSystem->getConfig( 'stock_gallery_default_cols_per_page', STOCK_DEFAULT_COLS_PER_PAGE );
 			if( empty( $this->mInfo['thumbnail_size'] ) ) {
 				$this->mInfo['thumbnail_size'] = $this->getPreference( 'stock_gallery_default_thumbnail_size', null );
 			}
 			$this->mInfo['access_answer'] = '';
-
 			$this->mInfo['num_components'] = $this->getComponentCount();
-			if( $this->getPreference( 'assembly_pagination' ) == STOCK_PAGINATION_POSITION_NUMBER ) {
-				$this->mInfo['num_pages'] = $this->mDb->getOne( "SELECT COUNT( distinct( floor(`item_position`) ) ) FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE assembly_content_id=?", [ $this->mContentId ] );
-			} else {
-				$pagination = $this->getPreference( 'assembly_pagination' );
-				if( in_array( $pagination, [ STOCK_PAGINATION_AUTO_FLOW, STOCK_PAGINATION_SIMPLE_LIST ] ) ) {
-					$this->mInfo['images_per_page'] = (int)$this->getPreference( 'total_per_page', $this->mInfo['rows_per_page'] );
-				} else {
-					$this->mInfo['images_per_page'] = $this->mInfo['cols_per_page'] * $this->mInfo['rows_per_page'];
-				}
-				$this->mInfo['num_pages'] = (int)$this->mInfo['num_components'] / $this->mInfo['images_per_page'] + ($this->mInfo['num_components'] % $this->mInfo['images_per_page'] == 0 ? 0 : 1);
-			}
 		}
 
 		return !empty( $this->mInfo );
@@ -245,24 +227,8 @@ class StockAssembly extends StockBase {
 
 			// load for just a single page
 			if( $pListHash['page'] != -1 ) {
-				if( $this->getLayout() == STOCK_PAGINATION_POSITION_NUMBER ) {
-					$query = "SELECT DISTINCT(FLOOR(`item_position`))
-							  FROM `".BIT_DB_PREFIX."stock_assembly_map`
-							  WHERE assembly_content_id=?
-							  ORDER BY floor(item_position)";
-					$mantissa = $this->mDb->getOne( $query, [ $this->mContentId ], 1, $pListHash['page'] - 1 );
-					// gallery image order with no positions set will have null mantissa, and all images will be shown
-					if( !is_null( $mantissa ) ) {
-						$whereSql .= " AND floor(item_position)=? ";
-						array_push( $bindVars, $mantissa );
-					}
-				} elseif( $this->getLayout() == STOCK_PAGINATION_FIXED_GRID ) {
-					$rowCount = ($this->mInfo['rows_per_page'] ?? 3) * ($this->mInfo['cols_per_page'] ?? 3);
-					$offset = $rowCount * ( (int) $pListHash['page'] - 1);
-				} else {
-					$rowCount = $pListHash['max_records'];
-					$offset = $rowCount * ( (int) $pListHash['page'] - 1);
-				}
+				$rowCount = $pListHash['max_records'];
+				$offset = $rowCount * ( (int) $pListHash['page'] - 1);
 			}
 			if( empty($rowCount) ) $rowCount = $pListHash['max_records'] ?? 10;
 			$this->mItems = [];
@@ -637,24 +603,6 @@ class StockAssembly extends StockBase {
 		return true;
 	}
 
-
-	/**
-	 * @return string  Pagination layout preference (one of STOCK_PAGINATION_* constants).
-	 */
-	public function getLayout() {
-		global $gBitSystem;
-		return $this->getPreference( 'assembly_pagination', $gBitSystem->getConfig( 'default_assembly_pagination', STOCK_PAGINATION_FIXED_GRID ) );
-	}
-
-	/** @return array  Map of STOCK_PAGINATION_* constant → human-readable label. */
-	public static function getAllLayouts() {
-		return [
-			STOCK_PAGINATION_FIXED_GRID      => 'Fixed Grid',
-			STOCK_PAGINATION_AUTO_FLOW       => 'Auto-Flow',
-			STOCK_PAGINATION_POSITION_NUMBER => 'Position Number',
-			STOCK_PAGINATION_SIMPLE_LIST     => 'Simple List',
-		];
-	}
 
 	/** @return string  Absolute path to the display_stock_assembly_inc.php setup file. */
 	public function getRenderFile() {

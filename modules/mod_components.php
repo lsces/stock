@@ -17,10 +17,7 @@ $display = true;
 $listHash = $moduleParams->value;
 
 if( !empty( $gContent ) && $gContent->getField( 'content_type_guid' ) == STOCKASSEMBLY_CONTENT_TYPE_GUID ) {
-	$displayCount = empty( $gContent->mItems ) ? 0 : count( $gContent->mItems );
-	$thumbCount = $gContent->mInfo['rows_per_page'] * $gContent->mInfo['cols_per_page'];
 	$listHash['assembly_content_id'] = $gContent->mContentId;
-	$display = $displayCount >= $thumbCount;
 }
 
 if( $display ) {

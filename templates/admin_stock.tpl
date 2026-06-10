@@ -1,18 +1,3 @@
-{literal}
-<script>//<![CDATA[
-function updateGalleryPagination() {
-	BitBase.hideById('fixed_grid-pagination');
-	BitBase.hideById('auto_flow-pagination');
-	BitBase.hideById('position_number-pagination');
-	BitBase.hideById('simple_list-pagination');
-
-	var input = document.getElementById('gallery-pagination');
-    var i  = input.selectedIndex;
-    var select = input.options[i].value;
-	BitBase.showById(select+'-pagination');
-}
-//]]></script>
-{/literal}
 {strip}
 
 {form}
@@ -84,29 +69,6 @@ function updateGalleryPagination() {
 				</div>
 			{/legend}
 
-			{legend legend="Default Assembly Display Settings"}
-				<div class="form-group">
-					{formhelp note="The settings below determine what the default display options will be set to for new assemblies."}
-				</div>
-
-				<div class="form-group">
-					{html_options id="gallery-pagination" name="default_gallery_pagination" id="gallery-pagination" options=$galleryPaginationTypes selected=$gBitSystem->getConfig('default_gallery_pagination',$smarty.const.STOCK_PAGINATION_FIXED_GRID) onchange="updateGalleryPagination();"}
-
-					<div id="fixed_grid-pagination">
-						<input type="text" id="gallery-rows-per-page" name="rows_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('stock_gallery_default_rows_per_page')}"/> {tr}Rows per page{/tr}<br/>
-						<input type="text" id="gallery-cols-per-page" name="cols_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('stock_gallery_default_cols_per_page')}"/> {tr}Columns per page{/tr}
-					</div>
-					<div id="auto_flow-pagination">
-						<input type="text" id="gallery-rows-per-page" name="total_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('stock_gallery_default_rows_per_page')}"/> {tr}Total components per page{/tr}
-					</div>
-					<div id="position_number-pagination">
-						{formhelp note="Components are ordered by package group and position within the package. Use the Component Order page to assign positions."}
-					</div>
-					<div id="simple_list-pagination">
-						<input type="text" id="gallery-rows-per-page" name="lines_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('stock_gallery_default_rows_per_page')}"/> {tr}Total lines per page{/tr}
-					</div>
-				</div>
-			{/legend}
 		{/jstab}
 
 		{jstab title="Components"}
@@ -133,6 +95,3 @@ function updateGalleryPagination() {
 {/form}
 
 {/strip}
-<script>//<![CDATA[
-updateGalleryPagination();
-//]]></script>

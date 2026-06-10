@@ -20,9 +20,6 @@ $gBitSystem->registerPackage( $pRegisterHash );
 
 if( $gBitSystem->isPackageActive( 'stock' ) ) { // && $gBitUser->hasPermission( 'p_stock_view' )) {
 
-	// Default Preferences Defines
-	define ( 'STOCK_DEFAULT_ROWS_PER_PAGE', 5 );
-	define ( 'STOCK_DEFAULT_COLS_PER_PAGE', 2 );
 	define ( 'STOCK_DEFAULT_THUMBNAIL_SIZE', 'large' );
 
 	$menuHash = [

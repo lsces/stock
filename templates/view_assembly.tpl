@@ -1,7 +1,5 @@
-{assign var=galLayout value=$gContent->getLayout()}
 <div class="floaticon">
 	{if $gContent->hasUpdatePermission()}
-		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='icon' serviceHash=$gContent->mInfo}
 		<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit Assembly"}</a>
 		<a title="{tr}Component Order{/tr}" href="{$smarty.const.STOCK_PKG_URL}component_order.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="view-sort-ascending" iexplain="Component Order"}</a>
 	{/if}
@@ -12,7 +10,7 @@
 		<a title="{tr}Delete Assembly{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php?content_id={$gContent->mContentId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Assembly"}</a>
 	{/if}
 </div>
-{include file="`$smarty.const.STOCK_PKG_PATH`assembly_views/`$galLayout`/stock_`$galLayout`_inc.tpl"}
+{include file="bitpackage:stock/stock_simple_list_inc.tpl"}
 
 {if $gXrefInfo->mGroups}
 	{jstabs}

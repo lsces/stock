@@ -10,7 +10,7 @@ $displayHash = [ 'perm_name' => 'p_stock_view' ];
 $gContent->invokeServices( 'content_display_function', $displayHash );
 
 $listHash = $_REQUEST;
-$listHash['max_records'] = $gContent->mInfo["images_per_page"] ?? $max_records;
+$listHash['max_records'] = $max_records;
 
 $gContent->loadComponents( $listHash );
 $gContent->loadParentAssemblies();
