@@ -58,8 +58,6 @@
 						{/if}
 					</td>
 				</tr>
-			{foreachelse}
-				<tr><td class="norecords" colspan="4">{tr}This assembly has no components.{/tr}</td></tr>
 			{/foreach}
 		</table>
 

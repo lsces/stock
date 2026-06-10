@@ -29,8 +29,6 @@
 			</td>
 			{counter name=itemCount}
 			{if $itemCount % 4 == 0}</tr>{/if}
-		{foreachelse}
-			<tr><td class="norecords">{tr}This assembly has no components.{/tr}</td></tr>
 		{/foreach}
 		{if $itemCount % 4 != 0}</tr>{/if}
 		</table>
