@@ -87,11 +87,11 @@
 						<td rowspan="{$comp.stock|@count}">{$comp.data|escape}</td>
 						<td rowspan="{$comp.stock|@count}">{$comp.part_number|escape}</td>
 						{/if}
-						{if $showBom}<td class="text-right">{if $qtype eq 'PCK' && $row.pack_size > 0}{math equation="b*k/p" b=$row.bom_qty k=$kitCount p=$row.pack_size format="%.2f"}{elseif $qtype eq 'SHT'}{math equation="b*k" b=$row.bom_qty k=$kitCount format="%.2f"}{else}{math equation="b*k" b=$row.bom_qty k=$kitCount format="%.0f"}{/if}</td>{/if}
+						{if $showBom}<td class="text-right">{if $qtype eq 'PRT' && $row.part_size > 0}{math equation="b*k/p" b=$row.bom_qty k=$kitCount p=$row.part_size format="%.2f"}{elseif $qtype eq 'SHT'}{math equation="b*k" b=$row.bom_qty k=$kitCount format="%.2f"}{else}{math equation="b*k" b=$row.bom_qty k=$kitCount format="%.0f"}{/if}</td>{/if}
 						<td>{$qtype|escape}</td>
-						<td class="text-right">{if $qtype eq 'PCK' && $row.pack_size > 0}{math equation="l/p" l=$row.level p=$row.pack_size format="%.2f"}{elseif $qtype eq 'SHT'}{$row.level|string_format:"%.2f"}{else}{$row.level|string_format:"%.0f"}{/if}</td>
+						<td class="text-right">{if $qtype eq 'PRT' && $row.part_size > 0}{math equation="l/p" l=$row.level p=$row.part_size format="%.2f"}{elseif $qtype eq 'SHT'}{$row.level|string_format:"%.2f"}{else}{$row.level|string_format:"%.0f"}{/if}</td>
 						{if $showBom}
-							<td class="text-right{if $remaining < 0} text-danger{/if}">{if $qtype eq 'PCK' && $row.pack_size > 0}{math equation="r/p" r=$remaining p=$row.pack_size format="%.2f"}{elseif $qtype eq 'SHT'}{$remaining|string_format:"%.2f"}{else}{$remaining|string_format:"%.0f"}{/if}</td>
+							<td class="text-right{if $remaining < 0} text-danger{/if}">{if $qtype eq 'PRT' && $row.part_size > 0}{math equation="r/p" r=$remaining p=$row.part_size format="%.2f"}{elseif $qtype eq 'SHT'}{$remaining|string_format:"%.2f"}{else}{$remaining|string_format:"%.0f"}{/if}</td>
 						{/if}
 					</tr>
 					{/foreach}

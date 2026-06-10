@@ -56,7 +56,7 @@ if( $gContent->isValid() ) {
 		 FROM `{$X}liberty_xref` x
 		 INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
 		 	AND mc.`content_type_guid` = 'stockmovement'
-		 WHERE x.`xref` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')
+		 WHERE x.`xref` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')
 		   AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
 		 GROUP BY x.`item`",
 		[ $gContent->mContentId ]
@@ -67,11 +67,11 @@ if( $gContent->isValid() ) {
 	}
 	$ps = $gBitDb->getOne(
 		"SELECT CAST(x.`xkey` AS DOUBLE PRECISION) FROM `".BIT_DB_PREFIX."liberty_xref` x
-		 WHERE x.`content_id` = ? AND x.`item` = 'PCK'",
+		 WHERE x.`content_id` = ? AND x.`item` = 'PRT'",
 		[ $gContent->mContentId ]
 	);
 	$gBitSmarty->assign( 'componentStockLevels', $stockLevels );
-	$gBitSmarty->assign( 'packSize', $ps ? (float)$ps : null );
+	$gBitSmarty->assign( 'partSize', $ps ? (float)$ps : null );
 }
 
 require_once STOCK_PKG_INCLUDE_PATH.'display_stock_component_inc.php';

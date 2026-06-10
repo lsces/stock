@@ -38,7 +38,7 @@ if( $assemblyContentId ) {
 					 ORDER BY sup.`xorder`) AS part_number,
 					(SELECT FIRST 1 CAST(pk.`xkey` AS DOUBLE PRECISION)
 					 FROM `{$X}liberty_xref` pk
-					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PCK') AS pack_size,
+					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PRT') AS part_size,
 					(SELECT SUM( CASE WHEN EXISTS (
 							SELECT 1 FROM `{$X}liberty_xref` r
 							WHERE r.`content_id` = mx.`content_id` AND r.`item` IN ('TRANS','ORDER')
@@ -52,7 +52,7 @@ if( $assemblyContentId ) {
 					   AND mx.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?') AS stock_level
 			FROM `{$X}liberty_content` lc
 				INNER JOIN `{$X}liberty_xref` bom ON bom.`content_id` = ?
-					AND bom.`item` IN ('SGL','PCK','SHT','VOL')
+					AND bom.`item` IN ('SGL','PRT','SHT','VOL')
 					AND bom.`xref` = lc.`content_id`
 			WHERE lc.`content_type_guid` = 'stockcomponent'
 			$findSql
@@ -76,7 +76,7 @@ if( $assemblyContentId ) {
 					 ORDER BY sup.`xorder`) AS part_number,
 					(SELECT FIRST 1 CAST(pk.`xkey` AS DOUBLE PRECISION)
 					 FROM `{$X}liberty_xref` pk
-					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PCK') AS pack_size,
+					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PRT') AS part_size,
 					SUM( CASE WHEN EXISTS (
 						SELECT 1 FROM `{$X}liberty_xref` r
 						WHERE r.`content_id` = x.`content_id` AND r.`item` IN ('TRANS','ORDER')
@@ -84,7 +84,7 @@ if( $assemblyContentId ) {
 					  ELSE -CAST(x.`xkey` AS DOUBLE PRECISION) END ) AS stock_level
 			FROM `{$X}liberty_content` lc
 				INNER JOIN `{$X}liberty_xref` x ON x.`xref` = lc.`content_id`
-					AND x.`item` IN ('SGL','PCK','SHT','VOL')
+					AND x.`item` IN ('SGL','PRT','SHT','VOL')
 					AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
 				INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
 					AND mc.`content_type_guid` = 'stockmovement'
@@ -118,7 +118,7 @@ foreach( $rows as $row ) {
 	$stockList[$cid]['stock'][$row['qty_type']] = [
 		'level'     => $level,
 		'bom_qty'   => $row['bom_qty'] !== null ? (float)$row['bom_qty'] : null,
-		'pack_size' => $row['pack_size'] !== null ? (float)$row['pack_size'] : null,
+		'part_size' => $row['part_size'] !== null ? (float)$row['part_size'] : null,
 	];
 }
 
@@ -169,8 +169,8 @@ if( $showShortages && isset( $_REQUEST['format'] ) && $_REQUEST['format'] === 'c
 	foreach( $stockList as $comp ) {
 		if( empty( $comp['part_number'] ) ) continue;
 		foreach( $comp['stock'] as $qtype => $row ) {
-			$qty = $qtype === 'PCK' && $row['pack_size'] > 0
-				? abs( $row['level'] ) / $row['pack_size']
+			$qty = $qtype === 'PRT' && $row['part_size'] > 0
+				? abs( $row['level'] ) / $row['part_size']
 				: abs( $row['level'] );
 			fputcsv( $out, [ $comp['part_number'], $qty ], ',', '"', '' );
 		}

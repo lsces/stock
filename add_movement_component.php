@@ -22,7 +22,7 @@ if( !$gContent->isValid() ) {
 }
 $gContent->verifyUpdatePermission();
 
-$validItems = [ 'SGL' => 'Single unit', 'PCK' => 'Pack', 'SHT' => 'Sheet (H x W)', 'VOL' => 'Volume' ];
+$validItems = [ 'SGL' => 'Single unit', 'PRT' => 'Part', 'SHT' => 'Sheet', 'VOL' => 'Volume' ];
 $errors = [];
 
 if( !empty( $_REQUEST['fCancel'] ) ) {
@@ -55,7 +55,7 @@ if( !empty( $_REQUEST['fAddComponent'] ) ) {
 
 		$nextXorder = (int)$gBitDb->getOne(
 			"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
-			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')",
+			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')",
 			[ $gContent->mContentId ]
 		) ?: 1;
 

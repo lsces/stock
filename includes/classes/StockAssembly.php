@@ -4,7 +4,7 @@
  *
  * Stored as a pure liberty_content record (content_type_guid='stockassembly').
  * Components are linked via stock_assembly_map with an item_position for ordering.
- * BOM quantities live in liberty_xref (x_group='quantity', items SGL/PCK/SHT/VOL).
+ * BOM quantities live in liberty_xref (x_group='quantity', items SGL/PRT/SHT/VOL).
  * Assemblies can be nested; breadcrumb/tree queries use a Firebird recursive CTE.
  *
  * @package stock
@@ -79,7 +79,7 @@ class StockAssembly extends StockBase {
 	 * Enrich a BOM xref row with component title, description, and pack size.
 	 *
 	 * Calls parent for supplier enrichment, then adds xref_title, xref_data,
-	 * pack_size, and pack_size_ext from the linked component's liberty_content + PCK xref.
+	 * part_size, and part_size_ext from the linked component's liberty_content + PCK xref.
 	 *
 	 * @param array $pXrefInfo  Xref display row; modified in place.
 	 */
@@ -87,16 +87,16 @@ class StockAssembly extends StockBase {
 		parent::enrichXrefDisplay( $pXrefInfo );
 		if( !empty( $pXrefInfo['xref'] ) ) {
 			if( $comp = $this->mDb->getRow(
-				"SELECT lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`, pck.`xkey_ext` AS `pack_size_ext`
+				"SELECT lc.`title`, lc.`data`, pck.`xkey` AS `part_size`, pck.`xkey_ext` AS `part_size_ext`
 				 FROM `".BIT_DB_PREFIX."liberty_content` lc
-				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PCK'
+				 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PRT'
 				 WHERE lc.`content_id` = ?",
 				[ (int)$pXrefInfo['xref'] ]
 			) ) {
 				$pXrefInfo['xref_title'] = $comp['title'];
 				$pXrefInfo['xref_data']  = $comp['data'];
-				$pXrefInfo['pack_size']     = $comp['pack_size'];
-				$pXrefInfo['pack_size_ext'] = $comp['pack_size_ext'];
+				$pXrefInfo['part_size']     = $comp['part_size'];
+				$pXrefInfo['part_size_ext'] = $comp['part_size_ext'];
 			}
 		}
 	}
@@ -114,9 +114,9 @@ class StockAssembly extends StockBase {
 		$componentIds = array_values( array_unique( array_filter( array_column( $bomGroup->mXrefs, 'xref' ) ) ) );
 		if( !$componentIds ) return;
 		$components = $this->mDb->getAssoc(
-			"SELECT lc.`content_id`, lc.`title`, lc.`data`, pck.`xkey` AS `pack_size`, pck.`xkey_ext` AS `pack_size_ext`
+			"SELECT lc.`content_id`, lc.`title`, lc.`data`, pck.`xkey` AS `part_size`, pck.`xkey_ext` AS `part_size_ext`
 			 FROM `".BIT_DB_PREFIX."liberty_content` lc
-			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PCK'
+			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PRT'
 			 WHERE lc.`content_id` IN (".implode( ',', array_fill( 0, count( $componentIds ), '?' ) ).")",
 			$componentIds
 		);
@@ -124,8 +124,8 @@ class StockAssembly extends StockBase {
 			if( !empty( $row['xref'] ) && isset( $components[$row['xref']] ) ) {
 				$row['xref_title']    = $components[$row['xref']]['title'];
 				$row['xref_data']     = $components[$row['xref']]['data'];
-				$row['pack_size']     = $components[$row['xref']]['pack_size'];
-				$row['pack_size_ext'] = $components[$row['xref']]['pack_size_ext'];
+				$row['part_size']     = $components[$row['xref']]['part_size'];
+				$row['part_size_ext'] = $components[$row['xref']]['part_size_ext'];
 			}
 		}
 		unset( $row );

@@ -55,7 +55,7 @@
 						<td><a href="{$mov.display_url|escape}">{$mov.title|escape}</a></td>
 						<td>{$mov.ref_type|escape|default:'—'}</td>
 						{if $componentContentId}
-							<td class="text-right">{if $mov.cmp_qty_type eq 'PCK' && $packSize > 0}{math equation="q/p" q=$mov.cmp_qty p=$packSize format="%.2f"}{elseif $mov.cmp_qty_type eq 'SHT'}{$mov.cmp_qty|string_format:"%.2f"}{else}{$mov.cmp_qty|string_format:"%.0f"}{/if} {$mov.cmp_qty_type|escape}</td>
+							<td class="text-right">{if $mov.cmp_qty_type eq 'PRT' && $partSize > 0}{math equation="q/p" q=$mov.cmp_qty p=$partSize format="%.2f"}{elseif $mov.cmp_qty_type eq 'SHT'}{$mov.cmp_qty|string_format:"%.2f"}{else}{$mov.cmp_qty|string_format:"%.0f"}{/if} {$mov.cmp_qty_type|escape}</td>
 						{/if}
 						<td>{if $mov.ref_start_date}{$mov.ref_start_date|bit_short_date}{else}—{/if}</td>
 						<td>{if $mov.event_time}{$mov.event_time|bit_short_date}{else}—{/if}</td>

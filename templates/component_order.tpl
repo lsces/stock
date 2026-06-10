@@ -52,7 +52,7 @@
 							<td>{$row.xref_data|escape}</td>
 							<td>
 								{$row.xkey|escape}
-								{if $row.item eq 'PCK' && $row.pack_size} of {$row.pack_size|escape}{if $row.pack_size_ext} {$row.pack_size_ext|escape}{/if}{/if}
+								{if $row.item eq 'PRT' && $row.part_size} of {$row.part_size|escape}{if $row.part_size_ext} {$row.part_size_ext|escape}{/if}{/if}
 							</td>
 							<td>{$row.xkey_ext|escape}</td>
 						</tr>

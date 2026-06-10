@@ -67,7 +67,7 @@ if( !empty( $_POST['fCreate'] ) ) {
 				if( !$cid ) continue;
 				$qty   = (float)( $qtysPost[$i] ?? 0 );
 				if( $qty <= 0 ) continue;
-				$qtype = in_array( $qtyTypesPost[$i] ?? '', [ 'SGL', 'PCK', 'SHT', 'VOL' ] )
+				$qtype = in_array( $qtyTypesPost[$i] ?? '', [ 'SGL', 'PRT', 'SHT', 'VOL' ] )
 				         ? $qtyTypesPost[$i] : 'SGL';
 				$lineHash = [
 					'content_id' => $movement->mContentId,
@@ -109,7 +109,7 @@ if( $fromPost ) {
 	}
 	foreach( $cids as $i => $cid ) {
 		if( !$cid ) continue;
-		$qtype   = in_array( $types[$i] ?? '', [ 'SGL', 'PCK', 'SHT', 'VOL' ] ) ? $types[$i] : 'SGL';
+		$qtype   = in_array( $types[$i] ?? '', [ 'SGL', 'PRT', 'SHT', 'VOL' ] ) ? $types[$i] : 'SGL';
 		$lines[] = [
 			'component_id' => $cid,
 			'title'        => $meta[$cid]['title'] ?? '',
@@ -159,7 +159,7 @@ if( $fromPost ) {
 						   AND mx.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?') AS stock_level
 				FROM `{$X}liberty_content` lc
 					INNER JOIN `{$X}liberty_xref` bom ON bom.`content_id` = ?
-						AND bom.`item` IN ('SGL','PCK','SHT','VOL')
+						AND bom.`item` IN ('SGL','PRT','SHT','VOL')
 						AND bom.`xref` = lc.`content_id`
 				WHERE lc.`content_type_guid` = 'stockcomponent'
 				$findSql
@@ -188,7 +188,7 @@ if( $fromPost ) {
 						  ELSE -CAST(x.`xkey` AS DOUBLE PRECISION) END ) AS stock_level
 				FROM `{$X}liberty_content` lc
 					INNER JOIN `{$X}liberty_xref` x ON x.`xref` = lc.`content_id`
-						AND x.`item` IN ('SGL','PCK','SHT','VOL')
+						AND x.`item` IN ('SGL','PRT','SHT','VOL')
 						AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
 					INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
 						AND mc.`content_type_guid` = 'stockmovement'

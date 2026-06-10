@@ -59,7 +59,7 @@
 						{foreach from=$componentStockLevels key=qtype item=level}
 						<tr{if $level < 0} class="danger"{elseif $level == 0} class="warning"{/if}>
 							<td>{$qtype|escape}</td>
-							<td class="text-right">{if $qtype eq 'PCK' && $packSize > 0}{math equation="l/p" l=$level p=$packSize format="%.2f"}{elseif $qtype eq 'SHT'}{$level|string_format:"%.2f"}{else}{$level|string_format:"%.0f"}{/if}</td>
+							<td class="text-right">{if $qtype eq 'PRT' && $partSize > 0}{math equation="l/p" l=$level p=$partSize format="%.2f"}{elseif $qtype eq 'SHT'}{$level|string_format:"%.2f"}{else}{$level|string_format:"%.0f"}{/if}</td>
 						</tr>
 						{/foreach}
 					{else}

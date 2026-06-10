@@ -8,7 +8,7 @@
 		{/if}
 	</td>
 	<td>{$xrefInfo.xref_data|escape}</td>
-	<td>{$xrefInfo.xkey|escape}{if $xrefInfo.pack_size} of {$xrefInfo.pack_size|escape}{if $xrefInfo.pack_size_ext} {$xrefInfo.pack_size_ext|escape}{/if}{/if}</td>
+	<td>{$xrefInfo.xkey|escape}{if $xrefInfo.part_size} of {$xrefInfo.part_size|escape}{if $xrefInfo.part_size_ext} {$xrefInfo.part_size_ext|escape}{/if}{/if}</td>
 	<td>{$xrefInfo.xkey_ext|escape}</td>
 	{if $xrefAllowEdit}
 		<td>{$xrefInfo.start_date|bit_short_date}</td>

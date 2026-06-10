@@ -1,7 +1,7 @@
 {strip}
 <div class="edit stock">
 	<div class="header">
-		<h1>{tr}Edit Item{/tr}: {$gContent->getTitle()|escape}</h1>
+		<h1>{tr}Edit BOM Entry{/tr}: {$gContent->getTitle()|escape}</h1>
 	</div>
 	<div class="body">
 		{formfeedback error=$errors}
@@ -20,11 +20,22 @@
 				{/forminput}
 			</div>
 
+			{if $xrefInfo.xref_data}
+			<div class="form-group">
+				{formlabel label="Description"}
+				{forminput}
+					<p class="form-control-static">{$xrefInfo.xref_data|escape}</p>
+				{/forminput}
+			</div>
+			{/if}
+
 			<div class="form-group">
 				{formlabel label="Pieces required" for="xkey"}
 				{forminput}
-					<input type="text" class="form-control input-small" name="xkey" id="xkey" value="{$xrefInfo.xkey|escape}" />
-					{if $xrefInfo.pack_size}<span class="help-block">{tr}of{/tr} {$xrefInfo.pack_size|escape} {tr}per pack{/tr}</span>{/if}
+					<div class="form-inline">
+						<input type="text" class="form-control input-small" name="xkey" id="xkey" value="{$xrefInfo.xkey|escape}" />
+						{if $xrefInfo.part_size} of {$xrefInfo.part_size|escape}{if $xrefInfo.part_size_ext} {$xrefInfo.part_size_ext|escape}{/if}{/if}
+					</div>
 				{/forminput}
 			</div>
 
@@ -32,13 +43,6 @@
 				{formlabel label="Ref designators" for="xkey_ext"}
 				{forminput}
 					<input type="text" class="form-control" name="xkey_ext" id="xkey_ext" value="{$xrefInfo.xkey_ext|escape}" />
-				{/forminput}
-			</div>
-
-			<div class="form-group">
-				{formlabel label="Note" for="edit"}
-				{forminput}
-					<input type="text" class="form-control" name="edit" id="edit" value="{$xrefInfo.data|escape}" />
 				{/forminput}
 			</div>
 

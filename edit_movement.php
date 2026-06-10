@@ -21,7 +21,7 @@ if( $gContent->isValid() ) {
 }
 
 // TODO: derive from liberty_xref_item WHERE content_type_guid='stockcomponent' AND x_group='quantity'
-$qtyTypes = [ 'SGL', 'PCK', 'SHT', 'VOL' ];
+$qtyTypes = [ 'SGL', 'PRT', 'SHT', 'VOL' ];
 
 // Movement reference types from DB — drives the type selector on create
 $refTypes = $gBitDb->getAssoc(
@@ -134,7 +134,7 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 			} else {
 				$nextXorder = (int)$gBitDb->getOne(
 					"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
-					 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')",
+					 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')",
 					[ $gContent->mContentId ]
 				) ?: 1;
 				$qtyHash = [

@@ -9,14 +9,14 @@
  *   3  supplier_pn    Supplier part number → xref #PN in xkey_ext (optional)
  *   4  supplier_price Supplier price       → xref #PR in xkey    (optional)
  *   5  supplier_url   Supplier URL         → xref #SUP data      (optional)
- *   6  qty_type       SGL/PCK/SHT/VOL — omit or blank for SGL    (optional)
- *   7  qty_value      Pack size for PCK (pieces per pack); dimensions for SHT (optional)
+ *   6  qty_type       SGL/PRT/PCK/SHT/VOL — omit or blank for SGL  (optional)
+ *   7  qty_value      Pack size for PRT/PCK (pieces per pack); dimensions for SHT (optional)
  *
  * Supplier name is matched against liberty_content.title for content_type_guid='contact'.
  * #SUP stores the contact content_id in the xref column; #PN and #PR share xorder=1
  * so they are grouped with the #SUP entry as one supplier set.
  *
- * Setting qty_type to PCK/SHT/VOL writes the appropriate xref on the component so that
+ * Setting qty_type to PRT/PCK/SHT/VOL writes the appropriate xref on the component so that
  * movement CSV imports pick up the correct default qty type without a manual override.
  *
  * Existing components (matched by title) are skipped unless cleared first.
@@ -132,8 +132,8 @@ function stockImportSimpleComponent( array $data, int $rowNum ): array {
 	}
 
 	// Quantity type xref — sets the default qty type used by movement CSV imports
-	// and the pack size shown in BOM displays (PCK xref xkey = pieces per pack)
-	if( in_array( $qtyType, [ 'PCK', 'SHT', 'VOL' ] ) ) {
+	// and the pack size shown in BOM displays (PRT/PCK xref xkey = pieces per pack)
+	if( in_array( $qtyType, [ 'PRT', 'PCK', 'SHT', 'VOL' ] ) ) {
 		$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
 			'xref_id'          => $gBitDb->GenID( 'liberty_xref_seq' ),
 			'content_id'       => $contentId,

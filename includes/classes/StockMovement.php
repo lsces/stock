@@ -7,7 +7,7 @@
  * TRANS/ORDER = inbound. Status (open vs received) is stored in lc.event_time:
  * 0 = open, positive Unix timestamp = received.
  *
- * Component lines live in liberty_xref (x_group='quantity', items SGL/PCK/SHT/VOL).
+ * Component lines live in liberty_xref (x_group='quantity', items SGL/PRT/SHT/VOL).
  * The reference xref (x_group='reference') carries the from/ref/date/contact data.
  *
  * @package stock
@@ -249,7 +249,7 @@ class StockMovement extends LibertyContent {
 	/**
 	 * Append quantity xrefs from an assembly BOM into this movement, scaled by kit count.
 	 *
-	 * Reads SGL/PCK/SHT/VOL xrefs from the assembly and inserts them as new movement
+	 * Reads SGL/PRT/SHT/VOL xrefs from the assembly and inserts them as new movement
 	 * quantity lines, starting xorder after any existing items. Safe to call multiple
 	 * times (e.g. for multi-assembly requisitions) — lines are only appended.
 	 *
@@ -264,7 +264,7 @@ class StockMovement extends LibertyContent {
 
 		$nextXorder = (int)$this->mDb->getOne(
 			"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
-			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')",
+			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')",
 			[ $this->mContentId ]
 		) ?: 1;
 
@@ -272,7 +272,7 @@ class StockMovement extends LibertyContent {
 			"SELECT x.`xref` AS item_content_id, x.`item` AS quantity_item,
 			        CAST(x.`xkey` AS DOUBLE PRECISION) AS quantity_value
 			 FROM `".BIT_DB_PREFIX."liberty_xref` x
-			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')
+			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')
 			   AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
 			 ORDER BY x.`xorder`",
 			[ $pAssemblyContentId ]
@@ -325,7 +325,7 @@ class StockMovement extends LibertyContent {
 		$cmpContentId = $this->verifyId( $pListHash['component_content_id'] ?? 0 ) ? (int)$pListHash['component_content_id'] : 0;
 		if( $cmpContentId ) {
 			$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` xcf
-				WHERE xcf.`content_id` = lc.`content_id` AND xcf.`item` IN ('SGL','PCK','SHT','VOL') AND xcf.`xref` = $cmpContentId)";
+				WHERE xcf.`content_id` = lc.`content_id` AND xcf.`item` IN ('SGL','PRT','SHT','VOL') AND xcf.`xref` = $cmpContentId)";
 		}
 		if( $this->verifyId( $pListHash['user_id'] ?? 0 ) ) {
 			$whereSql .= " AND lc.`user_id` = ?";
@@ -365,10 +365,10 @@ class StockMovement extends LibertyContent {
 		$X = BIT_DB_PREFIX;
 		$cmpQtySelect = $cmpContentId
 			? ", (SELECT FIRST 1 x.`item` FROM `{$X}liberty_xref` x
-			      WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PCK','SHT','VOL') AND x.`xref` = $cmpContentId
+			      WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PRT','SHT','VOL') AND x.`xref` = $cmpContentId
 			      ORDER BY x.`xorder`) AS cmp_qty_type,
 			     (SELECT SUM(CAST(x.`xkey` AS DOUBLE PRECISION)) FROM `{$X}liberty_xref` x
-			      WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PCK','SHT','VOL') AND x.`xref` = $cmpContentId) AS cmp_qty"
+			      WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PRT','SHT','VOL') AND x.`xref` = $cmpContentId) AS cmp_qty"
 			: ", CAST(NULL AS VARCHAR(4)) AS cmp_qty_type, CAST(NULL AS DOUBLE PRECISION) AS cmp_qty";
 
 		$query = "SELECT lc.`content_id`, lc.`title`, lc.`created`, lc.`last_modified`, lc.`event_time`,
@@ -437,7 +437,7 @@ class StockMovement extends LibertyContent {
 	 * The reference row updates or creates the REQN/TRANS/ORDER xref. Order date sets
 	 * xref.start_date; received date sets lc.event_time. Unknown components are skipped.
 	 *
-	 * @param  string[] $pQtyTypes  Allowed qty type codes (e.g. ['SGL','PCK','SHT','VOL']).
+	 * @param  string[] $pQtyTypes  Allowed qty type codes (e.g. ['SGL','PRT','SHT','VOL']).
 	 * @return array{loaded:int, skipped:int, errors:string[]}
 	 */
 	public function importCsv( array $pQtyTypes ): array {
@@ -453,7 +453,7 @@ class StockMovement extends LibertyContent {
 
 		$nextXorder = (int)$this->mDb->getOne(
 			"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
-			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PCK','SHT','VOL')",
+			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')",
 			[ $this->mContentId ]
 		) ?: 1;
 

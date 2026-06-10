@@ -24,7 +24,7 @@ if( !$gContent->isValid() ) {
 }
 $gContent->verifyUpdatePermission();
 
-$validItems = [ 'SGL' => 'Single unit', 'PCK' => 'Pack', 'SHT' => 'Sheet (H x W)', 'VOL' => 'Volume' ];
+$validItems = [ 'SGL' => 'Single unit', 'PRT' => 'Part', 'SHT' => 'Sheet', 'VOL' => 'Volume' ];
 $errors = [];
 
 if( !empty( $_REQUEST['fCancel'] ) ) {
@@ -60,7 +60,7 @@ if( !empty( $_REQUEST['fAddComponent'] ) ) {
 			// Place new row at end of current BOM
 			$maxXorder = (int)$gBitDb->getOne(
 				"SELECT MAX(`xorder`) FROM `".BIT_DB_PREFIX."liberty_xref`
-				 WHERE `content_id`=? AND `item` IN ('SGL','PCK','SHT','VOL')",
+				 WHERE `content_id`=? AND `item` IN ('SGL','PRT','SHT','VOL')",
 				[ $gContent->mContentId ]
 			);
 

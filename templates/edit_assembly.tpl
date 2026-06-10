@@ -70,7 +70,7 @@
 					<input type="file" name="csv_file" accept=".csv,text/csv"/>
 					<input type="submit" class="btn btn-default" name="upload_bom_csv" value="{tr}Upload BOM{/tr}"/>
 				</div>
-				<p class="help-block">{tr}Columns: Component, Order, Quantity, Size (SGL/PCK/SHT/VOL), Ref designators{/tr}</p>
+				<p class="help-block">{tr}Columns: Component, Order, Quantity, Size (SGL/PRT/SHT/VOL), Ref designators{/tr}</p>
 			{/form}
 		{/if}
 
