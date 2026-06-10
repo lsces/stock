@@ -2,6 +2,7 @@
 {if !empty($packageMenuTitle)}<a class="dropdown-toggle" data-toggle="dropdown" href="#"> {tr}{$packageMenuTitle}{/tr} <b class="caret"></b></a>{/if}
 <ul class="{$packageMenuClass}">
 	{if $gBitUser->hasPermission('p_stock_view')}
+		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}view_kitlocker.php">{biticon ipackage="icons" iname="view-grid-symbolic" iexplain="Kitlocker" ilocation=menu}</a></li>
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}list_assemblies.php">{biticon ipackage="icons" iname="view-group" iexplain="List Assemblies" ilocation=menu}</a></li>
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}list_components.php">{biticon ipackage="icons" iname="view-list-tree" iexplain="List Components" ilocation=menu}</a></li>
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}list_movements.php">{biticon ipackage="icons" iname="view-list-details" iexplain="List Movements" ilocation=menu}</a></li>
