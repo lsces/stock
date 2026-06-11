@@ -160,6 +160,15 @@ if( $gContent->isValid() ) {
 }
 
 $gContent->loadXrefInfo();
+if( isset( $gContent->mXrefInfo->mGroups['stgrp'] ) ) {
+	if( isset( $gContent->mXrefInfo->mGroups['kitlocker'] ) ) {
+		$gContent->mXrefInfo->mGroups['kitlocker']->mXrefs = array_merge(
+			$gContent->mXrefInfo->mGroups['kitlocker']->mXrefs,
+			$gContent->mXrefInfo->mGroups['stgrp']->mXrefs
+		);
+	}
+	unset( $gContent->mXrefInfo->mGroups['stgrp'] );
+}
 $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 
 $gContent->invokeServices( 'content_edit_function' );

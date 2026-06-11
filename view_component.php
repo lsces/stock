@@ -35,6 +35,15 @@ if( is_object( $gGallery ) && $gGallery->isCommentable() ) {
 $gContent->addHit();
 
 $gContent->loadXrefInfo();
+if( isset( $gContent->mXrefInfo->mGroups['stgrp'] ) ) {
+	if( isset( $gContent->mXrefInfo->mGroups['kitlocker'] ) ) {
+		$gContent->mXrefInfo->mGroups['kitlocker']->mXrefs = array_merge(
+			$gContent->mXrefInfo->mGroups['kitlocker']->mXrefs,
+			$gContent->mXrefInfo->mGroups['stgrp']->mXrefs
+		);
+	}
+	unset( $gContent->mXrefInfo->mGroups['stgrp'] );
+}
 $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 
 $isKitlocker = (bool)$gBitDb->getOne(

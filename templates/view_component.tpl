@@ -24,12 +24,9 @@
 		{jstabs}
 			{if $gXrefInfo->mGroups}
 				{assign var=klGroup value=null}
-				{assign var=sgGroup value=null}
 				{foreach $gXrefInfo->mGroups as $xrefGroup}
 					{if $xrefGroup->mXGroup eq 'kitlocker'}
 						{assign var=klGroup value=$xrefGroup}
-					{elseif $xrefGroup->mXGroup eq 'stgrp'}
-						{assign var=sgGroup value=$xrefGroup}
 					{else}
 						{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
 							xrefGroup=$xrefGroup allow_edit=false}
@@ -38,10 +35,6 @@
 				{if $isKitlocker && $klGroup}
 					{include file=$gContent->getXrefListTemplate($klGroup->mTemplate)
 						xrefGroup=$klGroup allow_edit=false}
-				{/if}
-				{if $isKitlocker && $sgGroup}
-					{include file=$gContent->getXrefListTemplate($sgGroup->mTemplate)
-						xrefGroup=$sgGroup allow_edit=false}
 				{/if}
 			{/if}
 
