@@ -173,41 +173,29 @@ class StockMovement extends LibertyContent {
 	}
 
 	/**
-	 * Load xref groups then enrich the 'quantity' group — resolves each component
-	 * content_id to xref_title and xref_data (component description).
+	 * Enrich the quantity group with part_size/part_size_ext from the PRT xref.
+	 * linked_title and linked_data come from the lc_linked JOIN in loadContent().
 	 */
 	public function loadXrefInfo(): void {
 		parent::loadXrefInfo();
 		if( empty( $this->mXrefInfo ) ) return;
 		$bomGroup = $this->mXrefInfo->mGroups['quantity'] ?? null;
 		if( !$bomGroup || empty( $bomGroup->mXrefs ) ) return;
-		$componentIds = array_values( array_unique( array_filter( array_column( $bomGroup->mXrefs, 'xref' ) ) ) );
+		$componentIds = array_values( array_unique( array_filter(
+			array_map( fn($r) => $r['xref'], $bomGroup->mXrefs )
+		) ) );
 		if( !$componentIds ) return;
 		$components = $this->mDb->getAssoc(
-			"SELECT lc.`content_id`, lc.`title`, lc.`data` FROM `".BIT_DB_PREFIX."liberty_content` lc WHERE lc.`content_id` IN (".implode( ',', array_fill( 0, count( $componentIds ), '?' ) ).")",
+			"SELECT lc.`content_id`, pck.`xkey` AS `part_size`, pck.`xkey_ext` AS `part_size_ext`
+			 FROM `".BIT_DB_PREFIX."liberty_content` lc
+			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PRT'
+			 WHERE lc.`content_id` IN (".implode( ',', array_fill( 0, count( $componentIds ), '?' ) ).")",
 			$componentIds
 		);
 		foreach( $bomGroup->mXrefs as &$row ) {
 			if( !empty( $row['xref'] ) && isset( $components[$row['xref']] ) ) {
-				$row['xref_title'] = $components[$row['xref']]['title'];
-				$row['xref_data']  = $components[$row['xref']]['data'];
-			}
-		}
-		unset( $row );
-
-		$assemblyGroup = $this->mXrefInfo->mGroups['assembly'] ?? null;
-		if( !$assemblyGroup || empty( $assemblyGroup->mXrefs ) ) return;
-		$assemblyIds = array_values( array_unique( array_filter( array_column( $assemblyGroup->mXrefs, 'xref' ) ) ) );
-		if( !$assemblyIds ) return;
-		$assemblies = $this->mDb->getAssoc(
-			"SELECT lc.`content_id`, lc.`title`, lc.`data` FROM `".BIT_DB_PREFIX."liberty_content` lc
-			 WHERE lc.`content_id` IN (".implode( ',', array_fill( 0, count( $assemblyIds ), '?' ) ).")",
-			$assemblyIds
-		);
-		foreach( $assemblyGroup->mXrefs as &$row ) {
-			if( !empty( $row['xref'] ) && isset( $assemblies[$row['xref']] ) ) {
-				$row['linked_title'] = $assemblies[$row['xref']]['title'];
-				$row['linked_desc']  = $assemblies[$row['xref']]['data'];
+				$row['part_size']     = $components[$row['xref']]['part_size'];
+				$row['part_size_ext'] = $components[$row['xref']]['part_size_ext'];
 			}
 		}
 		unset( $row );

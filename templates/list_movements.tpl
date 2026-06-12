@@ -1,7 +1,7 @@
 {strip}
 <div class="listing stock">
 	<header>
-		<div class="floaticon">
+		<div class="floaticon hidden-print">
 			<button type="button" class="btn btn-link" onclick="window.print()">{biticon ipackage="icons" iname="document-print" iexplain="Print"}</button>
 			{if $gBitUser->hasPermission('p_stock_create')}
 				<a href="{$smarty.const.STOCK_PKG_URL}add_requisition.php">{biticon ipackage="icons" iname="list-add" iexplain="Add Requisition"}</a>
