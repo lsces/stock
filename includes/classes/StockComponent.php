@@ -193,6 +193,25 @@ class StockComponent extends StockBase {
 			$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` kx WHERE kx.`content_id` = lc.`content_id` AND kx.`item` = 'KLID')";
 		}
 
+		if( !empty( $pListHash['hide_kitlocker'] ) ) {
+			// Exclude components that have KLID but no #SUP linking to the kitlocker contact (SCREF='kitlocker').
+			// Components where kitlocker is the supplier are kept — those are parts kitlocker supplies to elves.
+			$whereSql .= " AND NOT (
+				EXISTS (
+					SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` kx
+					WHERE kx.`content_id` = lc.`content_id` AND kx.`item` = 'KLID'
+				)
+				AND NOT EXISTS (
+					SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` sx
+					INNER JOIN `".BIT_DB_PREFIX."liberty_xref` scref
+						ON scref.`content_id` = sx.`xref`
+						AND scref.`item` = 'SCREF'
+						AND UPPER(scref.`xkey`) = 'KITLOCKER'
+					WHERE sx.`content_id` = lc.`content_id` AND sx.`item` = '#SUP'
+				)
+			)";
+		}
+
 		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
 
 		$orderby = !empty( $pListHash['sort_mode'] )

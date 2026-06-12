@@ -22,10 +22,16 @@ if( !empty( $_REQUEST['find'] ) ) {
 	$_REQUEST['search'] = $_REQUEST['find'];
 }
 
+// Default on — hide pure kitlocker components; show those also supplied by kitlocker to elves
+if( !isset( $_REQUEST['hide_kitlocker'] ) ) {
+	$_REQUEST['hide_kitlocker'] = 1;
+}
+
 $componentList = $component->getList( $_REQUEST );
 $component->invokeServices( 'content_list_function', $_REQUEST );
 $gBitSmarty->assign( 'listInfo', $_REQUEST['listInfo'] );
 $gBitSmarty->assign( 'componentList', $componentList );
+$gBitSmarty->assign( 'hideKitlocker', (bool)$_REQUEST['hide_kitlocker'] );
 
 $gBitSmarty->assign( 'gDefaultCenter', 'bitpackage:stock/list_components.tpl' );
 $gBitSystem->display( 'bitpackage:kernel/dynamic.tpl', 'List Components', [ 'display_mode' => 'list' ] );

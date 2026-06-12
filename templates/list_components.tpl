@@ -5,7 +5,13 @@
 			{if $gBitUser->hasPermission('p_stock_create')}
 				<a href="{$smarty.const.STOCK_PKG_URL}edit_component.php">{biticon ipackage="icons" iname="kt-add-filters" iexplain="Create Component"}</a>
 			{/if}
-			{minifind prompt="Components"}
+			{form class="minifind" method="get" action=$smarty.server.SCRIPT_NAME}
+				<div class="input-prepend form-inline">
+					<input class="form-control input-sm search-query" type="text" name="find" placeholder="Components" value="{$smarty.request.find|escape}" />
+					<label class="checkbox-inline"><input type="checkbox" name="hide_kitlocker" value="1"{if $hideKitlocker} checked="checked"{/if} /> {tr}Hide kitlocker{/tr}</label>
+					<button type="submit" class="btn btn-default btn-sm">{tr}Search{/tr}</button>
+				</div>
+			{/form}
 		</div>
 		<h1>{tr}Components{/tr}{if $gQueryUserId} {tr}by{/tr} {displayname user_id=$gQueryUserId}{/if}</h1>
 	</header>
