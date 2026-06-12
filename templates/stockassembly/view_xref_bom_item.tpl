@@ -2,12 +2,12 @@
 <tr class="{cycle values="even,odd"}">
 	<td>
 		{if $xrefInfo.xref > 0}
-			<a href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$xrefInfo.xref|escape}">{$xrefInfo.xref_title|default:$xrefInfo.xref|escape}</a>
+			<a href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$xrefInfo.xref|escape}">{$xrefInfo.linked_title|default:$xrefInfo.xref|escape}</a>
 		{else}
 			&nbsp;
 		{/if}
 	</td>
-	<td>{$xrefInfo.xref_data|escape}</td>
+	<td>{$xrefInfo.linked_data|escape}</td>
 	<td>{$xrefInfo.xkey|escape}</td>
 	<td>{$xrefInfo.xkey_ext|escape}</td>
 	{if $xrefAllowEdit}

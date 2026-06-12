@@ -107,10 +107,14 @@ class StockAssembly extends StockBase {
 		$bomGroup = $this->mXrefInfo->mGroups['quantity'] ?? null;
 		if( !$bomGroup || empty( $bomGroup->mXrefs ) ) return;
 		usort( $bomGroup->mXrefs, fn($a,$b) => ( $a['xorder'] <=> $b['xorder'] ) ?: strcmp( $a['item'], $b['item'] ) );
-		$componentIds = array_values( array_unique( array_filter( array_column( $bomGroup->mXrefs, 'xref' ) ) ) );
+		// title and data come from linked_title/linked_data (lc_linked JOIN in loadContent)
+		// only need a separate query for part_size/part_size_ext from the PRT xref
+		$componentIds = array_values( array_unique( array_filter(
+			array_map( fn($r) => $r['xref'], $bomGroup->mXrefs )
+		) ) );
 		if( !$componentIds ) return;
 		$components = $this->mDb->getAssoc(
-			"SELECT lc.`content_id`, lc.`title`, lc.`data`, pck.`xkey` AS `part_size`, pck.`xkey_ext` AS `part_size_ext`
+			"SELECT lc.`content_id`, pck.`xkey` AS `part_size`, pck.`xkey_ext` AS `part_size_ext`
 			 FROM `".BIT_DB_PREFIX."liberty_content` lc
 			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PRT'
 			 WHERE lc.`content_id` IN (".implode( ',', array_fill( 0, count( $componentIds ), '?' ) ).")",
@@ -118,8 +122,6 @@ class StockAssembly extends StockBase {
 		);
 		foreach( $bomGroup->mXrefs as &$row ) {
 			if( !empty( $row['xref'] ) && isset( $components[$row['xref']] ) ) {
-				$row['xref_title']    = $components[$row['xref']]['title'];
-				$row['xref_data']     = $components[$row['xref']]['data'];
 				$row['part_size']     = $components[$row['xref']]['part_size'];
 				$row['part_size_ext'] = $components[$row['xref']]['part_size_ext'];
 			}
