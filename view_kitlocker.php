@@ -37,4 +37,4 @@ unset( $row );
 $gBitSmarty->assign( 'stgrpItems', $stgrpItems );
 
 $gBitSystem->setBrowserTitle( KernelTools::tra( 'Kitlocker' ) );
-$gBitSystem->display( 'bitpackage:stock/stock_fixed_grid_inc.tpl', null, [ 'display_mode' => 'display' ] );
+$gBitSystem->display( 'bitpackage:stock/view_kitlocker.tpl', null, [ 'display_mode' => 'display' ] );
