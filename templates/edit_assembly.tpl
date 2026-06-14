@@ -30,12 +30,7 @@
 				{/forminput}
 			</div>
 
-			<div class="form-group">
-				{formlabel label="Description" for="assembly-desc"}
-				{forminput}
-					<textarea name="edit" id="assembly-desc" rows="4" cols="50">{$gContent->mInfo.data|default:''|escape}</textarea>
-				{/forminput}
-			</div>
+			{textarea edit=$gContent->mInfo.data name="edit" rows=10 label="Description"}
 
 			{if $gXrefInfo->mGroups}
 				{jstabs}

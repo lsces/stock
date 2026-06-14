@@ -35,7 +35,7 @@ if( !$row ) {
 $errors = [];
 
 if( !empty( $_POST['fSave'] ) ) {
-	$data = trim( $_POST['data'] ?? '' ) ?: null;
+	$data = trim( $_POST['edit'] ?? '' ) ?: null;
 	$gBitDb->query(
 		"UPDATE `{$X}liberty_xref_item` SET `data` = ?
 		 WHERE `item` = ? AND `x_group` = 'stgrp' AND `content_type_guid` = 'stock'",

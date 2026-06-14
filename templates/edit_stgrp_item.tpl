@@ -12,12 +12,7 @@
 		{form}
 			<input type="hidden" name="item" value="{$stgrpItem.item|escape}"/>
 
-			<div class="form-group">
-				{formlabel label="Description" for="editliberty"}
-				{forminput}
-					{textarea edit=$stgrpItem.data name='data' rows=10}
-				{/forminput}
-			</div>
+			{textarea edit=$stgrpItem.data rows=10 label="Description"}
 
 			<div class="form-group submit">
 				<input type="submit" class="btn btn-default" name="fCancel" value="{tr}Cancel{/tr}"/>
