@@ -38,6 +38,7 @@ if (!empty($_REQUEST['user_id']) && is_numeric($_REQUEST['user_id'])) {
 $galleryList = $gStockAssembly->getList( $_REQUEST );
 $gStockAssembly->invokeServices( 'content_list_function', $_REQUEST );
 $gBitSmarty->assign( 'listInfo', $_REQUEST['listInfo'] );
+
 $gBitSmarty->assign( 'galleryList', $galleryList );
 
 $gDefaultCenter = "bitpackage:stock/$template";

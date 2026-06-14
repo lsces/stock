@@ -997,6 +997,16 @@ class StockAssembly extends StockBase {
 			$sortSql .= " ORDER BY ".$this->mDb->convertSortmode( $pListHash['sort_mode'] )." ";
 		}
 		$selectSql .= ", (SELECT COUNT(*) FROM `".BIT_DB_PREFIX."stock_assembly_map` sacmc WHERE sacmc.`assembly_content_id` = lc.`content_id`) AS `child_count`";
+		$X = BIT_DB_PREFIX;
+		$selectSql .= ", (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` = '#SUP' ORDER BY x.`xorder`) AS `part_number`";
+		$selectSql .= ", (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` = 'KLID') AS `klid`";
+		$selectSql .= ", (SELECT COUNT(*) FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PRT','SHT','VOL')) AS `component_count`";
+		$selectSql .= ", (SELECT COALESCE(SUM(CAST(xasm.`xkey` AS DOUBLE PRECISION)), 0)
+		     FROM `{$X}liberty_xref` xasm
+		     INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = xasm.`content_id`
+		         AND mc.`content_type_guid` = 'stockmovement' AND mc.`user_id` = lc.`user_id`
+		     INNER JOIN `{$X}liberty_xref` xpbld ON xpbld.`content_id` = xasm.`content_id` AND xpbld.`item` = 'PBLD'
+		     WHERE xasm.`item` = 'ASSEMBLY' AND xasm.`xref` = lc.`content_id`) AS `prebuild_count`";
 
 		if( !empty( $pListHash['stgrp'] ) ) {
 			$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` sx WHERE sx.`content_id` = lc.`content_id` AND sx.`item` = ?)";
@@ -1033,6 +1043,13 @@ class StockAssembly extends StockBase {
 				foreach( array_keys( $data ) as $assemblyId ) {
 					$data[$assemblyId]['display_url'] = static::getDisplayUrlFromHash( $data[$assemblyId] );
 					$data[$assemblyId]['display_uri'] = static::getDisplayUriFromHash( $data[$assemblyId] );
+					if( !empty( $data[$assemblyId]['data'] ) ) {
+						$parseHash = [
+							'data'        => $data[$assemblyId]['data'],
+							'format_guid' => $data[$assemblyId]['format_guid'] ?? 'bithtml',
+						];
+						$data[$assemblyId]['parsed_data'] = LibertyContent::parseDataHash( $parseHash );
+					}
 					if( empty( $pListHash['no_thumbnails'] ) ) {
 						if( $thumbImage = $this->getThumbnailImage( $data[$assemblyId]['content_id'] ) ) {
 							$data[$assemblyId]['thumbnail_url'] = $thumbImage->getThumbnailUrl( $thumbsize );
