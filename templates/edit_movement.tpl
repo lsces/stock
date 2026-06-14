@@ -24,7 +24,7 @@
 				{/forminput}
 			</div>
 
-			{if !$isReqn}
+			{if !$isBuild}
 			{if $refTypes}
 			<div class="form-group">
 				{formlabel label="Movement Type" mandatory="y"}
@@ -65,7 +65,7 @@
 			{/if}
 
 			<div class="form-group">
-				{formlabel label="Ordered" for="ordered_date"}
+				{formlabel label="{if $isPbld}Build Date{else}Ordered{/if}" for="ordered_date"}
 				{forminput}
 					<input type="text" class="form-control input-small" name="ordered_date" id="ordered_date"
 						placeholder="dd/mm/yyyy" value="{$orderedDateVal|escape}" maxlength="10" />
@@ -73,7 +73,7 @@
 			</div>
 
 			<div class="form-group">
-				{formlabel label="Received" for="received_date"}
+				{formlabel label="{if $isPbld}Completed{else}Received{/if}" for="received_date"}
 				{forminput}
 					<input type="text" class="form-control input-small" name="received_date" id="received_date"
 						placeholder="dd/mm/yyyy" value="{$receivedDateVal|escape}" maxlength="10" />
@@ -110,7 +110,7 @@
 			{if $gXrefInfo->mGroups}
 				{jstabs}
 					{foreach $gXrefInfo->mGroups as $xrefGroup}
-						{if $xrefGroup->mXGroup neq 'reference' && ($xrefGroup->mXGroup neq 'assembly' || $isReqn)}
+						{if $xrefGroup->mXGroup neq 'reference' && ($xrefGroup->mXGroup neq 'assembly' || $isBuild)}
 							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
 								xrefGroup=$xrefGroup
 								allow_add=true
@@ -120,7 +120,7 @@
 				{/jstabs}
 			{/if}
 
-			{if !$isReqn}
+			{if !$isBuild}
 			{* ── Upload CSV (orders/transfers only) ── *}
 			<h4>{tr}Upload CSV{/tr}</h4>
 			{form enctype="multipart/form-data" ipackage="stock" ifile="edit_movement.php"}

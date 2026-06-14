@@ -93,24 +93,24 @@ class StockMovement extends LibertyContent {
 					, uue.`login` AS `modifier_user`, uue.`real_name` AS `modifier_real_name`
 					, uuc.`login` AS `creator_user`,  uuc.`real_name` AS `creator_real_name`
 					, (SELECT FIRST 1 x.`start_date` FROM `{$X}liberty_xref` x
-					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 					   ORDER BY x.`xorder`) AS ref_start_date
 					, (SELECT FIRST 1 xi.`cross_ref_title` FROM `{$X}liberty_xref` x
 					   JOIN `{$X}liberty_xref_item` xi ON xi.`item` = x.`item` AND xi.`content_type_guid` = 'stockmovement'
-					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 					   ORDER BY x.`xorder`) AS ref_type_title
 					, (SELECT FIRST 1 x.`xref` FROM `{$X}liberty_xref` x
-					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 					   ORDER BY x.`xorder`) AS ref_contact_id
 					, (SELECT FIRST 1 lc2.`title` FROM `{$X}liberty_xref` x
 					   JOIN `{$X}liberty_content` lc2 ON lc2.`content_id` = x.`xref`
-					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 					   ORDER BY x.`xorder`) AS ref_contact_name
 					, (SELECT FIRST 1 x.`item` FROM `{$X}liberty_xref` x
-					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 					   ORDER BY x.`xorder`) AS ref_type
 					, (SELECT FIRST 1 x.`data` FROM `{$X}liberty_xref` x
-					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 					   ORDER BY x.`xorder`) AS ref_from_data
 				FROM `".BIT_DB_PREFIX."liberty_content` lc
 					LEFT JOIN `".BIT_DB_PREFIX."users_users` uue ON uue.`user_id` = lc.`modifier_user_id`
@@ -208,9 +208,9 @@ class StockMovement extends LibertyContent {
 	 */
 	public function getDirection(): string {
 		$refType = $this->mInfo['ref_type'] ?? null;
-		if( $refType === 'REQN' )                           return 'O';
+		if( in_array( $refType, [ 'REQN', 'PBLD' ] ) )     return 'O';
 		if( in_array( $refType, [ 'TRANS', 'ORDER' ] ) )   return 'I';
-		return 'O';
+		return '';
 	}
 
 	/** @return bool  TRUE when lc.event_time is non-zero (movement has been received). */
@@ -301,19 +301,22 @@ class StockMovement extends LibertyContent {
 
 		$whereSql = " AND lc.`content_type_guid` = '".STOCKMOVEMENT_CONTENT_TYPE_GUID."'";
 
-		if( !empty( $pListHash['ref_type'] ) && in_array( $pListHash['ref_type'], [ 'REQN', 'TRANS', 'ORDER' ] ) ) {
+		if( !empty( $pListHash['ref_type'] ) && in_array( $pListHash['ref_type'], [ 'REQN', 'TRANS', 'ORDER', 'PBLD' ] ) ) {
 			$joinSql  .= " INNER JOIN `".BIT_DB_PREFIX."liberty_xref` xrf ON xrf.`content_id` = lc.`content_id` AND xrf.`item` = ?";
 			$bindVars[] = $pListHash['ref_type'];
 		}
 
+		$partId    = 0;
+		$partIsAsm = false;
 		if( $this->verifyId( $pListHash['assembly_content_id'] ?? 0 ) ) {
+			$partId    = (int)$pListHash['assembly_content_id'];
+			$partIsAsm = true;
 			$joinSql  .= " INNER JOIN `".BIT_DB_PREFIX."liberty_xref` xasm ON xasm.`content_id` = lc.`content_id` AND xasm.`item` = 'ASSEMBLY' AND xasm.`xref` = ?";
-			$bindVars[] = (int)$pListHash['assembly_content_id'];
-		}
-		$cmpContentId = $this->verifyId( $pListHash['component_content_id'] ?? 0 ) ? (int)$pListHash['component_content_id'] : 0;
-		if( $cmpContentId ) {
+			$bindVars[] = $partId;
+		} elseif( $this->verifyId( $pListHash['component_content_id'] ?? 0 ) ) {
+			$partId    = (int)$pListHash['component_content_id'];
 			$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` xcf
-				WHERE xcf.`content_id` = lc.`content_id` AND xcf.`item` IN ('SGL','PRT','SHT','VOL') AND xcf.`xref` = $cmpContentId)";
+				WHERE xcf.`content_id` = lc.`content_id` AND xcf.`item` IN ('SGL','PRT','SHT','VOL') AND xcf.`xref` = $partId)";
 		}
 		if( $this->verifyId( $pListHash['user_id'] ?? 0 ) ) {
 			$whereSql .= " AND lc.`user_id` = ?";
@@ -330,8 +333,8 @@ class StockMovement extends LibertyContent {
 		$orderby = match( $sortMode ) {
 			'event_time_asc'       => ' ORDER BY lc.event_time ASC',
 			'event_time_desc'      => ' ORDER BY lc.event_time DESC',
-			'ref_start_date_asc'   => ' ORDER BY (SELECT FIRST 1 x.start_date FROM '.BIT_DB_PREFIX.'liberty_xref x WHERE x.content_id=lc.content_id AND x.item IN (\'REQN\',\'TRANS\',\'ORDER\') ORDER BY x.xorder) ASC',
-			'ref_start_date_desc'  => ' ORDER BY (SELECT FIRST 1 x.start_date FROM '.BIT_DB_PREFIX.'liberty_xref x WHERE x.content_id=lc.content_id AND x.item IN (\'REQN\',\'TRANS\',\'ORDER\') ORDER BY x.xorder) DESC',
+			'ref_start_date_asc'   => ' ORDER BY (SELECT FIRST 1 x.start_date FROM '.BIT_DB_PREFIX.'liberty_xref x WHERE x.content_id=lc.content_id AND x.item IN (\'REQN\',\'TRANS\',\'ORDER\',\'PBLD\') ORDER BY x.xorder) ASC',
+			'ref_start_date_desc'  => ' ORDER BY (SELECT FIRST 1 x.start_date FROM '.BIT_DB_PREFIX.'liberty_xref x WHERE x.content_id=lc.content_id AND x.item IN (\'REQN\',\'TRANS\',\'ORDER\',\'PBLD\') ORDER BY x.xorder) DESC',
 			default => !empty( $sortMode )
 				? ' ORDER BY '.$this->mDb->convertSortmode( $sortMode )
 				: ' ORDER BY lc.last_modified DESC',
@@ -351,26 +354,31 @@ class StockMovement extends LibertyContent {
 		);
 
 		$X = BIT_DB_PREFIX;
-		$cmpQtySelect = $cmpContentId
-			? ", (SELECT FIRST 1 x.`item` FROM `{$X}liberty_xref` x
-			      WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PRT','SHT','VOL') AND x.`xref` = $cmpContentId
-			      ORDER BY x.`xorder`) AS cmp_qty_type,
-			     (SELECT SUM(CAST(x.`xkey` AS DOUBLE PRECISION)) FROM `{$X}liberty_xref` x
-			      WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PRT','SHT','VOL') AND x.`xref` = $cmpContentId) AS cmp_qty"
-			: ", CAST(NULL AS VARCHAR(4)) AS cmp_qty_type, CAST(NULL AS DOUBLE PRECISION) AS cmp_qty";
+		if( $partIsAsm ) {
+			$partQtySelect = ", CAST(NULL AS VARCHAR(4)) AS part_qty_type
+			     , CAST(xasm.`xkey` AS DOUBLE PRECISION) AS part_qty";
+		} elseif( $partId ) {
+			$partQtySelect = ", (SELECT FIRST 1 x.`item` FROM `{$X}liberty_xref` x
+			      WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PRT','SHT','VOL') AND x.`xref` = $partId
+			      ORDER BY x.`xorder`) AS part_qty_type
+			     , (SELECT SUM(CAST(x.`xkey` AS DOUBLE PRECISION)) FROM `{$X}liberty_xref` x
+			      WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PRT','SHT','VOL') AND x.`xref` = $partId) AS part_qty";
+		} else {
+			$partQtySelect = ", CAST(NULL AS VARCHAR(4)) AS part_qty_type, CAST(NULL AS DOUBLE PRECISION) AS part_qty";
+		}
 
 		$query = "SELECT lc.`content_id`, lc.`title`, lc.`created`, lc.`last_modified`, lc.`event_time`,
-						uu.`login`, uu.`real_name`,
+						lc.`user_id`, uu.`login`, uu.`real_name`,
 						(SELECT FIRST 1 x.`item` FROM `{$X}liberty_xref` x
-						 WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+						 WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 						 ORDER BY x.`xorder`) AS ref_type,
 						(SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x
-						 WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+						 WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 						 ORDER BY x.`xorder`) AS ref_key,
 						(SELECT FIRST 1 x.`start_date` FROM `{$X}liberty_xref` x
-						 WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER')
+						 WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 						 ORDER BY x.`xorder`) AS ref_start_date
-						$cmpQtySelect
+						$partQtySelect
 						$selectSql
 				FROM `{$X}liberty_content` lc
 					INNER JOIN `{$X}users_users` uu ON uu.`user_id` = lc.`user_id`
@@ -456,7 +464,7 @@ class StockMovement extends LibertyContent {
 				if( $ref !== '' ) {
 					$existingRow = $this->mDb->getRow(
 						"SELECT `xref_id`, `item` FROM `".BIT_DB_PREFIX."liberty_xref`
-						 WHERE `content_id` = ? AND `item` IN ('REQN','TRANS','ORDER') ORDER BY `xorder`",
+						 WHERE `content_id` = ? AND `item` IN ('REQN','TRANS','ORDER','PBLD') ORDER BY `xorder`",
 						[ $this->mContentId ]
 					);
 					// Preserve existing type if already set; default to TRANS for new rows
@@ -482,7 +490,7 @@ class StockMovement extends LibertyContent {
 							$this->mDb->query(
 								"UPDATE `".BIT_DB_PREFIX."liberty_xref`
 								 SET `start_date` = ?
-								 WHERE `content_id` = ? AND `item` IN ('REQN','TRANS','ORDER')",
+								 WHERE `content_id` = ? AND `item` IN ('REQN','TRANS','ORDER','PBLD')",
 								[ date( 'Y-m-d H:i:s', $ts ), $this->mContentId ]
 							);
 						}

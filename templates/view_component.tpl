@@ -59,7 +59,7 @@
 					{/if}
 				</tbody>
 			</table>
-			<a class="btn btn-default btn-xs" href="{$smarty.const.STOCK_PKG_URL}list_movements.php?component_content_id={$gContent->mContentId}">{tr}Stock history{/tr}</a>
+			<a class="btn btn-default btn-xs" href="{$smarty.const.STOCK_PKG_URL}list_movements.php?part_content_id={$gContent->mContentId}">{tr}Stock history{/tr}</a>
 			{/jstab}
 		{/jstabs}
 	</section>

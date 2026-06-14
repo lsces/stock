@@ -23,6 +23,9 @@ $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );
 
 $gContent->loadXrefInfo();
 $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
-$gBitSmarty->assign( 'isReqn', ( ( $gContent->mInfo['ref_type'] ?? '' ) === 'REQN' ) );
+$refType = $gContent->mInfo['ref_type'] ?? '';
+$gBitSmarty->assign( 'isReqn',  $refType === 'REQN' );
+$gBitSmarty->assign( 'isPbld',  $refType === 'PBLD' );
+$gBitSmarty->assign( 'isBuild', in_array( $refType, [ 'REQN', 'PBLD' ] ) );
 
 $gBitSystem->display( 'bitpackage:stock/view_movement.tpl', $gContent->getTitle() );

@@ -47,7 +47,7 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 		if( !empty( $_REQUEST['movement_type'] ) && isset( $refTypes[$_REQUEST['movement_type']] ) ) {
 			$existingRef = $gBitDb->getRow(
 				"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref`
-				 WHERE `content_id`=? AND `item` IN ('REQN','TRANS','ORDER') ORDER BY `xorder`",
+				 WHERE `content_id`=? AND `item` IN ('REQN','TRANS','ORDER','PBLD') ORDER BY `xorder`",
 				[ $gContent->mContentId ]
 			);
 			$refHash = [
@@ -66,7 +66,7 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 		if( !empty( $_REQUEST['ordered_date'] ) && ($ts = parseMovementDate( $_REQUEST['ordered_date'] )) ) {
 			$gBitDb->query(
 				"UPDATE `".BIT_DB_PREFIX."liberty_xref` SET `start_date`=?
-				 WHERE `content_id`=? AND `item` IN ('REQN','TRANS','ORDER')",
+				 WHERE `content_id`=? AND `item` IN ('REQN','TRANS','ORDER','PBLD')",
 				[ date( 'Y-m-d H:i:s', $ts ), $gContent->mContentId ]
 			);
 		}
@@ -187,8 +187,11 @@ $gBitSmarty->assign( 'orderedDateVal',   $orderedDateVal );
 $gBitSmarty->assign( 'receivedDateVal',  $receivedDateVal );
 $gBitSmarty->assign( 'contactLookupUrl', CONTACT_PKG_URL.'includes/lookup_contact.php' );
 
-$isReqn = ( ( $gContent->mInfo['ref_type'] ?? '' ) === 'REQN' );
-if( $isReqn ) {
+$refType = $gContent->mInfo['ref_type'] ?? '';
+$isReqn  = $refType === 'REQN';
+$isPbld  = $refType === 'PBLD';
+$isBuild = in_array( $refType, [ 'REQN', 'PBLD' ] );
+if( $isBuild ) {
 	$assembly      = new StockAssembly();
 	$asmHash       = [ 'show_empty' => true, 'sort_mode' => 'title_asc', 'max_records' => 1000 ];
 	$assemblyList  = $assembly->getList( $asmHash );
@@ -212,6 +215,8 @@ if( $isReqn ) {
 	) );
 }
 $gBitSmarty->assign( 'isReqn',   $isReqn );
+$gBitSmarty->assign( 'isPbld',   $isPbld );
+$gBitSmarty->assign( 'isBuild',  $isBuild );
 $gBitSmarty->assign( 'refTypes', $refTypes );
 $gBitSmarty->assign( 'errors',   $gContent->mErrors );
 

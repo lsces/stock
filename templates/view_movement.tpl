@@ -1,15 +1,19 @@
 {strip}
 <div class="display stock">
-	<div class="header">
+	<header>
 		<div class="floaticon">
-			{if $gBitUser->hasPermission('p_stock_create')}
+			{if $gContent->hasUpdatePermission()}
 				<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_movement.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit Movement"}</a>
 			{/if}
 		</div>
 		<h1>{$gContent->getTitle()|escape}</h1>
-	</div>
+		<small>
+			<a href="{$smarty.const.STOCK_PKG_URL}list_movements.php">{tr}Movements{/tr}</a>
+			&rsaquo; <a href="{$smarty.const.STOCK_PKG_URL}list_movements.php?user_id={$gContent->mInfo.user_id}">{$gContent->mInfo.creator|escape}</a>
+		</small>
+	</header>
 
-	<div class="body">
+	<section class="body">
 
 		<dl class="dl-horizontal">
 			<dt>{tr}Type{/tr}</dt>
@@ -26,11 +30,11 @@
 			<dt>{tr}Created{/tr}</dt>
 			<dd>{$gContent->mInfo.created|bit_short_datetime} {tr}by{/tr} {$gContent->mInfo.creator|escape}</dd>
 			{if $gContent->mInfo.ref_start_date}
-			<dt>{tr}Ordered{/tr}</dt>
+			<dt>{if $isPbld}{tr}Build Date{/tr}{else}{tr}Ordered{/tr}{/if}</dt>
 			<dd>{$gContent->mInfo.ref_start_date|bit_short_date}</dd>
 			{/if}
-			<dt>{tr}Received{/tr}</dt>
-			<dd>{if $gContent->isReceived()}{$gContent->mInfo.event_time|bit_short_date}{else}{tr}Pending{/tr}{/if}</dd>
+			<dt>{if $isPbld}{tr}Completed{/tr}{else}{tr}Received{/tr}{/if}</dt>
+			<dd>{if $gContent->isReceived()}{$gContent->mInfo.event_time|bit_short_date}{else}{if $isPbld}{tr}In progress{/tr}{else}{tr}Pending{/tr}{/if}{/if}</dd>
 			{if $gContent->mInfo.last_modified neq $gContent->mInfo.created}
 				<dt>{tr}Modified{/tr}</dt>
 				<dd>{$gContent->mInfo.last_modified|bit_short_datetime} {tr}by{/tr} {$gContent->mInfo.editor|escape}</dd>
@@ -44,7 +48,7 @@
 		{if $gXrefInfo->mGroups}
 			{jstabs}
 				{foreach $gXrefInfo->mGroups as $xrefGroup}
-					{if $xrefGroup->mXGroup neq 'reference' && ($xrefGroup->mXGroup neq 'assembly' || $isReqn)}
+					{if $xrefGroup->mXGroup neq 'reference' && ($xrefGroup->mXGroup neq 'assembly' || $isBuild)}
 						{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
 							xrefGroup=$xrefGroup
 							allow_add=false
@@ -54,6 +58,6 @@
 			{/jstabs}
 		{/if}
 
-	</div><!-- end .body -->
+	</section><!-- end .body -->
 </div><!-- end .stock -->
 {/strip}

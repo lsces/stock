@@ -18,15 +18,31 @@ $assemblyContentId = isset( $_REQUEST['assembly_content_id'] ) && is_numeric( $_
                      ? (int)$_REQUEST['assembly_content_id'] : null;
 $kitCount          = isset( $_REQUEST['kit_count'] ) && is_numeric( $_REQUEST['kit_count'] ) && (float)$_REQUEST['kit_count'] > 0
                      ? (float)$_REQUEST['kit_count'] : 1;
+$filterUserId      = isset( $_REQUEST['user_id'] ) && is_numeric( $_REQUEST['user_id'] )
+                     ? (int)$_REQUEST['user_id'] : null;
+$filterUserName    = '';
+if( $filterUserId ) {
+	$uRow = $gBitDb->getRow(
+		"SELECT `login`, `real_name` FROM `".BIT_DB_PREFIX."users_users` WHERE `user_id` = ?",
+		[ $filterUserId ]
+	);
+	$filterUserName = $uRow['real_name'] ?: $uRow['login'] ?: '';
+}
 
 $X = BIT_DB_PREFIX;
 
 $bindVars = [];
 
 if( $assemblyContentId ) {
-	// BOM view: start from BOM items so components with no movements still appear
+	// BOM view: start from BOM items so components with no movements still appear.
+	// Bind var order must match ? positions in the SQL: user_id (in subquery SELECT) first,
+	// then assemblyContentId (in FROM JOIN), then find (in WHERE).
+	$userSubSql = '';
+	if( $filterUserId ) {
+		$userSubSql = " AND mc.`user_id` = ?";
+		$bindVars[] = $filterUserId;
+	}
 	$findSql = $find !== '' ? " AND UPPER(lc.`title`) LIKE ?" : '';
-	if( $find !== '' ) $bindVars[] = '%'.strtoupper( $find ).'%';
 
 	$query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
 					bom.`item` AS qty_type,
@@ -49,7 +65,8 @@ if( $assemblyContentId ) {
 					 	AND mc.`content_type_guid` = 'stockmovement'
 					 WHERE mx.`xref` = lc.`content_id`
 					   AND mx.`item` = bom.`item`
-					   AND mx.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?') AS stock_level
+					   AND mx.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
+					   $userSubSql) AS stock_level
 			FROM `{$X}liberty_content` lc
 				INNER JOIN `{$X}liberty_xref` bom ON bom.`content_id` = ?
 					AND bom.`item` IN ('SGL','PRT','SHT','VOL')
@@ -58,11 +75,16 @@ if( $assemblyContentId ) {
 			$findSql
 			ORDER BY bom.`xorder`";
 	$bindVars[] = $assemblyContentId;
+	if( $find !== '' ) $bindVars[] = '%'.strtoupper( $find ).'%';
 } else {
 	// General list: only components with movement history
 	$whereSql = '';
+	if( $filterUserId ) {
+		$whereSql .= " AND mc.`user_id` = ?";
+		$bindVars[] = $filterUserId;
+	}
 	if( $find !== '' ) {
-		$whereSql = " AND UPPER(lc.`title`) LIKE ?";
+		$whereSql .= " AND UPPER(lc.`title`) LIKE ?";
 		$bindVars[] = '%'.strtoupper( $find ).'%';
 	}
 
@@ -187,5 +209,7 @@ $gBitSmarty->assign( 'find',               $find );
 $gBitSmarty->assign( 'showBom',            (bool)$assemblyContentId );
 $gBitSmarty->assign( 'showShortages',      $showShortages );
 $gBitSmarty->assign( 'kitCount',           $kitCount );
+$gBitSmarty->assign( 'filterUserId',       $filterUserId );
+$gBitSmarty->assign( 'filterUserName',     $filterUserName );
 
 $gBitSystem->display( 'bitpackage:stock/list_stock.tpl', 'Stock Levels', [ 'display_mode' => 'list' ] );

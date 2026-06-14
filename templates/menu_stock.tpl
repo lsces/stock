@@ -12,7 +12,7 @@
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}edit_component.php">{biticon ipackage="icons" iname="kt-add-filters" iexplain="Create a Component" ilocation=menu}</a></li>
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}edit_assembly.php">{biticon ipackage="icons" iname="view-list-icons" iexplain="Create an Assembly" ilocation=menu}</a></li>
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}edit_movement.php">{biticon ipackage="icons" iname="view-task-add" iexplain="Add Movement" ilocation=menu}</a></li>
-		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}add_requisition.php">{biticon ipackage="icons" iname="view-task-child-add" iexplain="Create Requisition" ilocation=menu}</a></li>
+		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}add_prebuild.php">{biticon ipackage="icons" iname="package-x-generic" iexplain="Create Prebuild" ilocation=menu}</a></li>
 	{/if}
 </ul>
 {/strip}
