@@ -48,6 +48,8 @@
 				{/jstabs}
 			{/if}
 
+			{include file="bitpackage:liberty/edit_content_owner_inc.tpl"}
+
 			<div class="form-group submit">
 				{if $gContent->isValid()}
 					<input type="submit" class="btn btn-default" name="cancelgallery" value="{tr}Cancel{/tr}"/>

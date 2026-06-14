@@ -97,6 +97,8 @@
 			</div>
 			{/if}
 
+			{include file="bitpackage:liberty/edit_content_owner_inc.tpl"}
+
 			<div class="form-group submit">
 				<input type="submit" class="btn btn-primary" name="fSave" value="{tr}Save{/tr}" />
 				{if $gContent->isValid() && $gBitUser->hasPermission('p_stock_expunge')}
