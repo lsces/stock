@@ -46,8 +46,8 @@
 							{if $gal.is_hidden|default:'n' == 'y' || $gal.is_private|default:'n' == 'y' || $gal.access_answer|default:false}
 								{biticon ipackage="icons" iname="lock" iexplain="Restricted"}
 							{/if}
-							{if $gal.data}
-								<br/><small class="text-muted">{$gal.data|truncate:250|escape}</small>
+							{if $gal.parsed_data}
+								<br/><small class="text-muted">{$gal.parsed_data|strip_tags|truncate:250}</small>
 							{/if}
 						</td>
 						{if $gBitSystem->isFeatureActive('stock_list_user')}<td>{displayname hash=$gal nolink=true}</td>{/if}
