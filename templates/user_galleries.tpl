@@ -37,8 +37,14 @@
 							<dl class="dl-horizontal small" style="margin-bottom:0">
 								<dt>{tr}Components{/tr}</dt>
 								<dd>{$gal.component_count}</dd>
-								<dt>{tr}Prebuilt{/tr}</dt>
-								<dd>{$gal.prebuild_count|string_format:"%.0f"}</dd>
+								{if $gal.prebuild_content_id}
+									{assign var=pbldUrl value="`$smarty.const.STOCK_PKG_URL`view_movement.php?content_id=`$gal.prebuild_content_id`"}
+									<dt><a href="{$pbldUrl}">{tr}Prebuilt{/tr}</a></dt>
+									<dd><a href="{$pbldUrl}">{$gal.prebuild_count|string_format:"%.0f"}</a></dd>
+								{else}
+									<dt>{tr}Prebuilt{/tr}</dt>
+									<dd>{$gal.prebuild_count|string_format:"%.0f"}</dd>
+								{/if}
 							</dl>
 						</div>
 					</div>

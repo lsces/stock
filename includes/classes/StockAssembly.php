@@ -1007,6 +1007,13 @@ class StockAssembly extends StockBase {
 		         AND mc.`content_type_guid` = 'stockmovement' AND mc.`user_id` = lc.`user_id`
 		     INNER JOIN `{$X}liberty_xref` xpbld ON xpbld.`content_id` = xasm.`content_id` AND xpbld.`item` = 'PBLD'
 		     WHERE xasm.`item` = 'ASSEMBLY' AND xasm.`xref` = lc.`content_id`) AS `prebuild_count`";
+		$selectSql .= ", (SELECT FIRST 1 xpbld.`content_id`
+		     FROM `{$X}liberty_xref` xasm
+		     INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = xasm.`content_id`
+		         AND mc.`content_type_guid` = 'stockmovement' AND mc.`user_id` = lc.`user_id`
+		     INNER JOIN `{$X}liberty_xref` xpbld ON xpbld.`content_id` = xasm.`content_id` AND xpbld.`item` = 'PBLD'
+		     WHERE xasm.`item` = 'ASSEMBLY' AND xasm.`xref` = lc.`content_id`
+		     ORDER BY mc.`created` DESC) AS `prebuild_content_id`";
 
 		if( !empty( $pListHash['stgrp'] ) ) {
 			$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` sx WHERE sx.`content_id` = lc.`content_id` AND sx.`item` = ?)";
