@@ -29,6 +29,7 @@ $refTypes = $gBitDb->getAssoc(
 	 FROM `".BIT_DB_PREFIX."liberty_xref_item` xi
 	 JOIN `".BIT_DB_PREFIX."liberty_xref_group` xg ON xg.`x_group` = xi.`x_group` AND xg.`content_type_guid` = xi.`content_type_guid`
 	 WHERE xi.`content_type_guid` = '".STOCKMOVEMENT_CONTENT_TYPE_GUID."' AND xi.`x_group` = 'reference'
+	   AND xi.`item` IN ('ORDER','TRANS')
 	 ORDER BY xi.`item`"
 );
 

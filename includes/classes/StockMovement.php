@@ -109,6 +109,9 @@ class StockMovement extends LibertyContent {
 					, (SELECT FIRST 1 x.`item` FROM `{$X}liberty_xref` x
 					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 					   ORDER BY x.`xorder`) AS ref_type
+					, (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x
+					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
+					   ORDER BY x.`xorder`) AS ref_key
 					, (SELECT FIRST 1 x.`data` FROM `{$X}liberty_xref` x
 					   WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('REQN','TRANS','ORDER','PBLD')
 					   ORDER BY x.`xorder`) AS ref_from_data
