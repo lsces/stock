@@ -44,12 +44,12 @@
 							</td>
 							<td>
 								{if $row.xref > 0}
-									<a href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$row.xref|escape}">{$row.xref_title|default:$row.xref|escape}</a>
+									<a href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$row.xref|escape}">{$row.linked_title|default:$row.xref|escape}</a>
 								{else}
 									&nbsp;
 								{/if}
 							</td>
-							<td>{$row.xref_data|escape}</td>
+							<td>{$row.linked_data|escape}</td>
 							<td>
 								{$row.xkey|escape}
 								{if $row.item eq 'PRT' && $row.part_size} of {$row.part_size|escape}{if $row.part_size_ext} {$row.part_size_ext|escape}{/if}{/if}
