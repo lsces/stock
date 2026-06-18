@@ -11,7 +11,7 @@
 
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
 		{if $gContent->mInfo.data}
-			<p>{$gContent->mInfo.data|escape}</p>
+			<div class="content">{$gContent->getParsedData()}</div>
 		{/if}
 	</section>
 
