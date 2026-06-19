@@ -4,6 +4,9 @@
 	{if $gBitUser->hasPermission('p_stock_view')}
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}view_kitlocker.php">{biticon ipackage="icons" iname="view-grid-symbolic" iexplain="Kitlocker" ilocation=menu}</a></li>
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}list_assemblies.php">{biticon ipackage="icons" iname="view-group" iexplain="List Assemblies" ilocation=menu}</a></li>
+		{if $gBitUser->hasPermission('p_contact_view')}
+			<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}list_elves.php">{biticon ipackage="icons" iname="contact-new" iexplain="Kit Elves" ilocation=menu}</a></li>
+		{/if}
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}list_components.php">{biticon ipackage="icons" iname="view-list-tree" iexplain="List Components" ilocation=menu}</a></li>
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}list_movements.php">{biticon ipackage="icons" iname="view-list-details" iexplain="List Movements" ilocation=menu}</a></li>
 		<li><a class="item" href="{$smarty.const.STOCK_PKG_URL}list_stock.php">{biticon ipackage="icons" iname="view-form-table" iexplain="Stock Levels" ilocation=menu}</a></li>
