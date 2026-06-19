@@ -27,7 +27,7 @@
 						{else}
 							<a href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$item.content_id}">{$item.title|escape}</a>
 						{/if}
-						{if $item.data}<br/><small class="text-muted">{$item.data|truncate:120|escape}</small>{/if}
+						{if $item.parsed_data}<br/><small class="text-muted">{$item.parsed_data|strip_tags|truncate:120}</small>{/if}
 					</td>
 					<td>{if $item.content_type_guid eq 'stockassembly'}{tr}Assembly{/tr}{else}{tr}Component{/tr}{/if}</td>
 					<td>{$item.klid|escape}</td>

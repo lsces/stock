@@ -7,6 +7,7 @@
 namespace Bitweaver\Stock;
 
 use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyContent;
 
 require_once '../kernel/includes/setup_inc.php';
 
@@ -35,7 +36,7 @@ if( $stgrp ) {
 }
 
 $items = $gBitDb->getAll(
-	"SELECT lc.`content_id`, lc.`title`, lc.`data`, lc.`content_type_guid`,
+	"SELECT lc.`content_id`, lc.`title`, lc.`data`, lc.`format_guid`, lc.`content_type_guid`,
 		(SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x
 		 WHERE x.`content_id` = lc.`content_id` AND x.`item` = 'KLID') AS klid,
 		(SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x
@@ -45,6 +46,12 @@ $items = $gBitDb->getAll(
 	 ORDER BY lc.`title`",
 	$bindVars
 );
+
+foreach( $items as &$row ) {
+	$parseHash = [ 'data' => $row['data'], 'format_guid' => $row['format_guid'] ?? 'bithtml' ];
+	$row['parsed_data'] = LibertyContent::parseDataHash( $parseHash );
+}
+unset( $row );
 
 $gBitSmarty->assign( 'kitlockerItems', $items );
 $gBitSmarty->assign( 'stgrp',          $stgrp );
