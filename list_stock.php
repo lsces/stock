@@ -6,6 +6,8 @@
 
 namespace Bitweaver\Stock;
 
+use Bitweaver\BitBase;
+
 require_once '../kernel/includes/setup_inc.php';
 
 global $gBitSystem, $gBitSmarty, $gBitDb;
@@ -30,6 +32,16 @@ if( $filterUserId ) {
 }
 
 $X = BIT_DB_PREFIX;
+
+$listHash = $_REQUEST;
+if( !$assemblyContentId ) {
+	if( empty( $listHash['max_records'] ) ) {
+		$listHash['max_records'] = 20;
+	}
+	BitBase::prepGetList( $listHash );
+}
+$maxRecords = $listHash['max_records'] ?? 20;
+$offset     = $listHash['offset'] ?? 0;
 
 $bindVars = [];
 
@@ -201,6 +213,17 @@ if( $showShortages && isset( $_REQUEST['format'] ) && $_REQUEST['format'] === 'c
 	}
 	fclose( $out );
 	exit;
+}
+
+if( !$assemblyContentId ) {
+	$listHash['cant']         = count( $stockList );
+	$stockList                = array_slice( $stockList, $offset, $maxRecords, true );
+	$listHash['page_records'] = count( $stockList );
+	if( $filterUserId )  $listHash['listInfo']['parameters']['user_id']   = $filterUserId;
+	if( $find !== '' )   $listHash['listInfo']['parameters']['find']      = $find;
+	if( $showShortages ) $listHash['listInfo']['parameters']['shortages'] = 1;
+	BitBase::postGetList( $listHash );
+	$gBitSmarty->assign( 'listInfo', $listHash['listInfo'] );
 }
 
 $gBitSmarty->assign( 'stockList',          $stockList );
