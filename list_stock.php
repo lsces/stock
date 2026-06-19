@@ -46,7 +46,7 @@ if( $assemblyContentId ) {
 
 	$query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
 					bom.`item` AS qty_type,
-					CAST(bom.`xkey` AS DOUBLE PRECISION) AS bom_qty,
+					CASE WHEN bom.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?' THEN CAST(bom.`xkey` AS DOUBLE PRECISION) ELSE NULL END AS bom_qty,
 					bom.`xorder` AS bom_xorder,
 					(SELECT FIRST 1 sup.`xkey`
 					 FROM `{$X}liberty_xref` sup
@@ -54,7 +54,8 @@ if( $assemblyContentId ) {
 					 ORDER BY sup.`xorder`) AS part_number,
 					(SELECT FIRST 1 CAST(pk.`xkey` AS DOUBLE PRECISION)
 					 FROM `{$X}liberty_xref` pk
-					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PRT') AS part_size,
+					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PRT'
+					   AND pk.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?') AS part_size,
 					(SELECT SUM( CASE WHEN EXISTS (
 							SELECT 1 FROM `{$X}liberty_xref` r
 							WHERE r.`content_id` = mx.`content_id` AND r.`item` IN ('TRANS','ORDER')
@@ -98,7 +99,8 @@ if( $assemblyContentId ) {
 					 ORDER BY sup.`xorder`) AS part_number,
 					(SELECT FIRST 1 CAST(pk.`xkey` AS DOUBLE PRECISION)
 					 FROM `{$X}liberty_xref` pk
-					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PRT') AS part_size,
+					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PRT'
+					   AND pk.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?') AS part_size,
 					SUM( CASE WHEN EXISTS (
 						SELECT 1 FROM `{$X}liberty_xref` r
 						WHERE r.`content_id` = x.`content_id` AND r.`item` IN ('TRANS','ORDER')
