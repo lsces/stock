@@ -172,8 +172,8 @@ if( $showShortages ) {
 
 // Assembly selector list
 $assembly = new StockAssembly();
-$listHash = [ 'show_empty' => true, 'sort_mode' => 'title_asc', 'max_records' => 500 ];
-$assemblyList = $assembly->getList( $listHash );
+$asmHash = [ 'show_empty' => true, 'sort_mode' => 'title_asc', 'max_records' => 500 ];
+$assemblyList = $assembly->getList( $asmHash );
 
 // Load selected assembly title for display
 $assemblyTitle = '';
