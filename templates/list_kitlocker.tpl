@@ -38,7 +38,7 @@
 				{/foreach}
 			</tbody>
 		</table>
-		{include file="bitpackage:kernel/pagination.tpl"}
+		{pagination stgrp=$stgrp|default:''}
 	</section>
 </div>
 {/strip}
