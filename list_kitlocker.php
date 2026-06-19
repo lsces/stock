@@ -8,6 +8,7 @@ namespace Bitweaver\Stock;
 
 use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyContent;
+use Bitweaver\BitBase;
 
 require_once '../kernel/includes/setup_inc.php';
 
@@ -35,7 +36,16 @@ if( $stgrp ) {
 	$groupTitle = null;
 }
 
-$items = $gBitDb->getAll(
+$maxRecords = max( 1, (int)( $_REQUEST['max_records'] ?? 20 ) );
+$page       = max( 1, (int)( $_REQUEST['page'] ?? 1 ) );
+$offset     = ( $page - 1 ) * $maxRecords;
+
+$totalCount = (int)$gBitDb->getOne(
+	"SELECT COUNT(*) FROM `{$X}liberty_content` lc WHERE 1=1 $whereSql",
+	$bindVars
+);
+
+$rs = $gBitDb->query(
 	"SELECT lc.`content_id`, lc.`title`, lc.`data`, lc.`format_guid`, lc.`content_type_guid`,
 		(SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x
 		 WHERE x.`content_id` = lc.`content_id` AND x.`item` = 'KLID') AS klid,
@@ -44,18 +54,32 @@ $items = $gBitDb->getAll(
 	 FROM `{$X}liberty_content` lc
 	 WHERE 1=1 $whereSql
 	 ORDER BY lc.`title`",
-	$bindVars
+	$bindVars, $maxRecords, $offset
 );
 
-foreach( $items as &$row ) {
+$items = [];
+while( $row = $rs->fetchRow() ) {
 	$parseHash = [ 'data' => $row['data'], 'format_guid' => $row['format_guid'] ?? 'bithtml' ];
 	$row['parsed_data'] = LibertyContent::parseDataHash( $parseHash );
+	$items[] = $row;
 }
-unset( $row );
+
+$listHash = [
+	'cant'         => $totalCount,
+	'max_records'  => $maxRecords,
+	'offset'       => $offset,
+	'page'         => $page,
+	'page_records' => count( $items ),
+];
+if( $stgrp ) {
+	$listHash['listInfo']['parameters']['stgrp'] = $stgrp;
+}
+BitBase::postGetList( $listHash );
 
 $gBitSmarty->assign( 'kitlockerItems', $items );
 $gBitSmarty->assign( 'stgrp',          $stgrp );
 $gBitSmarty->assign( 'groupTitle',     $groupTitle );
+$gBitSmarty->assign( 'listInfo',       $listHash['listInfo'] );
 
 $pageTitle = $groupTitle ?: KernelTools::tra( 'Kitlocker' );
 $gBitSystem->setBrowserTitle( $pageTitle );

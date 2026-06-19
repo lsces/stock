@@ -38,6 +38,7 @@
 				{/foreach}
 			</tbody>
 		</table>
+		{include file="bitpackage:kernel/pagination.tpl"}
 	</section>
 </div>
 {/strip}
