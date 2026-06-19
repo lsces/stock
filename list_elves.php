@@ -10,7 +10,7 @@ namespace Bitweaver\Stock;
 require_once '../kernel/includes/setup_inc.php';
 
 $gBitSystem->verifyPackage( 'stock' );
-$gBitUser->requirePermission( 'p_contact_view' );
+$gBitSystem->verifyPermission( 'p_contact_view' );
 
 global $gBitSystem, $gBitSmarty, $gBitDb;
 
