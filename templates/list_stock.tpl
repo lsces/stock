@@ -106,7 +106,7 @@
 		{else}
 			<p class="muted">{tr}No stock records found.{/tr}</p>
 		{/if}
-		{if $listInfo}{include file="bitpackage:kernel/pagination.tpl"}{/if}
+		{pagination user_id=$filterUserId|default:'' find=$find|default:''}
 
 	</section>
 </div>
