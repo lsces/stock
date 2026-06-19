@@ -36,9 +36,10 @@ if( $stgrp ) {
 	$groupTitle = null;
 }
 
-$maxRecords = max( 1, (int)( $_REQUEST['max_records'] ?? 20 ) );
-$page       = max( 1, (int)( $_REQUEST['page'] ?? 1 ) );
-$offset     = ( $page - 1 ) * $maxRecords;
+$listHash = $_REQUEST;
+BitBase::prepGetList( $listHash );
+$maxRecords = $listHash['max_records'];
+$offset     = $listHash['offset'];
 
 $totalCount = (int)$gBitDb->getOne(
 	"SELECT COUNT(*) FROM `{$X}liberty_content` lc WHERE 1=1 $whereSql",
@@ -64,13 +65,8 @@ while( $row = $rs->fetchRow() ) {
 	$items[] = $row;
 }
 
-$listHash = [
-	'cant'         => $totalCount,
-	'max_records'  => $maxRecords,
-	'offset'       => $offset,
-	'page'         => $page,
-	'page_records' => count( $items ),
-];
+$listHash['cant']         = $totalCount;
+$listHash['page_records'] = count( $items );
 if( $stgrp ) {
 	$listHash['listInfo']['parameters']['stgrp'] = $stgrp;
 }
