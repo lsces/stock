@@ -4,7 +4,7 @@
 		<div class="floaticon">
 		</div>
 		<h1>{if $groupTitle}{$groupTitle|escape}{else}{tr}Kitlocker{/tr}{/if}</h1>
-		{if $stgrp}<small><a href="{$smarty.const.STOCK_PKG_URL}view_kitlocker.php">&lsaquo; {tr}Kitlocker{/tr}</a></small>{/if}
+		<small><a href="{$smarty.const.STOCK_PKG_URL}view_kitlocker.php">&lsaquo; {tr}Kitlocker{/tr}</a></small>
 	</header>
 
 	<section class="body">
