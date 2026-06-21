@@ -74,9 +74,11 @@ class StockComponent extends StockBase {
 
 			$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
 
+			$X = BIT_DB_PREFIX;
 			$sql = "SELECT lc.* $selectSql
 						, uue.`login` AS `modifier_user`, uue.`real_name` AS `modifier_real_name`
 						, uuc.`login` AS `creator_user`, uuc.`real_name` AS `creator_real_name`
+						, (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` = 'KLID') AS `klid`
 					FROM `".BIT_DB_PREFIX."liberty_content` lc
 						LEFT JOIN `".BIT_DB_PREFIX."users_users` uue ON (uue.`user_id` = lc.`modifier_user_id`)
 						LEFT JOIN `".BIT_DB_PREFIX."users_users` uuc ON (uuc.`user_id` = lc.`user_id`) $joinSql
@@ -214,6 +216,9 @@ class StockComponent extends StockBase {
 
 		$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
 
+		$X = BIT_DB_PREFIX;
+		$selectSql .= ", (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` = 'KLID') AS `klid`";
+
 		$orderby = !empty( $pListHash['sort_mode'] )
 			? " ORDER BY ".$this->mDb->convertSortmode( $pListHash['sort_mode'] )
 			: '';
@@ -239,6 +244,7 @@ class StockComponent extends StockBase {
 		if( $rows = $this->mDb->query( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'] ) ) {
 			foreach( $rows as $row ) {
 				$row['display_url']    = static::getDisplayUrlFromHash( $row );
+				$row['title']          = static::getTitleFromHash( $row );
 				$ret[$row['hash_key']] = $row;
 			}
 		}
@@ -312,6 +318,9 @@ class StockComponent extends StockBase {
 				if( !empty( $pHash['content_id'] ) ) {
 					$ret .= ' '.$pHash['content_id'];
 				}
+			}
+			if( !empty( $pHash['klid'] ) ) {
+				$ret .= ' ('.$pHash['klid'].')';
 			}
 			return $ret;
 		}
