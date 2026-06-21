@@ -37,6 +37,10 @@ if (!empty($_REQUEST['user_id']) && is_numeric($_REQUEST['user_id'])) {
 
 $galleryList = $gStockAssembly->getList( $_REQUEST );
 $gStockAssembly->invokeServices( 'content_list_function', $_REQUEST );
+$_REQUEST['listInfo']['parameters'] = array_filter( [
+	'user_id'    => !empty( $_REQUEST['user_id'] )    ? (int)$_REQUEST['user_id']    : '',
+	'gallery_id' => !empty( $_REQUEST['gallery_id'] ) ? (int)$_REQUEST['gallery_id'] : '',
+] );
 $gBitSmarty->assign( 'listInfo', $_REQUEST['listInfo'] );
 
 $gBitSmarty->assign( 'galleryList', $galleryList );

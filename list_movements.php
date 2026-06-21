@@ -59,6 +59,11 @@ if( $filterUserId ) {
 	$filterUserName = $uRow['real_name'] ?: $uRow['login'] ?: '';
 }
 
+$listHash['listInfo']['parameters'] = array_filter( [
+	'part_content_id' => $partContentId ?: '',
+	'ref_type'        => $_REQUEST['ref_type'] ?? '',
+	'user_id'         => $filterUserId ?: '',
+] );
 $gBitSmarty->assign( 'listInfo',       $listHash['listInfo'] );
 $gBitSmarty->assign( 'movementList',   $movementList );
 $gBitSmarty->assign( 'filterType',     $_REQUEST['ref_type'] ?? '' );

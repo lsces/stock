@@ -29,6 +29,11 @@ if( !isset( $_REQUEST['hide_kitlocker'] ) && empty( $_REQUEST['filter_submitted'
 
 $componentList = $component->getList( $_REQUEST );
 $component->invokeServices( 'content_list_function', $_REQUEST );
+$_REQUEST['listInfo']['parameters'] = array_filter( [
+	'user_id'          => !empty( $_REQUEST['user_id'] ) ? (int)$_REQUEST['user_id'] : '',
+	'hide_kitlocker'   => $_REQUEST['hide_kitlocker']   ?? '',
+	'filter_submitted' => $_REQUEST['filter_submitted'] ?? '',
+] );
 $gBitSmarty->assign( 'listInfo', $_REQUEST['listInfo'] );
 $gBitSmarty->assign( 'componentList', $componentList );
 $gBitSmarty->assign( 'hideKitlocker', (bool)$_REQUEST['hide_kitlocker'] );

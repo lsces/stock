@@ -46,12 +46,12 @@
 		<table class="table table-striped table-hover">
 			<thead>
 				<tr>
-					<th>{smartlink ititle="Reference" isort="title"}</th>
+					<th>{smartlink ititle="Reference" isort="title" icontrol=$listInfo}</th>
 					<th>{tr}Type{/tr}</th>
 					{if $partContentId}<th class="text-right">{tr}Qty{/tr}</th>{/if}
-					<th>{smartlink ititle="Ordered" isort="ref_start_date" ifile="list_movements.php" ipackage="stock"}</th>
-					<th>{smartlink ititle="Received" isort="event_time" ifile="list_movements.php" ipackage="stock"}</th>
-					<th>{smartlink ititle="Date" isort="created_desc"}</th>
+					<th>{smartlink ititle="Ordered" isort="ref_start_date" ifile="list_movements.php" ipackage="stock" icontrol=$listInfo}</th>
+					<th>{smartlink ititle="Received" isort="event_time" ifile="list_movements.php" ipackage="stock" icontrol=$listInfo}</th>
+					<th>{smartlink ititle="Date" isort="created_desc" icontrol=$listInfo}</th>
 					<th>{tr}Creator{/tr}</th>
 					{if $gBitUser->hasPermission('p_stock_update')}<th></th>{/if}
 				</tr>
