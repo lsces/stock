@@ -207,6 +207,26 @@ class StockMovement extends LibertyContent {
 			}
 		}
 		unset( $row );
+
+		$asmGroup = $this->mXrefInfo->mGroups['assembly'] ?? null;
+		if( !$asmGroup || empty( $asmGroup->mXrefs ) ) return;
+		$asmXrefIds = array_values( array_unique( array_filter(
+			array_map( fn($r) => $r['xref'], $asmGroup->mXrefs )
+		) ) );
+		if( !$asmXrefIds ) return;
+		$klidMap = $this->mDb->getAssoc(
+			"SELECT lc.`content_id`, klid.`xkey`
+			 FROM `".BIT_DB_PREFIX."liberty_content` lc
+			 INNER JOIN `".BIT_DB_PREFIX."liberty_xref` klid ON klid.`content_id` = lc.`content_id` AND klid.`item` = 'KLID'
+			 WHERE lc.`content_id` IN (".implode( ',', array_fill( 0, count( $asmXrefIds ), '?' ) ).")",
+			$asmXrefIds
+		);
+		foreach( $asmGroup->mXrefs as &$row ) {
+			if( !empty( $row['xref'] ) && !empty( $klidMap[$row['xref']] ) ) {
+				$row['linked_title'] .= ' ('.$klidMap[$row['xref']].')';
+			}
+		}
+		unset( $row );
 	}
 
 	/**
