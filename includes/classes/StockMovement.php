@@ -190,8 +190,10 @@ class StockMovement extends LibertyContent {
 		if( !$componentIds ) return;
 		$components = $this->mDb->getAssoc(
 			"SELECT lc.`content_id`, pck.`xkey` AS `part_size`, pck.`xkey_ext` AS `part_size_ext`
+			      , klid.`xkey` AS `klid`
 			 FROM `".BIT_DB_PREFIX."liberty_content` lc
-			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck ON pck.`content_id` = lc.`content_id` AND pck.`item` = 'PRT'
+			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` pck  ON pck.`content_id`  = lc.`content_id` AND pck.`item`  = 'PRT'
+			 LEFT JOIN `".BIT_DB_PREFIX."liberty_xref` klid ON klid.`content_id` = lc.`content_id` AND klid.`item` = 'KLID'
 			 WHERE lc.`content_id` IN (".implode( ',', array_fill( 0, count( $componentIds ), '?' ) ).")",
 			$componentIds
 		);
@@ -199,6 +201,9 @@ class StockMovement extends LibertyContent {
 			if( !empty( $row['xref'] ) && isset( $components[$row['xref']] ) ) {
 				$row['part_size']     = $components[$row['xref']]['part_size'];
 				$row['part_size_ext'] = $components[$row['xref']]['part_size_ext'];
+				if( !empty( $components[$row['xref']]['klid'] ) ) {
+					$row['linked_title'] .= ' ('.$components[$row['xref']]['klid'].')';
+				}
 			}
 		}
 		unset( $row );
