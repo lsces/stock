@@ -22,8 +22,8 @@ if( !empty( $_REQUEST['find'] ) ) {
 	$_REQUEST['search'] = $_REQUEST['find'];
 }
 
-// Default on — hide pure kitlocker components; show those also supplied by kitlocker to elves
-if( !isset( $_REQUEST['hide_kitlocker'] ) ) {
+// Default on unless the filter form has been submitted (sentinel field present)
+if( !isset( $_REQUEST['hide_kitlocker'] ) && empty( $_REQUEST['filter_submitted'] ) ) {
 	$_REQUEST['hide_kitlocker'] = 1;
 }
 

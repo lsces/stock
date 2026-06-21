@@ -6,6 +6,7 @@
 				<a href="{$smarty.const.STOCK_PKG_URL}edit_component.php">{biticon ipackage="icons" iname="kt-add-filters" iexplain="Create Component"}</a>
 			{/if}
 			<form class="minifind" action="{$smarty.const.STOCK_PKG_URL}list_components.php" method="get">
+				<input type="hidden" name="filter_submitted" value="1" />
 				<div class="form-inline">
 					<div class="form-group">
 						<input class="form-control input-sm" type="text" name="find" placeholder="{tr}Components{/tr}" value="{$smarty.request.find|escape}" />
