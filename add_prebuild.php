@@ -92,10 +92,10 @@ if( $itemIds ) {
 	);
 	foreach( $klidRows as $r ) { $klidMap[$r['content_id']] = $r['xkey']; }
 }
-$itemListJson = json_encode( array_map(
+$itemListJson = json_encode( array_values( array_map(
 	fn( $i ) => [ 'id' => (int)$i['content_id'], 'text' => $i['title'], 'klid' => $klidMap[$i['content_id']] ?? '' ],
 	$assemblyList
-) );
+) ) );
 $preselectTitle = '';
 if( $preselect ) {
 	foreach( $assemblyList as $item ) {
