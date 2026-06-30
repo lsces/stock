@@ -48,7 +48,7 @@
 				<tr>
 					<th>{smartlink ititle="Reference" isort="title" icontrol=$listInfo}</th>
 					<th>{tr}Type{/tr}</th>
-					{if $partContentId}<th class="text-right">{tr}Qty{/tr}</th>{/if}
+					{if $partContentId}<th class="text-right">{tr}Qty{/tr}{if $partQtyNet !== null} ({$partQtyNet|string_format:"%.0f"}){/if}</th>{/if}
 					<th>{smartlink ititle="Ordered" isort="ref_start_date" ifile="list_movements.php" ipackage="stock" icontrol=$listInfo}</th>
 					<th>{smartlink ititle="Received" isort="event_time" ifile="list_movements.php" ipackage="stock" icontrol=$listInfo}</th>
 					<th>{smartlink ititle="Date" isort="created_desc" icontrol=$listInfo}</th>
@@ -63,9 +63,9 @@
 						<td>{$mov.ref_type|escape|default:'—'}</td>
 						{if $partContentId}
 							{if $partType eq 'assembly'}
-								<td class="text-right">{$mov.part_qty|string_format:"%.0f"}</td>
+								<td class="text-right">{if $mov.ref_type eq 'REQN' or $mov.ref_type eq 'PBLD'}-{/if}{$mov.part_qty|string_format:"%.0f"}</td>
 							{else}
-								<td class="text-right">{if $mov.part_qty_type eq 'PRT' && $partSize > 0}{math equation="q/p" q=$mov.part_qty p=$partSize format="%.2f"}{elseif $mov.part_qty_type eq 'SHT'}{$mov.part_qty|string_format:"%.2f"}{else}{$mov.part_qty|string_format:"%.0f"}{/if} {$mov.part_qty_type|escape}</td>
+								<td class="text-right">{if $mov.ref_type eq 'REQN' or $mov.ref_type eq 'PBLD'}-{/if}{if $mov.part_qty_type eq 'PRT' && $partSize > 0}{math equation="q/p" q=$mov.part_qty p=$partSize format="%.2f"}{elseif $mov.part_qty_type eq 'SHT'}{$mov.part_qty|string_format:"%.2f"}{else}{$mov.part_qty|string_format:"%.0f"}{/if} {$mov.part_qty_type|escape}</td>
 							{/if}
 						{/if}
 						<td>{if $mov.ref_start_date}{$mov.ref_start_date|bit_short_date}{else}—{/if}</td>

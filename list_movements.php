@@ -74,4 +74,20 @@ $gBitSmarty->assign( 'partSize',       $partSize );
 $gBitSmarty->assign( 'filterUserId',   $filterUserId );
 $gBitSmarty->assign( 'filterUserName', $filterUserName );
 
+$partQtyNet = null;
+if( $partContentId ) {
+	$partQtyNet = $gBitDb->getOne(
+		"SELECT SUM( CASE WHEN r.`item` IN ('REQN','PBLD')
+		                  THEN -CAST(x.`xkey` AS DOUBLE PRECISION)
+		                  ELSE  CAST(x.`xkey` AS DOUBLE PRECISION) END )
+		 FROM `".BIT_DB_PREFIX."liberty_xref` x
+		 JOIN `".BIT_DB_PREFIX."liberty_xref` r
+		      ON r.`content_id` = x.`content_id` AND r.`item` IN ('REQN','PBLD','TRANS','ORDER')
+		 WHERE x.`xref` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')",
+		[ $partContentId ]
+	);
+	$partQtyNet = $partQtyNet !== null ? (float)$partQtyNet : null;
+}
+$gBitSmarty->assign( 'partQtyNet', $partQtyNet );
+
 $gBitSystem->display( 'bitpackage:stock/list_movements.tpl', 'Movements', [ 'display_mode' => 'list' ] );
