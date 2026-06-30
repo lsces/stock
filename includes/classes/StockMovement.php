@@ -481,6 +481,7 @@ class StockMovement extends LibertyContent {
 			[ $this->mContentId ]
 		) ?: 1;
 
+		$contactId = 0;
 		$rowNum = 0;
 		while( ( $data = fgetcsv( $handle, 1000, ',', '"', '' ) ) !== false ) {
 			$rowNum++;
@@ -489,6 +490,12 @@ class StockMovement extends LibertyContent {
 				$ref          = trim( $data[1] ?? '' );
 				$orderDateStr = trim( $data[2] ?? '' );
 				$recvDateStr  = trim( $data[3] ?? '' );
+				// Look up contact by SCREF short name — needed for supplier part# fallback on item rows
+				$contactId = $from !== '' ? (int)$this->mDb->getOne(
+					"SELECT `content_id` FROM `".BIT_DB_PREFIX."liberty_xref`
+					 WHERE `item`='SCREF' AND `xkey`=?",
+					[ $from ]
+				) : 0;
 				if( $ref !== '' ) {
 					$existingRow = $this->mDb->getRow(
 						"SELECT `xref_id`, `item` FROM `".BIT_DB_PREFIX."liberty_xref`
@@ -497,12 +504,6 @@ class StockMovement extends LibertyContent {
 					);
 					// Preserve existing type if already set; default to TRANS for new rows
 					$refItem = $existingRow['item'] ?? 'TRANS';
-					// Look up contact by SCREF short name
-					$contactId = $from !== '' ? (int)$this->mDb->getOne(
-						"SELECT `content_id` FROM `".BIT_DB_PREFIX."liberty_xref`
-						 WHERE `item`='SCREF' AND `xkey`=?",
-						[ $from ]
-					) : 0;
 					$refHash = [ 'content_id' => $this->mContentId, 'item' => $refItem, 'xkey' => $ref, 'edit' => $from ];
 					if( $contactId ) $refHash['xref'] = $contactId;
 					$existingRow ? $refHash['xref_id'] = $existingRow['xref_id'] : $refHash['fAddXref'] = 1;
@@ -557,6 +558,16 @@ class StockMovement extends LibertyContent {
 				 WHERE lc.`content_type_guid` = 'stockcomponent' AND lc.`title` = ?",
 				[ $componentName ]
 			);
+			if( !$contentId && $contactId ) {
+				// Fall back to supplier's own part number via #SUP xref
+				$contentId = $this->mDb->getOne(
+					"SELECT lx.`content_id` FROM `".BIT_DB_PREFIX."liberty_xref` lx
+					 JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = lx.`content_id`
+					 WHERE lx.`item` = '#SUP' AND lx.`xref` = ? AND lx.`xkey` = ?
+					   AND lc.`content_type_guid` = 'stockcomponent'",
+					[ $contactId, $componentName ]
+				);
+			}
 			if( !$contentId ) {
 				$result['errors'][] = "Row $rowNum: '$componentName' not found, skipped.";
 				$result['skipped']++;
