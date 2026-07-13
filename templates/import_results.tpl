@@ -11,6 +11,9 @@
 			{if $updated}
 				<strong>{$updated}</strong> {tr}records updated{/tr}.
 			{/if}
+			{if $created}
+				<strong>{$created}</strong> {tr}new records created{/tr}.
+			{/if}
 			{if $skipped}
 				<strong>{$skipped}</strong> {tr}rows skipped{/tr}.
 			{/if}
