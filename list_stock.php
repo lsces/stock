@@ -58,7 +58,7 @@ if( $assemblyContentId ) {
 
 	$query = "SELECT lc.`content_id`, lc.`title`, lc.`data`,
 					bom.`item` AS qty_type,
-					CASE WHEN bom.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?' THEN CAST(bom.`xkey` AS DOUBLE PRECISION) ELSE NULL END AS bom_qty,
+					CASE WHEN bom.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?' THEN CAST(bom.`xkey` AS DOUBLE PRECISION) ELSE NULL END AS bom_qty,
 					bom.`xorder` AS bom_xorder,
 					(SELECT FIRST 1 sup.`xkey`
 					 FROM `{$X}liberty_xref` sup
@@ -67,7 +67,7 @@ if( $assemblyContentId ) {
 					(SELECT FIRST 1 CAST(pk.`xkey` AS DOUBLE PRECISION)
 					 FROM `{$X}liberty_xref` pk
 					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PRT'
-					   AND pk.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?') AS part_size,
+					   AND pk.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?') AS part_size,
 					(SELECT SUM( CASE WHEN EXISTS (
 							SELECT 1 FROM `{$X}liberty_xref` r
 							WHERE r.`content_id` = mx.`content_id` AND r.`item` IN ('TRANS','ORDER')
@@ -78,7 +78,7 @@ if( $assemblyContentId ) {
 					 	AND mc.`content_type_guid` = 'stockmovement'
 					 WHERE mx.`xref` = lc.`content_id`
 					   AND mx.`item` = bom.`item`
-					   AND mx.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
+					   AND mx.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?'
 					   $userSubSql) AS stock_level
 			FROM `{$X}liberty_content` lc
 				INNER JOIN `{$X}liberty_xref` bom ON bom.`content_id` = ?
@@ -112,7 +112,7 @@ if( $assemblyContentId ) {
 					(SELECT FIRST 1 CAST(pk.`xkey` AS DOUBLE PRECISION)
 					 FROM `{$X}liberty_xref` pk
 					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PRT'
-					   AND pk.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?') AS part_size,
+					   AND pk.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?') AS part_size,
 					SUM( CASE WHEN EXISTS (
 						SELECT 1 FROM `{$X}liberty_xref` r
 						WHERE r.`content_id` = x.`content_id` AND r.`item` IN ('TRANS','ORDER')
@@ -121,7 +121,7 @@ if( $assemblyContentId ) {
 			FROM `{$X}liberty_content` lc
 				INNER JOIN `{$X}liberty_xref` x ON x.`xref` = lc.`content_id`
 					AND x.`item` IN ('SGL','PRT','SHT','VOL')
-					AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
+					AND x.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?'
 				INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
 					AND mc.`content_type_guid` = 'stockmovement'
 			WHERE lc.`content_type_guid` = 'stockcomponent'

@@ -66,7 +66,7 @@ if( $gContent->isValid() ) {
 		 INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
 		 	AND mc.`content_type_guid` = 'stockmovement'
 		 WHERE x.`xref` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')
-		   AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
+		   AND x.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?'
 		 GROUP BY x.`item`",
 		[ $gContent->mContentId ]
 	);

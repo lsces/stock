@@ -156,7 +156,7 @@ if( $fromPost ) {
 						 	AND mc.`content_type_guid` = 'stockmovement'
 						 WHERE mx.`xref` = lc.`content_id`
 						   AND mx.`item` = bom.`item`
-						   AND mx.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?') AS stock_level
+						   AND mx.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?') AS stock_level
 				FROM `{$X}liberty_content` lc
 					INNER JOIN `{$X}liberty_xref` bom ON bom.`content_id` = ?
 						AND bom.`item` IN ('SGL','PRT','SHT','VOL')
@@ -189,7 +189,7 @@ if( $fromPost ) {
 				FROM `{$X}liberty_content` lc
 					INNER JOIN `{$X}liberty_xref` x ON x.`xref` = lc.`content_id`
 						AND x.`item` IN ('SGL','PRT','SHT','VOL')
-						AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
+						AND x.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?'
 					INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = x.`content_id`
 						AND mc.`content_type_guid` = 'stockmovement'
 				WHERE lc.`content_type_guid` = 'stockcomponent'

@@ -289,7 +289,7 @@ class StockMovement extends LibertyContent {
 			        CAST(x.`xkey` AS DOUBLE PRECISION) AS quantity_value
 			 FROM `".BIT_DB_PREFIX."liberty_xref` x
 			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')
-			   AND x.`xkey` SIMILAR TO '[0-9]+(\.[0-9]+)?'
+			   AND x.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?'
 			 ORDER BY x.`xorder`",
 			[ $pAssemblyContentId ]
 		);
