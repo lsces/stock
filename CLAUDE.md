@@ -85,6 +85,45 @@ Uploaded CSVs saved to `STOCK_IMPORT_PATH` (`storage/stock/`) as `<origname>_mov
 - `$isPbld` — ref_type === 'PBLD'
 - `$isBuild` — REQN or PBLD; controls assembly picker visibility, xref tab, CSV upload suppression
 
+## Firebird SIMILAR TO gotcha
+Firebird's `SIMILAR TO` has no implicit backslash escape (needs an explicit `ESCAPE`
+clause) — `\.` in a pattern matches a literal backslash-then-dot, not an escaped dot. Use
+`[.]` for a literal dot instead (bracket expression, no `ESCAPE` needed). This bit the
+numeric-xkey filter `'[0-9]+(\.[0-9]+)?'` used across `StockMovement::explodeFromAssembly()`,
+`view_component.php`, `list_stock.php`, and `add_order.php` — it silently dropped every
+decimal-valued `xkey` (mainly fractional SHT quantities like `0.02`) while whole-number
+SGL/PRT/VOL values happened to pass. Fixed 2026-07-13 to `'[0-9]+([.][0-9]+)?'` in all 8
+occurrences. Any new `SIMILAR TO` pattern with a literal `.` (or other regex metacharacter)
+must use the bracket form, not backslash-escaping.
+
+## Kitlocker sync / import tooling
+Kitlocker-specific xref items (role_id 3, `x_group='kitlocker'`), defined in
+`admin/schema_inc.php`, set on both StockAssembly and StockComponent:
+- `KLID` — Kitlocker ID code (e.g. `36A`) — the match key against the live site's exports
+- `KLPR` — Kitlocker Price (currently unused/empty in `merg` — don't confuse with KLID)
+- `KL3M` — 3-month sales count
+- `KLSGL` — current stock count
+- `KLG01`–`KLG99` — group tag (`stgrp` group), one per product section; name↔number map
+  lives in `storage/stock/KitlockerGroups.csv` (28 groups, `G1`=General Kits...`G28`=POSTAGE)
+
+`stock/import/` holds one-off/repeatable CSV and HTML importers (not part of the package's
+core code path — ad hoc data-loading tools):
+- `ImportKitlockerAssemblies.php` / `load_kitlocker_assemblies.php` — full catalogue CSV
+  import (title, KLID, description, KLSGL, KL3M, group, type A/C), creates records if missing
+- `ImportKitlockerStockPredict.php` / `load_kitlocker_stock_predict.php` — parses the raw
+  "MERG Kitlocker - Stock predict" HTML export directly (no CSV conversion needed — table
+  markup is consistent enough for DOMDocument), matches by KLID, upserts KLSGL/KL3M only.
+  Unmatched codes are reported, not silently created — pass `?create=CODE:A,CODE:C` to create
+  them (the export has no assembly/component column, so the type must be given explicitly).
+  Does not set KLGxx group — group name is derivable from each row's enclosing `<h2>` section
+  heading if this needs revisiting, since section order/names exactly match
+  `KitlockerGroups.csv`, but this isn't built.
+
+**Direction:** the CSV/HTML importers are a stopgap, not a pattern to extend — the stated
+goal is to add new kitlocker items through the normal `edit_assembly.php` /
+`edit_component.php` UI flow instead and retire the import scripts. Don't build more import
+tooling proactively; confirm first if asked to extend this area.
+
 ## Xref display notes
 **Floaticon placement** — floaticons for assembly views live in `assembly_icons_inc.tpl`,
 included from `stock_simple_list_inc.tpl`. Forms in floaticon use `class="minifind"`.
