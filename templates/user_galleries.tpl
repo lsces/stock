@@ -35,8 +35,10 @@
 						</div>
 						<div class="panel-footer">
 							<dl class="dl-horizontal small" style="margin-bottom:0">
-								<dt>{tr}Components{/tr}</dt>
-								<dd>{$gal.component_count}</dd>
+								<dt>{tr}Kitlocker Stock{/tr}</dt>
+								<dd>{if $gal.klsgl ne ''}{$gal.klsgl|escape}{else}&mdash;{/if}</dd>
+								<dt>{tr}3 Month Sales{/tr}</dt>
+								<dd>{if $gal.kl3m ne ''}{$gal.kl3m|escape}{else}&mdash;{/if}</dd>
 								{if $gal.prebuild_content_id}
 									{assign var=pbldUrl value="`$smarty.const.STOCK_PKG_URL`view_movement.php?content_id=`$gal.prebuild_content_id`"}
 									<dt><a href="{$pbldUrl}">{tr}Prebuilt{/tr}</a></dt>
@@ -45,10 +47,29 @@
 									<dt>{tr}Prebuilt{/tr}</dt>
 									<dd>{$gal.prebuild_count|string_format:"%.0f"}</dd>
 								{/if}
+								<hr style="margin:4px 0" />
+								<dt>{tr}Components{/tr}</dt>
+								<dd>{$gal.component_count}</dd>
 							</dl>
+							{if $shortageComponents[$galleryId]}
+								<ul class="list-unstyled small text-danger" style="margin:6px 0 0">
+									{foreach from=$shortageComponents[$galleryId] item=short}
+										<li>
+											<a href="{$smarty.const.STOCK_PKG_URL}view_component.php?content_id={$short.content_id}">{$short.title|escape}</a>
+											({$short.level|string_format:"%.0f"})
+										</li>
+									{/foreach}
+								</ul>
+							{/if}
 						</div>
 					</div>
 				</div>
+				{if $gal@iteration is div by 3}
+					<div class="clearfix hidden-xs hidden-sm"></div>
+				{/if}
+				{if $gal@iteration is div by 2}
+					<div class="clearfix hidden-xs hidden-md hidden-lg"></div>
+				{/if}
 			{foreachelse}
 				<div class="col-xs-12 norecords">{tr}No assemblies found.{/tr}</div>
 			{/foreach}

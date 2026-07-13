@@ -1000,6 +1000,8 @@ class StockAssembly extends StockBase {
 		$X = BIT_DB_PREFIX;
 		$selectSql .= ", (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` = '#SUP' ORDER BY x.`xorder`) AS `part_number`";
 		$selectSql .= ", (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` = 'KLID') AS `klid`";
+		$selectSql .= ", (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` = 'KLSGL') AS `klsgl`";
+		$selectSql .= ", (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` = 'KL3M') AS `kl3m`";
 		$selectSql .= ", (SELECT COUNT(*) FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` IN ('SGL','PRT','SHT','VOL')) AS `component_count`";
 		$selectSql .= ", (SELECT COALESCE(SUM(CAST(xasm.`xkey` AS DOUBLE PRECISION)), 0)
 		     FROM `{$X}liberty_xref` xasm
@@ -1082,6 +1084,59 @@ class StockAssembly extends StockBase {
 		$pListHash['cant'] = $cant;
 		LibertyContent::postGetList( $pListHash );
 		return $data;
+	}
+
+	/**
+	 * Batched lookup of BOM components at 0 or negative stock, for a set of assemblies.
+	 *
+	 * Stock level per component/qty_type is the same signed-movement sum used by
+	 * list_stock.php (TRANS/ORDER = +, REQN/PBLD = -). A component with no movement history
+	 * at all has no stock_level row and is treated as 0 (i.e. included).
+	 *
+	 * @param  int[] $pAssemblyIds
+	 * @return array  assembly_content_id => list of [ content_id, title, qty_type, level ]
+	 */
+	public function getShortageComponents( array $pAssemblyIds ): array {
+		$ret = [];
+		if( !$pAssemblyIds ) {
+			return $ret;
+		}
+		$X = BIT_DB_PREFIX;
+		$in = implode( ',', array_fill( 0, count( $pAssemblyIds ), '?' ) );
+
+		$rows = $this->mDb->query(
+			"SELECT bom.`content_id` AS assembly_id, bom.`xref` AS component_id, comp.`title`, bom.`item` AS qty_type,
+					(SELECT SUM( CASE WHEN EXISTS (
+							SELECT 1 FROM `{$X}liberty_xref` r
+							WHERE r.`content_id` = mx.`content_id` AND r.`item` IN ('TRANS','ORDER')
+						) THEN CAST(mx.`xkey` AS DOUBLE PRECISION)
+						  ELSE -CAST(mx.`xkey` AS DOUBLE PRECISION) END )
+					 FROM `{$X}liberty_xref` mx
+					 INNER JOIN `{$X}liberty_content` mc ON mc.`content_id` = mx.`content_id`
+					 	AND mc.`content_type_guid` = 'stockmovement'
+					 WHERE mx.`xref` = bom.`xref` AND mx.`item` = bom.`item`
+					   AND mx.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?') AS stock_level
+			 FROM `{$X}liberty_xref` bom
+				INNER JOIN `{$X}liberty_content` comp ON comp.`content_id` = bom.`xref`
+			 WHERE bom.`content_id` IN ($in) AND bom.`item` IN ('SGL','PRT','SHT','VOL')
+			 ORDER BY comp.`title`",
+			$pAssemblyIds
+		);
+
+		foreach( $rows as $row ) {
+			$level = $row['stock_level'] !== null ? (float)$row['stock_level'] : 0.0;
+			if( $level > 0 ) {
+				continue;
+			}
+			$ret[$row['assembly_id']][] = [
+				'content_id' => (int)$row['component_id'],
+				'title'      => $row['title'],
+				'qty_type'   => $row['qty_type'],
+				'level'      => $level,
+			];
+		}
+
+		return $ret;
 	}
 
 	/** @return string  Font-Awesome icon HTML for use in service menus. */
