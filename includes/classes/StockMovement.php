@@ -86,7 +86,7 @@ class StockMovement extends LibertyContent {
 		$whereSql = " WHERE lc.`content_id` = ? AND lc.`content_type_guid` = '".STOCKMOVEMENT_CONTENT_TYPE_GUID."'";
 		$bindVars = [ $this->mContentId ];
 		$selectSql = $joinSql = '';
-		$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
+		$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, $this );
 
 		$X = BIT_DB_PREFIX;
 		$sql = "SELECT lc.* $selectSql

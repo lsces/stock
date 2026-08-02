@@ -169,7 +169,7 @@ class StockAssembly extends StockBase {
 		$whereSql = " WHERE lc.`content_id` = ? AND lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."'";
 		$bindVars = [ $this->mContentId ];
 
-		$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
+		$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, $this );
 
 		$query = "SELECT lc.* $selectSql
 					, uue.`login` AS modifier_user, uue.`real_name` AS `modifier_real_name`

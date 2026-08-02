@@ -72,7 +72,7 @@ class StockComponent extends StockBase {
 			$whereSql = " WHERE lc.`content_id` = ? AND lc.`content_type_guid` = '".STOCKCOMPONENT_CONTENT_TYPE_GUID."'";
 			$bindVars[] = $this->mContentId;
 
-			$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
+			$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, $this );
 
 			$X = BIT_DB_PREFIX;
 			$sql = "SELECT lc.* $selectSql
