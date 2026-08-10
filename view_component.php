@@ -8,6 +8,9 @@
  * required setup
  */
 
+use Bitweaver\KernelTools;
+use Bitweaver\HttpStatusCodes;
+
 require_once '../kernel/includes/setup_inc.php';
 global $gBitSystem, $gDebug;
 
@@ -19,7 +22,15 @@ if( !empty( $_REQUEST['highlight'] ) ) {
 
 include_once STOCK_PKG_INCLUDE_PATH.'component_lookup_inc.php';
 
-if( $gContent && $gContent->isValid() ) {
+if( !$gContent->isValid() ) {
+	if( !empty( $_REQUEST['content_id'] ) ) {
+		$gBitSystem->fatalError( KernelTools::tra( 'No component exists with the given ID' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
+	}
+	KernelTools::bit_redirect( STOCK_PKG_URL."list_components.php", HttpStatusCodes::HTTP_FOUND );
+	die;
+}
+
+if( $gContent->isValid() ) {
 	$gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );
 }
 

@@ -65,7 +65,7 @@ class StockComponent extends StockBase {
 	 * @return int|null  Row count (> 0) on success, or null if mContentId is not set.
 	 */
 	public function load() {
-		if( $this->isValid() ) {
+		if( $this->verifyId( $this->mContentId ) ) {
 			$selectSql = $joinSql = $whereSql = '';
 			$bindVars = [];
 
@@ -137,6 +137,20 @@ class StockComponent extends StockBase {
 	 *
 	 * @return bool Always TRUE (errors are recorded in $this->mErrors).
 	 */
+	/**
+	 * @return bool TRUE when mContentId refers to a real liberty_content row of this
+	 *              content type — not just an id that looks syntactically valid.
+	 */
+	public function isValid() {
+		if( !@$this->verifyId( $this->mContentId ) ) {
+			return false;
+		}
+		return (bool)$this->mDb->getOne(
+			"SELECT 1 FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id` = ? AND `content_type_guid` = ?",
+			[ $this->mContentId, STOCKCOMPONENT_CONTENT_TYPE_GUID ]
+		);
+	}
+
 	public function expunge(): bool {
 		if( $this->isValid() ) {
 			$this->StartTrans();
@@ -149,11 +163,6 @@ class StockComponent extends StockBase {
 			}
 		}
 		return true;
-	}
-
-	/** @return bool TRUE when mContentId is a valid positive integer. */
-	public function isValid() {
-		return @$this->verifyId( $this->mContentId );
 	}
 
 	/**

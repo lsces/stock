@@ -7,12 +7,20 @@
 namespace Bitweaver\Stock;
 
 use Bitweaver\KernelTools;
+use Bitweaver\HttpStatusCodes;
 
 require_once '../kernel/includes/setup_inc.php';
 
 global $gBitSystem, $gBitUser;
 
 include_once STOCK_PKG_INCLUDE_PATH.'component_lookup_inc.php';
+
+// A content_id was given but didn't resolve to a real record — that's "not found", not an
+// invitation to silently fall into create-new mode. No content_id at all is the real
+// create-new case.
+if( !empty( $_REQUEST['content_id'] ) && !$gContent->isValid() ) {
+	$gBitSystem->fatalError( KernelTools::tra( 'No component exists with the given ID' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
+}
 
 if( $gContent->isValid() ) {
 	$gContent->verifyUpdatePermission();

@@ -11,11 +11,19 @@ namespace Bitweaver\Stock;
 
 require_once '../kernel/includes/setup_inc.php';
 use Bitweaver\KernelTools;
+use Bitweaver\HttpStatusCodes;
 
 global $gBitSystem, $gBitDb;
 
 include_once LIBERTY_PKG_INCLUDE_PATH.'liberty_lib.php';
 include_once STOCK_PKG_INCLUDE_PATH.'assembly_lookup_inc.php';
+
+// A content_id was given but didn't resolve to a real record — that's "not found", not an
+// invitation to silently fall into create-new mode. No content_id at all is the real
+// create-new case.
+if( !empty( $_REQUEST['content_id'] ) && !$gContent->isValid() ) {
+	$gBitSystem->fatalError( KernelTools::tra( 'No assembly exists with the given ID' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
+}
 
 // Ensure the user has the permission to create or edit assemblies
 if( $gContent->isValid() ){

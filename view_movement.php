@@ -5,6 +5,9 @@
 
 namespace Bitweaver\Stock;
 
+use Bitweaver\KernelTools;
+use Bitweaver\HttpStatusCodes;
+
 require_once '../kernel/includes/setup_inc.php';
 
 global $gBitSystem, $gBitSmarty, $gBitDb;
@@ -15,8 +18,7 @@ $gBitSystem->verifyPermission( 'p_stock_view' );
 include_once STOCK_PKG_INCLUDE_PATH.'movement_lookup_inc.php';
 
 if( !$gContent->isValid() ) {
-	$gBitSystem->display( 'error.tpl', 'Movement not found' );
-	die;
+	$gBitSystem->fatalError( KernelTools::tra( 'No movement exists with the given ID' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 
 $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );

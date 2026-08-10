@@ -50,9 +50,18 @@ class StockMovement extends LibertyContent {
 		$this->mAdminContentPerm  = 'p_stock_admin';
 	}
 
-	/** @return bool TRUE when mContentId is a valid positive integer. */
+	/**
+	 * @return bool TRUE when mContentId refers to a real liberty_content row of this
+	 *              content type — not just an id that looks syntactically valid.
+	 */
 	public function isValid(): bool {
-		return (bool)$this->verifyId( $this->mContentId );
+		if( !$this->verifyId( $this->mContentId ) ) {
+			return false;
+		}
+		return (bool)$this->mDb->getOne(
+			"SELECT 1 FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id` = ? AND `content_type_guid` = ?",
+			[ $this->mContentId, STOCKMOVEMENT_CONTENT_TYPE_GUID ]
+		);
 	}
 
 	/**
