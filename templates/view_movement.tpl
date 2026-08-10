@@ -21,7 +21,7 @@
 			{if $gContent->mInfo.ref_contact_name}
 			<dt>{tr}Supplier{/tr}</dt>
 			<dd>
-				<a href="{$smarty.const.CONTACT_PKG_URL}display.php?content_id={$gContent->mInfo.ref_contact_id}">{$gContent->mInfo.ref_contact_name|escape}</a>
+				<a href="{$smarty.const.CONTACT_PKG_URL}display_contact.php?content_id={$gContent->mInfo.ref_contact_id}">{$gContent->mInfo.ref_contact_name|escape}</a>
 			</dd>
 			{elseif $gContent->mInfo.ref_from_data}
 			<dt>{tr}From{/tr}</dt>
@@ -61,12 +61,7 @@
 							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
 								xrefGroup=$xrefGroup allow_add=false allow_edit=false}
 						{/if}
-					{elseif $xrefGroup->mXGroup eq 'supplier'}
-						{if $refType eq 'ORDER'}
-							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
-								xrefGroup=$xrefGroup allow_add=false allow_edit=false}
-						{/if}
-					{elseif $xrefGroup->mXGroup eq 'stgrp' || $xrefGroup->mXGroup eq 'kitlocker'}
+					{elseif $xrefGroup->mXGroup eq 'supplier' || $xrefGroup->mXGroup eq 'stgrp' || $xrefGroup->mXGroup eq 'kitlocker'}
 					{else}
 						{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
 							xrefGroup=$xrefGroup allow_add=false allow_edit=false}

@@ -209,6 +209,35 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 	header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
 	die;
 
+} elseif( !empty( $_REQUEST['fConvertToRequisition'] ) && $gContent->isValid() ) {
+	// PBLD -> REQN: a prebuild delivered to the kitlocker becomes a requisition. Only
+	// changes the reference xref's item/xkey (RQ number replaces the prebuild name) —
+	// user_id is deliberately left untouched (stock-total implications not yet worked out).
+	$rqNumber = trim( $_REQUEST['rq_number'] ?? '' );
+	if( $rqNumber !== '' && ( $gContent->mInfo['ref_type'] ?? '' ) === 'PBLD' ) {
+		$refRow = $gBitDb->getRow(
+			"SELECT `xref_id`, `xorder` FROM `".BIT_DB_PREFIX."liberty_xref`
+			 WHERE `content_id` = ? AND `item` = 'PBLD'",
+			[ $gContent->mContentId ]
+		);
+		if( $refRow ) {
+			$refHash = [
+				'xref_id'    => $refRow['xref_id'],
+				'content_id' => $gContent->mContentId,
+				'item'       => 'REQN',
+				'xkey'       => $rqNumber,
+				'xorder'     => (int)$refRow['xorder'],
+			];
+			$gContent->storeXref( $refHash );
+			$gBitDb->query(
+				"UPDATE `".BIT_DB_PREFIX."liberty_content` SET `title` = ? WHERE `content_id` = ?",
+				[ $rqNumber, $gContent->mContentId ]
+			);
+		}
+	}
+	header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
+	die;
+
 } elseif( !empty( $_REQUEST['delete'] ) ) {
 	$gBitSystem->verifyPermission( 'p_stock_admin' );
 	if( !empty( $_REQUEST['cancel'] ) ) {

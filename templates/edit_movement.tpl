@@ -3,7 +3,7 @@
 	<div class="header">
 		<h1>
 			{if $gContent->isValid()}
-				{tr}Edit Movement{/tr}: {$gContent->getTitle()|escape}
+				{if $isPbld}{tr}Edit Prebuild{/tr}{elseif $isReqn}{tr}Edit Requisition{/tr}{else}{tr}Edit Movement{/tr}{/if}: {$gContent->getTitle()|escape}
 			{else}
 				{tr}Create Movement{/tr}
 			{/if}
@@ -109,6 +109,22 @@
 
 		{if $gContent->isValid()}
 
+			{if $isPbld}
+			<div class="form-group">
+				{form ipackage="stock" ifile="edit_movement.php"}
+					<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}" />
+					<input type="hidden" name="fConvertToRequisition" value="1" />
+					<div class="form-inline">
+						<label>{tr}Convert to Requisition{/tr}:</label>
+						<input type="text" class="form-control input-small" name="rq_number"
+							placeholder="{tr}RQ number{/tr}" maxlength="160" required="required" />
+						<button type="submit" class="btn btn-warning btn-sm">{tr}Convert{/tr}</button>
+					</div>
+					{formhelp note="One-way — turns this prebuild into a requisition (RQ) once it's been delivered to the kitlocker. The RQ number replaces the prebuild's name."}
+				{/form}
+			</div>
+			{/if}
+
 			{if $gXrefInfo->mGroups}
 				{jstabs}
 					{foreach $gXrefInfo->mGroups as $xrefGroup}
@@ -116,11 +132,12 @@
 						   'assembly'/'quantity' are superseded by the per-assembly BOM tabs
 						   below for build movements (REQN/PBLD) — the flat Items list only
 						   makes sense for ORDER/TRANS, which have no BOM to break out.
-						   'supplier' only applies to ORDER movements (the only type that
-						   actually references a supplier). 'stgrp'/'kitlocker' are
-						   assembly/component catalogue metadata, shared package-wide via the
-						   dual-guid xref schema (see liberty/CLAUDE.md) — never relevant to a
-						   movement itself, so always hidden here regardless of type. *}
+						   'supplier'/'stgrp'/'kitlocker' are assembly/component catalogue
+						   metadata, shared package-wide via the dual-guid xref schema (see
+						   liberty/CLAUDE.md) — never relevant to a movement itself. A
+						   movement's own supplier/contact link is the 'reference' xref's
+						   ref_contact_id (the "From" field above), a completely separate
+						   thing from this package-level 'supplier' group. *}
 						{if $xrefGroup->mXGroup eq 'reference'}
 						{elseif $xrefGroup->mXGroup eq 'assembly'}
 							{if $isBuild}
@@ -132,12 +149,7 @@
 								{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
 									xrefGroup=$xrefGroup allow_add=true allow_edit=true}
 							{/if}
-						{elseif $xrefGroup->mXGroup eq 'supplier'}
-							{if $refType eq 'ORDER'}
-								{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
-									xrefGroup=$xrefGroup allow_add=true allow_edit=true}
-							{/if}
-						{elseif $xrefGroup->mXGroup eq 'stgrp' || $xrefGroup->mXGroup eq 'kitlocker'}
+						{elseif $xrefGroup->mXGroup eq 'supplier' || $xrefGroup->mXGroup eq 'stgrp' || $xrefGroup->mXGroup eq 'kitlocker'}
 						{else}
 							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
 								xrefGroup=$xrefGroup allow_add=true allow_edit=true}
