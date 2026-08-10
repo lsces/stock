@@ -48,12 +48,32 @@
 		{if $gXrefInfo->mGroups}
 			{jstabs}
 				{foreach $gXrefInfo->mGroups as $xrefGroup}
-					{if $xrefGroup->mXGroup neq 'reference' && ($xrefGroup->mXGroup neq 'assembly' || $isBuild)}
+					{* See edit_movement.tpl for the reasoning behind each of these — kept
+					   identical here so view/edit show the same set of tabs. *}
+					{if $xrefGroup->mXGroup eq 'reference'}
+					{elseif $xrefGroup->mXGroup eq 'assembly'}
+						{if $isBuild}
+							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+								xrefGroup=$xrefGroup allow_add=false allow_edit=false}
+						{/if}
+					{elseif $xrefGroup->mXGroup eq 'quantity'}
+						{if !$isBuild}
+							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+								xrefGroup=$xrefGroup allow_add=false allow_edit=false}
+						{/if}
+					{elseif $xrefGroup->mXGroup eq 'supplier'}
+						{if $refType eq 'ORDER'}
+							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+								xrefGroup=$xrefGroup allow_add=false allow_edit=false}
+						{/if}
+					{elseif $xrefGroup->mXGroup eq 'stgrp' || $xrefGroup->mXGroup eq 'kitlocker'}
+					{else}
 						{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
-							xrefGroup=$xrefGroup
-							allow_add=false
-							allow_edit=false}
+							xrefGroup=$xrefGroup allow_add=false allow_edit=false}
 					{/if}
+				{/foreach}
+				{foreach $assemblyTabs as $asmTab}
+					{include file="bitpackage:stock/view_assembly_bom_tab.tpl" asmTab=$asmTab allow_edit=false}
 				{/foreach}
 			{/jstabs}
 		{/if}

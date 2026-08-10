@@ -131,8 +131,15 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 			];
 			$gContent->storeXref( $assemblyHash );
 			if( $targetRow['content_type_guid'] === 'stockassembly' ) {
-				$gContent->explodeFromAssembly( $targetContentId, $kitCount );
+				// Stamp every exploded BOM line with the ASSEMBLY xref's own entry_date so
+				// rescaleFromAssembly() can later tell this assembly's lines apart from
+				// another assembly's, should the movement ever gain a second one.
+				$assemblyEntryDate = $gContent->mInfo['xref_store']['entry_date'] ?? null;
+				$gContent->explodeFromAssembly( $targetContentId, $kitCount, $assemblyEntryDate );
 			} else {
+				// Same entry_date stamp as the assembly branch — keeps this component's own
+				// SGL line correctly scoped for syncComponentQuantity() to find later.
+				$componentEntryDate = $gContent->mInfo['xref_store']['entry_date'] ?? null;
 				$nextXorder = (int)$gBitDb->getOne(
 					"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
 					 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')",
@@ -146,7 +153,56 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 					'xorder'     => $nextXorder,
 					'fAddXref'   => 1,
 				];
+				if( $componentEntryDate !== null ) {
+					$qtyHash['entry_date'] = $componentEntryDate;
+				}
 				$gContent->storeXref( $qtyHash );
+			}
+		}
+	}
+	header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
+	die;
+
+} elseif( !empty( $_REQUEST['fAdjustAssembly'] ) && $gContent->isValid() ) {
+	$adjXrefId   = isset( $_REQUEST['xref_id'] ) && is_numeric( $_REQUEST['xref_id'] ) ? (int)$_REQUEST['xref_id'] : 0;
+	$newKitCount = isset( $_REQUEST['new_kit_count'] ) && is_numeric( $_REQUEST['new_kit_count'] )
+	               ? max( 1, (float)$_REQUEST['new_kit_count'] ) : 0;
+	if( $adjXrefId && $newKitCount > 0 ) {
+		// Find the assembly xref via the object layer
+		$gContent->loadXrefInfo();
+		$asmGroup  = $gContent->mXrefInfo->mGroups['assembly'] ?? null;
+		$foundXref = null;
+		if( $asmGroup ) {
+			foreach( $asmGroup->mXrefs as $xr ) {
+				if( (int)$xr['xref_id'] === $adjXrefId ) {
+					$foundXref = $xr;
+					break;
+				}
+			}
+		}
+		if( $foundXref ) {
+			$asmContentId = (int)$foundXref['xref'];
+			$oldKitCount  = (float)$foundXref['xkey'];
+			if( abs( $newKitCount - $oldKitCount ) > 0.0001 && $asmContentId ) {
+				if( ($foundXref['data'] ?? '') === 'stockcomponent' ) {
+					$gContent->syncComponentQuantity( $asmContentId, $newKitCount, $foundXref['entry_date'] ?? null );
+				} else {
+					$gContent->rescaleFromAssembly( $asmContentId, $newKitCount, $foundXref['entry_date'] ?? null );
+				}
+				// Update the ASSEMBLY xref kit count — pass all fields so verify() can
+				// identify the item correctly for the UPDATE path; xorder must be passed
+				// explicitly or verify() zeroes it on the UPDATE path.
+				$kitHash = [
+					'xref_id'    => $adjXrefId,
+					'content_id' => $gContent->mContentId,
+					'item'       => 'ASSEMBLY',
+					'xref'       => $asmContentId,
+					'xkey'       => (string)$newKitCount,
+					'xkey_ext'   => (string)$foundXref['xkey_ext'],
+					'edit'       => (string)$foundXref['data'],
+					'xorder'     => (int)$foundXref['xorder'],
+				];
+				$gContent->storeXref( $kitHash );
 			}
 		}
 	}
@@ -174,10 +230,48 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 	}
 }
 
+$assemblyTabs = [];
 if( $gContent->isValid() ) {
 	$gContent->loadXrefInfo();
 	$gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
+
+	// One tab per real assembly on this movement — shows only that assembly's own BOM
+	// lines (matched by the shared entry_date stamped at explosion time), separate from
+	// the flat cross-assembly "Items" tab.
+	$asmGroup = $gContent->mXrefInfo->mGroups['assembly'] ?? null;
+	if( $asmGroup ) {
+		foreach( $asmGroup->mXrefs as $asmXref ) {
+			if( ( $asmXref['data'] ?? '' ) !== 'stockassembly' ) {
+				continue;
+			}
+			$entryDate = $asmXref['entry_date'] ?? null;
+			$bindVars  = [ $gContent->mContentId ];
+			$entrySql  = 'AND x.`entry_date` ';
+			if( $entryDate !== null ) {
+				$entrySql   .= '= ?';
+				$bindVars[]  = $entryDate;
+			} else {
+				$entrySql .= 'IS NULL';
+			}
+			$lines = $gBitDb->getAll(
+				"SELECT x.`xref_id`, x.`item`, x.`xref`, x.`xkey`, lc.`title` AS component_title
+				 FROM `".BIT_DB_PREFIX."liberty_xref` x
+				 LEFT JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.`content_id` = x.`xref`
+				 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL') $entrySql
+				 ORDER BY x.`xorder`",
+				$bindVars
+			);
+			$assemblyTabs[] = [
+				'xref_id'    => (int)$asmXref['xref_id'],
+				'content_id' => (int)$asmXref['xref'],
+				'title'      => $asmXref['xkey_ext'],
+				'kit_count'  => $asmXref['xkey'],
+				'lines'      => $lines,
+			];
+		}
+	}
 }
+$gBitSmarty->assign( 'assemblyTabs', $assemblyTabs );
 
 // Pre-format dates as dd/mm/yyyy for form fields
 $orderedDateVal  = !empty( $gContent->mInfo['ref_start_date'] )
@@ -218,6 +312,7 @@ if( $isBuild ) {
 $gBitSmarty->assign( 'isReqn',   $isReqn );
 $gBitSmarty->assign( 'isPbld',   $isPbld );
 $gBitSmarty->assign( 'isBuild',  $isBuild );
+$gBitSmarty->assign( 'refType',  $refType );
 $gBitSmarty->assign( 'refTypes', $refTypes );
 $gBitSmarty->assign( 'errors',   $gContent->mErrors );
 

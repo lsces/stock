@@ -34,6 +34,7 @@
 <h5>{tr}Add item{/tr}</h5>
 {form ipackage="stock" ifile="edit_movement.php"}
 	<input type="hidden" name="content_id" value="{$gContent->mContentId|escape}" />
+	<input type="hidden" name="fAddAssembly" value="1" />
 	<div class="form-inline">
 		<input type="hidden" name="assembly_content_id" id="asm_add_id" value="" />
 		<div style="position:relative;display:inline-block;width:20em;vertical-align:top">
@@ -46,10 +47,11 @@
 		<input type="number" class="form-control input-sm" name="kit_count"
 			min="1" step="1" value="1" style="width:5em;display:inline-block" title="{tr}Qty / kits{/tr}" />
 		&nbsp;
-		<input type="submit" class="btn btn-default btn-sm" name="fAddAssembly" value="{tr}Add{/tr}" />
+		<input type="submit" class="btn btn-default btn-sm" value="{tr}Add{/tr}" />
 	</div>
 {/form}
 {/if}
+
 {/legend}
 {/jstab}
 {if $xrefAllowAdd && $itemListJson}

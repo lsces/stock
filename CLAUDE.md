@@ -65,7 +65,7 @@ PBLD uses "Completed"/"In progress" labels; other types use "Received"/"Pending"
 - `xref` = contact content_id (linked supplier/source — looked up via SCREF xkey)
 - `start_date` (TIMESTAMP) = order/build date
 
-**ASSEMBLY xref** (x_group='assembly', item='ASSEMBLY') on REQN and PBLD movements:
+**ASSEMBLY xref** (x_group='assembly', item='ASSEMBLY', `multiple=1`) on REQN and PBLD movements:
 - `xref` = assembly content_id
 - `xkey` = kit count (number of assemblies built/requested)
 - `xkey_ext` = assembly title
@@ -75,6 +75,20 @@ PBLD uses "Completed"/"In progress" labels; other types use "Received"/"Pending"
 - `xref` = component content_id
 - `xkey` = quantity value
 - `xorder` = line sequence (managed explicitly)
+
+**Multi-assembly movements — known unhandled case (2026-08-10)**: `ASSEMBLY` being
+`multiple=1` means the data model technically allows more than one assembly per movement, and
+`explodeFromAssembly()`'s docstring already anticipated it ("safe to call multiple times, e.g.
+for multi-assembly requisitions"). But quantity xrefs carry no back-reference to which
+`ASSEMBLY` xref produced them — just `item`+`xref`(component). `StockMovement::
+rescaleFromAssembly()` (used by `edit_movement.php`'s "Adjust quantities" / `fAdjustAssembly`)
+matches existing quantity lines by component id alone, so if two assemblies on the same
+movement share a component, rescaling one assembly's kit count will overwrite that shared
+line using only the assembly being adjusted — the other assembly's contribution is silently
+lost. Not a real bug today since every movement in practice has exactly one assembly. If
+multi-assembly movements start being used for real, this needs quantity xrefs tagged with
+their source `ASSEMBLY` xref_id (e.g. via the currently-unused `data` column) before adjust/
+rescale can be trusted. Do not action until asked.
 
 **CSV format** (one movement per file): line 1 = `from(SCREF), ref, order_date(dd/mm/yy),
 received_date(dd/mm/yy optional)`; lines 2+ = `component_title, quantity, [optional qty type]`.

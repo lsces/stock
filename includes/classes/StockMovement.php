@@ -269,11 +269,18 @@ class StockMovement extends LibertyContent {
 	 * quantity lines, starting xorder after any existing items. Safe to call multiple
 	 * times (e.g. for multi-assembly requisitions) — lines are only appended.
 	 *
-	 * @param  int   $pAssemblyContentId  Source assembly content_id.
-	 * @param  float $pKitCount           Multiplier applied to each BOM quantity.
+	 * @param  int         $pAssemblyContentId  Source assembly content_id.
+	 * @param  float       $pKitCount           Multiplier applied to each BOM quantity.
+	 * @param  string|null $pEntryDate          If given, stamped on every inserted line's
+	 *                                          `entry_date` — pass the source ASSEMBLY xref's
+	 *                                          own `entry_date` so the whole batch shares one
+	 *                                          value, letting rescaleFromAssembly() later tell
+	 *                                          this assembly's lines apart from another
+	 *                                          assembly's on the same movement. Omit to let
+	 *                                          each row get its own insert-time timestamp.
 	 * @return bool  FALSE if movement or assembly id is invalid.
 	 */
-	public function explodeFromAssembly( int $pAssemblyContentId, float $pKitCount = 1 ): bool {
+	public function explodeFromAssembly( int $pAssemblyContentId, float $pKitCount = 1, ?string $pEntryDate = null ): bool {
 		if( !$this->isValid() || !$this->verifyId( $pAssemblyContentId ) ) {
 			return false;
 		}
@@ -303,11 +310,156 @@ class StockMovement extends LibertyContent {
 				'xkey'       => $row['quantity_value'] * $pKitCount,
 				'xorder'     => $nextXorder,
 			];
+			if( $pEntryDate !== null ) {
+				$bomHash['entry_date'] = $pEntryDate;
+			}
 			$this->storeXref( $bomHash );
 			$nextXorder++;
 		}
 		$this->CompleteTrans();
 		return true;
+	}
+
+	/**
+	 * Rescale this movement's quantity lines to a new total kit count for one assembly.
+	 *
+	 * Unlike explodeFromAssembly() (which only ever appends new lines, for the initial add),
+	 * this recomputes each BOM component's quantity as (assembly's current per-kit xkey) *
+	 * $pNewKitCount and updates the movement's existing quantity xref for that component in
+	 * place — or inserts one if the assembly's BOM has grown since the last explosion. Works
+	 * correctly for both increases and decreases since it sets an absolute value, not a delta.
+	 *
+	 * Matches "existing" lines by component id scoped to $pEntryDate (the source ASSEMBLY
+	 * xref's own entry_date, as stamped by explodeFromAssembly()) so that two assemblies on
+	 * the same movement sharing a component don't clobber each other's lines — each
+	 * assembly-add's batch carries its own shared entry_date. Pre-migration rows (inserted
+	 * before entry_date existed) have it NULL on both the ASSEMBLY xref and its exploded
+	 * lines; passing $pEntryDate = null preserves the old component-id-only matching for them.
+	 *
+	 * @param  int         $pAssemblyContentId  Source assembly content_id.
+	 * @param  float       $pNewKitCount        New total kit count (absolute, not a delta).
+	 * @param  string|null $pEntryDate          The ASSEMBLY xref's own entry_date; null for
+	 *                                          pre-migration rows that never got one stamped.
+	 * @return bool  FALSE if movement or assembly id is invalid.
+	 */
+	public function rescaleFromAssembly( int $pAssemblyContentId, float $pNewKitCount, ?string $pEntryDate = null ): bool {
+		if( !$this->isValid() || !$this->verifyId( $pAssemblyContentId ) ) {
+			return false;
+		}
+
+		$bomRows = $this->mDb->query(
+			"SELECT x.`xref` AS item_content_id, x.`item` AS quantity_item,
+			        CAST(x.`xkey` AS DOUBLE PRECISION) AS per_kit_qty
+			 FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')
+			   AND x.`xkey` SIMILAR TO '[0-9]+([.][0-9]+)?'
+			 ORDER BY x.`xorder`",
+			[ $pAssemblyContentId ]
+		);
+
+		$nextXorder = (int)$this->mDb->getOne(
+			"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
+			 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')",
+			[ $this->mContentId ]
+		) ?: 1;
+
+		$this->StartTrans();
+		foreach( $bomRows as $row ) {
+			$matchSql = "SELECT `xref_id`, `xorder` FROM `".BIT_DB_PREFIX."liberty_xref`
+			             WHERE `content_id` = ? AND `item` = ? AND `xref` = ? AND `entry_date` ";
+			$matchBind = [ $this->mContentId, $row['quantity_item'], (int)$row['item_content_id'] ];
+			if( $pEntryDate !== null ) {
+				$matchSql   .= '= ?';
+				$matchBind[] = $pEntryDate;
+			} else {
+				$matchSql .= 'IS NULL';
+			}
+			$existing = $this->mDb->getRow( $matchSql, $matchBind );
+
+			$qtyHash = [
+				'content_id' => $this->mContentId,
+				'item'       => $row['quantity_item'],
+				'xref'       => (int)$row['item_content_id'],
+				'xkey'       => $row['per_kit_qty'] * $pNewKitCount,
+			];
+			if( $existing ) {
+				// Update in place — xorder must be passed explicitly or verify() zeroes it.
+				$qtyHash['xref_id'] = $existing['xref_id'];
+				$qtyHash['xorder']  = (int)$existing['xorder'];
+			} else {
+				$qtyHash['xorder']   = $nextXorder++;
+				$qtyHash['fAddXref'] = 1;
+			}
+			if( $pEntryDate !== null ) {
+				$qtyHash['entry_date'] = $pEntryDate;
+			}
+			$this->storeXref( $qtyHash );
+		}
+		$this->CompleteTrans();
+		return true;
+	}
+
+	/**
+	 * Set a standalone component's own quantity line to an absolute value.
+	 *
+	 * Companion to rescaleFromAssembly() for the other ASSEMBLY-item case: a directly-added
+	 * component (content_type_guid='stockcomponent') has no BOM to explode — it's represented
+	 * by a single SGL quantity line (see edit_movement.php's fAddAssembly component branch).
+	 * This keeps that line's xkey matching the ASSEMBLY-item's own kit-count field, which is
+	 * what stock level calculations actually read (list_stock.php sums the SGL/PRT/SHT/VOL
+	 * xrefs directly, not the ASSEMBLY-item's xkey) — letting the two drift apart was the
+	 * original "Adjust" no-op bug for component entries.
+	 *
+	 * KNOWN LIMITATION: only handles item='SGL'. Fine today since every kitlocker component is
+	 * sold singly (see stock/CLAUDE.md); components using other quantity item types (PRT/SHT/
+	 * VOL) aren't supported by this path — the same limitation fAddAssembly's component branch
+	 * already has.
+	 *
+	 * @param  int         $pComponentContentId  The component content_id.
+	 * @param  float       $pNewQty              New absolute quantity.
+	 * @param  string|null $pEntryDate           The ASSEMBLY xref's own entry_date, for
+	 *                                           scoping; null for pre-migration rows that
+	 *                                           never got one stamped.
+	 * @return bool  FALSE if movement or component id is invalid.
+	 */
+	public function syncComponentQuantity( int $pComponentContentId, float $pNewQty, ?string $pEntryDate = null ): bool {
+		if( !$this->isValid() || !$this->verifyId( $pComponentContentId ) ) {
+			return false;
+		}
+
+		$matchSql = "SELECT `xref_id`, `xorder` FROM `".BIT_DB_PREFIX."liberty_xref`
+		             WHERE `content_id` = ? AND `item` = 'SGL' AND `xref` = ? AND `entry_date` ";
+		$matchBind = [ $this->mContentId, $pComponentContentId ];
+		if( $pEntryDate !== null ) {
+			$matchSql   .= '= ?';
+			$matchBind[] = $pEntryDate;
+		} else {
+			$matchSql .= 'IS NULL';
+		}
+		$existing = $this->mDb->getRow( $matchSql, $matchBind );
+
+		$qtyHash = [
+			'content_id' => $this->mContentId,
+			'item'       => 'SGL',
+			'xref'       => $pComponentContentId,
+			'xkey'       => (string)$pNewQty,
+		];
+		if( $existing ) {
+			$qtyHash['xref_id'] = $existing['xref_id'];
+			$qtyHash['xorder']  = (int)$existing['xorder'];
+		} else {
+			$nextXorder = (int)$this->mDb->getOne(
+				"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
+				 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')",
+				[ $this->mContentId ]
+			) ?: 1;
+			$qtyHash['xorder']   = $nextXorder;
+			$qtyHash['fAddXref'] = 1;
+		}
+		if( $pEntryDate !== null ) {
+			$qtyHash['entry_date'] = $pEntryDate;
+		}
+		return $this->storeXref( $qtyHash );
 	}
 
 	/**

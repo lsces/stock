@@ -112,12 +112,39 @@
 			{if $gXrefInfo->mGroups}
 				{jstabs}
 					{foreach $gXrefInfo->mGroups as $xrefGroup}
-						{if $xrefGroup->mXGroup neq 'reference' && ($xrefGroup->mXGroup neq 'assembly' || $isBuild)}
+						{* 'reference' renders inline in the main form, not as a tab.
+						   'assembly'/'quantity' are superseded by the per-assembly BOM tabs
+						   below for build movements (REQN/PBLD) — the flat Items list only
+						   makes sense for ORDER/TRANS, which have no BOM to break out.
+						   'supplier' only applies to ORDER movements (the only type that
+						   actually references a supplier). 'stgrp'/'kitlocker' are
+						   assembly/component catalogue metadata, shared package-wide via the
+						   dual-guid xref schema (see liberty/CLAUDE.md) — never relevant to a
+						   movement itself, so always hidden here regardless of type. *}
+						{if $xrefGroup->mXGroup eq 'reference'}
+						{elseif $xrefGroup->mXGroup eq 'assembly'}
+							{if $isBuild}
+								{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+									xrefGroup=$xrefGroup allow_add=true allow_edit=true}
+							{/if}
+						{elseif $xrefGroup->mXGroup eq 'quantity'}
+							{if !$isBuild}
+								{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+									xrefGroup=$xrefGroup allow_add=true allow_edit=true}
+							{/if}
+						{elseif $xrefGroup->mXGroup eq 'supplier'}
+							{if $refType eq 'ORDER'}
+								{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+									xrefGroup=$xrefGroup allow_add=true allow_edit=true}
+							{/if}
+						{elseif $xrefGroup->mXGroup eq 'stgrp' || $xrefGroup->mXGroup eq 'kitlocker'}
+						{else}
 							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
-								xrefGroup=$xrefGroup
-								allow_add=true
-								allow_edit=true}
+								xrefGroup=$xrefGroup allow_add=true allow_edit=true}
 						{/if}
+					{/foreach}
+					{foreach $assemblyTabs as $asmTab}
+						{include file="bitpackage:stock/view_assembly_bom_tab.tpl" asmTab=$asmTab allow_edit=true}
 					{/foreach}
 				{/jstabs}
 			{/if}
