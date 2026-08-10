@@ -51,7 +51,7 @@
 					{if $partContentId}<th class="text-right">{tr}Qty{/tr}{if $partQtyNet !== null} ({$partQtyNet|string_format:"%.0f"}){/if}</th>{/if}
 					<th>{smartlink ititle="Ordered" isort="ref_start_date" ifile="list_movements.php" ipackage="stock" icontrol=$listInfo}</th>
 					<th>{smartlink ititle="Received" isort="event_time" ifile="list_movements.php" ipackage="stock" icontrol=$listInfo}</th>
-					<th>{smartlink ititle="Date" isort="created_desc" icontrol=$listInfo}</th>
+					<th>{smartlink ititle="Date" isort="created" icontrol=$listInfo}</th>
 					<th>{tr}Creator{/tr}</th>
 					{if $gBitUser->hasPermission('p_stock_update')}<th></th>{/if}
 				</tr>
