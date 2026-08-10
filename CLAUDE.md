@@ -51,8 +51,12 @@ Movement = pure `liberty_content` record (`content_type_guid='stockmovement'`). 
 - `TRANS` = inbound from another elf
 - `ORDER` = inbound from supplier
 
-**PBLD workflow**: kitelf creates via `add_prebuild.php`; PBLD → REQN switch (delivery to
-kitlocker) is a future action requiring user_id reassignment — not yet implemented.
+**PBLD workflow**: kitelf creates via `add_prebuild.php`. PBLD → REQN switch (delivery to
+kitlocker) is now built: `edit_movement.php`'s `fConvertToRequisition` action (button only
+shown when `$isPbld`) changes the reference xref's `item` from `PBLD` to `REQN` and its `xkey`
+from the prebuild name to the real RQ number, and syncs `lc.title` to match. Deliberately does
+**not** touch `user_id`/ownership — the stock-total implications of reassigning ownership on
+delivery haven't been worked out, so it's left as-is for now.
 
 **Status** = `lc.event_time` (BIGINT, Unix seconds) — `0` = placed/open, positive = received/fulfilled.
 `StockMovement::markReceived()` sets it to `time()`. `isReceived()` uses `!empty()` so 0 = not received.
@@ -76,23 +80,59 @@ PBLD uses "Completed"/"In progress" labels; other types use "Received"/"Pending"
 - `xkey` = quantity value
 - `xorder` = line sequence (managed explicitly)
 
-**Multi-assembly movements — known unhandled case (2026-08-10)**: `ASSEMBLY` being
-`multiple=1` means the data model technically allows more than one assembly per movement, and
-`explodeFromAssembly()`'s docstring already anticipated it ("safe to call multiple times, e.g.
-for multi-assembly requisitions"). But quantity xrefs carry no back-reference to which
-`ASSEMBLY` xref produced them — just `item`+`xref`(component). `StockMovement::
-rescaleFromAssembly()` (used by `edit_movement.php`'s "Adjust quantities" / `fAdjustAssembly`)
-matches existing quantity lines by component id alone, so if two assemblies on the same
-movement share a component, rescaling one assembly's kit count will overwrite that shared
-line using only the assembly being adjusted — the other assembly's contribution is silently
-lost. Not a real bug today since every movement in practice has exactly one assembly. If
-multi-assembly movements start being used for real, this needs quantity xrefs tagged with
-their source `ASSEMBLY` xref_id (e.g. via the currently-unused `data` column) before adjust/
-rescale can be trusted. Do not action until asked.
+**Multi-assembly movements — solved via `entry_date` (2026-08-10)**: `ASSEMBLY` being
+`multiple=1` means the data model allows more than one assembly per movement, and
+`explodeFromAssembly()`'s docstring anticipated it ("safe to call multiple times, e.g. for
+multi-assembly requisitions"). Originally quantity xrefs carried no back-reference to which
+`ASSEMBLY` xref produced them, so two assemblies sharing a component would clobber each
+other's line on adjust. Fixed by repurposing `liberty_xref.entry_date` (a genuinely dead
+column sitewide until this — see `liberty/CLAUDE.md`) as a batch marker: every quantity line
+`explodeFromAssembly()`/`fAddAssembly`'s component branch inserts gets stamped with the
+*same* `entry_date` as its source `ASSEMBLY` xref (or `null`, preserved consistently, for
+pre-migration rows that never got one). `rescaleFromAssembly()` and `syncComponentQuantity()`
+then match existing lines by component id **scoped to that entry_date**, so two assemblies
+sharing a component keep separate, correctly-isolated lines. Verified live with two real
+assemblies sharing a component on the same movement — see session log below for the test.
+
+**Per-assembly BOM tabs**: `edit_movement.php`/`view_movement.php` build one `{jstab}` per
+real assembly (`ASSEMBLY` xref with `data='stockassembly'`) on the movement, via
+`templates/view_assembly_bom_tab.tpl`, showing only that assembly's own `entry_date`-matched
+quantity lines — same matching mechanism as above. Line-level edit/delete on these tabs is
+gated to `p_stock_admin` (stricter than the general `allow_edit` used elsewhere); ordinary
+editors only get the whole-kit-count control. Standalone components (`data='stockcomponent'`)
+stay on the main "Assembly" tab, not split into their own tab — see `StockMovement::
+syncComponentQuantity()` below.
 
 **CSV format** (one movement per file): line 1 = `from(SCREF), ref, order_date(dd/mm/yy),
 received_date(dd/mm/yy optional)`; lines 2+ = `component_title, quantity, [optional qty type]`.
 Uploaded CSVs saved to `STOCK_IMPORT_PATH` (`storage/stock/`) as `<origname>_move_<content_id>.csv`.
+
+**Standalone component quantity sync**: a directly-added component (`fAddAssembly`'s
+non-assembly branch) is represented by a single SGL quantity line, not a BOM. `StockMovement::
+syncComponentQuantity()` keeps that line's `xkey` matching the `ASSEMBLY`-item's own kit-count
+field on adjust — stock level calculations (`list_stock.php`) read the SGL/PRT/SHT/VOL xrefs
+directly, not the `ASSEMBLY` xref's `xkey`, so letting the two drift apart silently broke
+stock totals until this was added. Only handles `item='SGL'` — fine today since every
+kitlocker component is sold singly; components using other quantity item types (PRT/SHT/VOL)
+aren't supported by the standalone-add path at all.
+
+**Tab visibility by movement type** (`edit_movement.tpl`/`view_movement.tpl`): the `assembly`
+and `quantity` (flat "Items") xref-group tabs are mutually exclusive on `$isBuild` — REQN/PBLD
+get the Assembly tab (+ per-assembly BOM tabs above), ORDER/TRANS get the flat Items tab
+instead (no BOM to break out). The `supplier`/`stgrp`/`kitlocker` xref groups are always
+hidden on a movement regardless of type — they're package-level assembly/component catalogue
+metadata (dual-guid xref schema, see `liberty/CLAUDE.md`), not something a movement itself
+has. A movement's own supplier/contact link is the `reference` xref's `ref_contact_id` (the
+"From" field), a completely separate thing from the `supplier` xref group.
+
+**`isValid()` — checks for a real record, not just a valid-looking id**:
+`StockMovement`/`StockAssembly`/`StockComponent::isValid()` all query `liberty_content`
+directly for a matching `content_id` + `content_type_guid`, not just `verifyId($mContentId)`.
+Before this fix, a syntactically-valid-but-nonexistent `content_id` (e.g. `?content_id=99999999`)
+read as "valid" — `view_*.php` rendered blank/broken pages instead of 404ing, and
+`edit_*.php` silently fell into create-new mode instead of erroring. All six `view_*.php`/
+`edit_*.php` entry points now show a consistent "No X exists with the given ID" 404. A
+`LibertyContent`-wide version of this fix was tried and reverted — see `liberty/CLAUDE.md`.
 
 ## edit_movement flags
 - `$isReqn` — ref_type === 'REQN'
@@ -109,6 +149,27 @@ decimal-valued `xkey` (mainly fractional SHT quantities like `0.02`) while whole
 SGL/PRT/VOL values happened to pass. Fixed 2026-07-13 to `'[0-9]+([.][0-9]+)?'` in all 8
 occurrences. Any new `SIMILAR TO` pattern with a literal `.` (or other regex metacharacter)
 must use the bracket form, not backslash-escaping.
+
+## Smartlink isort gotcha (2026-08-10)
+`{smartlink isort="..."}` (`list_movements.tpl`'s column headers) must be passed the **bare**
+field name — `function.smartlink.php` appends `_asc`/`_desc` itself to build the toggle link.
+The Date column was wrongly given `isort="created_desc"` (pre-suffixed), so clicking it built
+`sort_mode=created_desc_asc`/`created_desc_desc` — `BitDb::convertSortmodeOneItem()` only
+strips the *trailing* `_asc`/`_desc`, leaving `created_desc` as the "column name", which
+doesn't exist → Firebird `Column unknown CREATED_DESC`. Fixed to `isort="created"`, matching
+the other three (working) columns. Any new sortable column here must follow the same rule.
+
+## Form action-dispatch gotcha (2026-08-10)
+`edit_movement.php` branches on `!empty($_REQUEST['fSomeAction'])` to pick which handler runs,
+where `fSomeAction` was the `name` of the clicked `<button type="submit" name="fSomeAction">`.
+This breaks silently on forms with a single number/text input — pressing Enter to submit
+(rather than clicking the button) makes Firefox omit the button's name/value entirely, so the
+`elseif` chain matches nothing and the page just re-renders as if freshly loaded, with no
+error. Found via the "Adjust quantities" inline Set/Save control. Fixed by carrying the
+action flag as an explicit `<input type="hidden" name="fSomeAction" value="1" />` instead —
+applies to both the per-row adjust form (`view_xref_assembly_item.tpl`) and the "Add item"
+form (`view_xref_assembly_group.tpl`). Any new single-input stock form should follow this
+pattern from the start.
 
 ## Kitlocker sync / import tooling
 Kitlocker-specific xref items (role_id 3, `x_group='kitlocker'`), defined in
@@ -132,11 +193,14 @@ core code path — ad hoc data-loading tools):
   Does not set KLGxx group — group name is derivable from each row's enclosing `<h2>` section
   heading if this needs revisiting, since section order/names exactly match
   `KitlockerGroups.csv`, but this isn't built.
-  **How to actually run it**: save the site's raw HTML export as
-  `storage/stock/KitlockerStockPredict.html` (exact filename — `STOCK_IMPORT_PATH`), then
-  visit `stock/import/load_kitlocker_stock_predict.php` on the live site. For any codes it
-  reports as "no matching KLID, skipped", re-visit with `?create=CODE:A,CODE:C` appended
-  (`A`=StockAssembly, `C`=StockComponent) to create them.
+  **How to actually run it (2026-08-10)**: reachable from the Stock admin menu ("Sync
+  Kitlocker Stock Predict"). The page itself now has a browser upload form (`html_file`) that
+  writes straight to `storage/stock/KitlockerStockPredict.html` — no manual file copy needed.
+  Only actually processes on a fresh upload or an explicit `?create=` retry, never on a bare
+  page visit (a plain GET used to silently re-run against whatever stale file was already on
+  disk). Unmatched codes list with "Add as Assembly"/"Add as Component" buttons (plain
+  `?create=CODE:A`/`:C` links reusing the already-saved file) instead of requiring the query
+  string to be typed by hand.
 
 **Direction:** the CSV/HTML importers are a stopgap, not a pattern to extend — the stated
 goal is to add new kitlocker items through the normal `edit_assembly.php` /
