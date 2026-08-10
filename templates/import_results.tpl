@@ -4,6 +4,15 @@
 		<h1>{$page_title|default:"Import Results"|escape}</h1>
 	</div>
 	<div class="body">
+		{if $uploadForm}
+			<form method="post" enctype="multipart/form-data">
+				<div class="form-inline">
+					<input type="file" name="html_file" accept=".html,.htm,text/html" />
+					<input type="submit" class="btn btn-default btn-sm" value="{tr}Upload &amp; Run{/tr}" />
+				</div>
+			</form>
+			<hr />
+		{/if}
 		<p>{tr}File{/tr}: <code>{$csvFile|escape}</code></p>
 
 		<p>
@@ -38,6 +47,25 @@
 					<li>{$msg|escape}</li>
 				{/foreach}
 			</ul>
+		{/if}
+
+		{if $skippedRows}
+			<h3>{tr}Unmatched codes{/tr}</h3>
+			<table class="table table-condensed">
+				<thead><tr><th>{tr}Code{/tr}</th><th>{tr}Name{/tr}</th><th></th></tr></thead>
+				<tbody>
+					{foreach $skippedRows as $sr}
+					<tr>
+						<td>{$sr.code|escape}</td>
+						<td>{$sr.name|escape}</td>
+						<td>
+							<a class="btn btn-default btn-xs" href="?create={$sr.code|escape}:A">{tr}Add as Assembly{/tr}</a>
+							<a class="btn btn-default btn-xs" href="?create={$sr.code|escape}:C">{tr}Add as Component{/tr}</a>
+						</td>
+					</tr>
+					{/foreach}
+				</tbody>
+			</table>
 		{/if}
 	</div>
 </div>
