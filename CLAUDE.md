@@ -132,6 +132,11 @@ core code path — ad hoc data-loading tools):
   Does not set KLGxx group — group name is derivable from each row's enclosing `<h2>` section
   heading if this needs revisiting, since section order/names exactly match
   `KitlockerGroups.csv`, but this isn't built.
+  **How to actually run it**: save the site's raw HTML export as
+  `storage/stock/KitlockerStockPredict.html` (exact filename — `STOCK_IMPORT_PATH`), then
+  visit `stock/import/load_kitlocker_stock_predict.php` on the live site. For any codes it
+  reports as "no matching KLID, skipped", re-visit with `?create=CODE:A,CODE:C` appended
+  (`A`=StockAssembly, `C`=StockComponent) to create them.
 
 **Direction:** the CSV/HTML importers are a stopgap, not a pattern to extend — the stated
 goal is to add new kitlocker items through the normal `edit_assembly.php` /
