@@ -133,6 +133,8 @@ read as "valid" — `view_*.php` rendered blank/broken pages instead of 404ing, 
 `edit_*.php` silently fell into create-new mode instead of erroring. All six `view_*.php`/
 `edit_*.php` entry points now show a consistent "No X exists with the given ID" 404. A
 `LibertyContent`-wide version of this fix was tried and reverted — see `liberty/CLAUDE.md`.
+This same change also exposed a real kernel destructor bug (crashed live on srv10 until fixed
+2026-08-11) — see `liberty/CLAUDE.md`'s "Side effect found 2026-08-11" note.
 
 ## edit_movement flags
 - `$isReqn` — ref_type === 'REQN'
