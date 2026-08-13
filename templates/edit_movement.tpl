@@ -92,7 +92,7 @@
 				{formlabel label="Load CSV"}
 				{forminput}
 					<input type="file" name="csv_file" accept=".csv,text/csv" />
-					{formhelp note="Optional — upload movement CSV at creation time"}
+					{formhelp note="Optional — upload movement CSV at creation time. First line: From,Ref,Order Date,Received Date (all optional; leave From blank to use this movement's own supplier)"}
 				{/forminput}
 			</div>
 			{/if}
@@ -170,6 +170,7 @@
 					<input type="file" name="csv_file" accept=".csv,text/csv" />
 					<input type="submit" class="btn btn-default" name="upload_csv" value="{tr}Upload{/tr}" />
 				</div>
+				{formhelp note="First line: From,Ref,Order Date,Received Date (all optional; leave From blank to use this movement's own supplier)"}
 			{/form}
 			{/if}
 
