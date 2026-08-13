@@ -657,6 +657,13 @@ class StockMovement extends LibertyContent {
 					 WHERE `item`='SCREF' AND `xkey`=?",
 					[ $from ]
 				) : 0;
+				// Fall back to the movement's own already-stored "From" contact if the CSV's own
+				// from-column is blank or didn't resolve to a known SCREF - lets a plain item CSV
+				// (e.g. adding to an existing movement that already has its supplier set) still
+				// match by supplier part number without having to repeat the supplier in the CSV.
+				if( !$contactId && !empty( $this->mInfo['ref_contact_id'] ) ) {
+					$contactId = (int)$this->mInfo['ref_contact_id'];
+				}
 				if( $ref !== '' ) {
 					$existingRow = $this->mDb->getRow(
 						"SELECT `xref_id`, `item` FROM `".BIT_DB_PREFIX."liberty_xref`
