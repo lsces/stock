@@ -18,8 +18,8 @@ $find              = trim( $_REQUEST['find'] ?? '' );
 $showShortages     = !empty( $_REQUEST['shortages'] );
 $assemblyContentId = isset( $_REQUEST['assembly_content_id'] ) && is_numeric( $_REQUEST['assembly_content_id'] )
                      ? (int)$_REQUEST['assembly_content_id'] : null;
-$kitCount          = isset( $_REQUEST['kit_count'] ) && is_numeric( $_REQUEST['kit_count'] ) && (float)$_REQUEST['kit_count'] > 0
-                     ? (float)$_REQUEST['kit_count'] : 1;
+$kitCount          = isset( $_REQUEST['kit_count'] ) && is_numeric( $_REQUEST['kit_count'] ) && (float)$_REQUEST['kit_count'] >= 0
+                     ? (float)$_REQUEST['kit_count'] : 0;
 $filterUserId      = isset( $_REQUEST['user_id'] ) && is_numeric( $_REQUEST['user_id'] )
                      ? (int)$_REQUEST['user_id'] : null;
 $filterUserName    = '';
@@ -64,6 +64,10 @@ if( $assemblyContentId ) {
 					 FROM `{$X}liberty_xref` sup
 					 WHERE sup.`content_id` = lc.`content_id` AND sup.`item` = '#SUP'
 					 ORDER BY sup.`xorder`) AS part_number,
+					(SELECT FIRST 1 sup.`xref`
+					 FROM `{$X}liberty_xref` sup
+					 WHERE sup.`content_id` = lc.`content_id` AND sup.`item` = '#SUP'
+					 ORDER BY sup.`xorder`) AS supplier_contact_id,
 					(SELECT FIRST 1 CAST(pk.`xkey` AS DOUBLE PRECISION)
 					 FROM `{$X}liberty_xref` pk
 					 WHERE pk.`content_id` = lc.`content_id` AND pk.`item` = 'PRT'
@@ -145,6 +149,7 @@ foreach( $rows as $row ) {
 			'title'       => $row['title'],
 			'data'        => $row['data'],
 			'part_number' => $row['part_number'],
+			'supplier_contact_id' => $row['supplier_contact_id'] !== null ? (int)$row['supplier_contact_id'] : null,
 			'display_url' => STOCK_PKG_URL.'view_component.php?content_id='.$cid,
 			'bom_group'   => $bomXorder !== null ? (int)floor( $bomXorder / 1000 ) : null,
 			'stock'       => [],
@@ -198,12 +203,56 @@ $assemblyListJson = json_encode( array_values( array_map(
 ) ) );
 
 if( $showShortages && isset( $_REQUEST['format'] ) && $_REQUEST['format'] === 'csv' ) {
+	// Section label per component's supplier: the SCREF short code (matches
+	// importCsv()'s from(SCREF) column, see stock/CLAUDE.md) if the linked
+	// contact has one, else its title, else 'Unknown' for a #SUP that was
+	// never linked to a real contact. Resolved in one batch, not per-row.
+	$supplierCids = array_unique( array_filter( array_map(
+		fn( $c ) => $c['supplier_contact_id'], $stockList
+	) ) );
+	$screfMap = [];
+	$titleMap = [];
+	if( $supplierCids ) {
+		$placeholders = implode( ',', array_fill( 0, count( $supplierCids ), '?' ) );
+		$screfRows = $gBitDb->getAll(
+			"SELECT `content_id`, `xkey` FROM `".BIT_DB_PREFIX."liberty_xref`
+			 WHERE `item` = 'SCREF' AND `content_id` IN ($placeholders)",
+			array_values( $supplierCids )
+		);
+		foreach( $screfRows as $r ) { $screfMap[$r['content_id']] = $r['xkey']; }
+		$titleRows = $gBitDb->getAll(
+			"SELECT `content_id`, `title` FROM `".BIT_DB_PREFIX."liberty_content`
+			 WHERE `content_id` IN ($placeholders)",
+			array_values( $supplierCids )
+		);
+		foreach( $titleRows as $r ) { $titleMap[$r['content_id']] = $r['title']; }
+	}
+	$supplierLabel = function( $comp ) use ( $screfMap, $titleMap ) {
+		$cid = $comp['supplier_contact_id'];
+		if( !$cid ) return 'Unknown';
+		return $screfMap[$cid] ?? $titleMap[$cid] ?? 'Unknown';
+	};
+
+	// Sort the already-fetched array by supplier label here in PHP, rather
+	// than trying to fold supplier ordering into the SQL above.
+	$sortedList = $stockList;
+	uasort( $sortedList, function( $a, $b ) use ( $supplierLabel ) {
+		return strcasecmp( $supplierLabel( $a ), $supplierLabel( $b ) )
+			?: strcasecmp( $a['title'], $b['title'] );
+	} );
+
 	header( 'Content-Type: text/csv; charset=utf-8' );
 	header( 'Content-Disposition: attachment; filename="shortages.csv"' );
-	$out = fopen( 'php://output', 'w' );
-	fputcsv( $out, [ 'Part No', 'Qty' ], ',', '"', '' );
-	foreach( $stockList as $comp ) {
+	$out          = fopen( 'php://output', 'w' );
+	$today        = date( 'd/m/y' );
+	$currentLabel = null;
+	foreach( $sortedList as $comp ) {
 		if( empty( $comp['part_number'] ) ) continue;
+		$label = $supplierLabel( $comp );
+		if( $label !== $currentLabel ) {
+			fputcsv( $out, [ $label, 'REF', $today ], ',', '"', '' );
+			$currentLabel = $label;
+		}
 		foreach( $comp['stock'] as $qtype => $row ) {
 			$qty = $qtype === 'PRT' && $row['part_size'] > 0
 				? abs( $row['level'] ) / $row['part_size']

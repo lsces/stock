@@ -33,7 +33,7 @@
 				<div class="form-group">
 					<label>{tr}Kits{/tr}</label>
 					<input type="number" class="form-control input-sm" name="kit_count"
-						min="1" step="1" style="width:5em"
+						min="0" step="1" style="width:5em"
 						value="{$kitCount|escape}" />
 				</div>
 				{/if}
