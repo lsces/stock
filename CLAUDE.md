@@ -219,3 +219,15 @@ during the normal foreach and render at the end only when `$isKitlocker` is true
 
 **movement edit_movement.php** filters 'reference' group in template:
 `{if $xrefGroup->mXGroup neq 'reference'}` — reference is rendered directly in the form.
+
+## `stock_assembly_map` — possibly vestigial, flagged not fixed (2026-08-16)
+Found while designing Food's own assembly/BOM equivalent (which deliberately does NOT use a map
+table — see `food/CLAUDE.md`): `stockassembly`'s own quantity items (`SGL`/`PRT`/`SHT`/`VOL`) are
+registered `multiple=0` in `schema_inc.php`, which structurally can't hold more than one row per
+type per assembly — so they can't be the mechanism behind a multi-line BOM either. Yet
+`stock_assembly_map` is still actively referenced by `StockAssembly::addItem()`/
+`getComponentMapList()`/the parent-lookup code in `StockBase.php`. Looks like leftover
+structural-hierarchy code from an earlier design phase (nested assembly navigation?) rather than
+the live BOM-quantity display mechanism — not confirmed either way, not investigated further.
+Worth a dedicated look at some point: is `stock_assembly_map` actually load-bearing for anything
+currently in use, or safe to retire the same way `stock_component`/`stock_assembly` were?
