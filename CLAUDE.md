@@ -220,14 +220,30 @@ during the normal foreach and render at the end only when `$isKitlocker` is true
 **movement edit_movement.php** filters 'reference' group in template:
 `{if $xrefGroup->mXGroup neq 'reference'}` — reference is rendered directly in the form.
 
-## `stock_assembly_map` — possibly vestigial, flagged not fixed (2026-08-16)
-Found while designing Food's own assembly/BOM equivalent (which deliberately does NOT use a map
-table — see `food/CLAUDE.md`): `stockassembly`'s own quantity items (`SGL`/`PRT`/`SHT`/`VOL`) are
-registered `multiple=0` in `schema_inc.php`, which structurally can't hold more than one row per
-type per assembly — so they can't be the mechanism behind a multi-line BOM either. Yet
-`stock_assembly_map` is still actively referenced by `StockAssembly::addItem()`/
-`getComponentMapList()`/the parent-lookup code in `StockBase.php`. Looks like leftover
-structural-hierarchy code from an earlier design phase (nested assembly navigation?) rather than
-the live BOM-quantity display mechanism — not confirmed either way, not investigated further.
-Worth a dedicated look at some point: is `stock_assembly_map` actually load-bearing for anything
-currently in use, or safe to retire the same way `stock_component`/`stock_assembly` were?
+## `stock_assembly_map` — confirmed dead, not just "possibly" (2026-08-16, checked against `merg`)
+Follow-up to the note below (kept for the history) — checked properly against the real `merg`
+database (the live stock DB; `rdmcloud` doesn't even have the `stock_assembly_map` table, wrong
+DB to check against) rather than reasoning from code alone:
+
+- `SELECT COUNT(*) FROM stock_assembly_map` → **0 rows**.
+- Real BOM data: 122 `stockassembly` content records, 359 real BOM-line `liberty_xref` rows under
+  `SGL`/`PRT`/`PCK`/`SHT`/`VOL` (the `quantity`/`bom` group, `sort_order=4`) — confirming the xref
+  route is genuinely where BOM data lives, exactly the pattern Food's own `FoodAssembly` uses (no
+  map table, ingredient rows are xref rows).
+- `import/load_merg_bom.php` — the actual, currently-used BOM import tool — writes straight to
+  `liberty_xref` (`item='SGL'`, `xref`=component content_id, `xkey`=quantity, `xorder`=next
+  position via `MAX(xorder)+1`, same pattern `FoodAssembly::addItem()` mirrors). It never touches
+  `stock_assembly_map` at all.
+- Side note while there: `SGL`/`PRT`/`SHT`/`VOL` are registered `multiple=0` in `schema_inc.php`
+  but the real importer writes several `xorder`-incrementing rows per item per assembly anyway
+  (359 rows across 122 assemblies is obviously >1 row/type on average) — the `multiple` flag on
+  this group doesn't reflect actual usage, a separate small doc/schema inconsistency, not chased
+  further here.
+
+So `stock_assembly_map` is a schema table with a real amount of live PHP code still reading/
+writing it (`StockAssembly::addItem()`/`getComponentMapList()`, hierarchy `connectby()` walks and
+`child_count` in `StockBase.php`/`StockAssembly.php`, `StockComponent`'s own reverse-lookup joins)
+that all silently operates on nothing — every one of those queries runs fine, just against a
+permanently-empty table. Not yet touched (retiring active, referenced code is a bigger, separate
+job — same caution as `stock_component`/`stock_assembly`'s own retirement), but the "is it
+load-bearing" question from the note below is now answered: no.
