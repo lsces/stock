@@ -16,7 +16,7 @@
 				{formlabel label="Supplier"}
 				{forminput}
 					<p class="form-control-static">
-						<a href="{$smarty.const.CONTACT_PKG_URL}display_contact.php?content_id={$xrefInfo.xref|escape}">{$xrefInfo.xref_title|escape}</a>
+						<a href="{$smarty.const.CONTACT_PKG_URL}view.php?content_id={$xrefInfo.xref|escape}">{$xrefInfo.xref_title|escape}</a>
 					</p>
 				{/forminput}
 			</div>

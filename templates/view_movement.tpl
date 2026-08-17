@@ -21,7 +21,7 @@
 			{if $gContent->mInfo.ref_contact_name}
 			<dt>{tr}Supplier{/tr}</dt>
 			<dd>
-				<a href="{$smarty.const.CONTACT_PKG_URL}display_contact.php?content_id={$gContent->mInfo.ref_contact_id}">{$gContent->mInfo.ref_contact_name|escape}</a>
+				<a href="{$smarty.const.CONTACT_PKG_URL}view.php?content_id={$gContent->mInfo.ref_contact_id}">{$gContent->mInfo.ref_contact_name|escape}</a>
 			</dd>
 			{elseif $gContent->mInfo.ref_from_data}
 			<dt>{tr}From{/tr}</dt>

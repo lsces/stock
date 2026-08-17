@@ -19,7 +19,7 @@
 				{foreach $elves as $elf}
 				<tr>
 					<td>
-						<a href="{$smarty.const.CONTACT_PKG_URL}display_contact.php?content_id={$elf.content_id}">{$elf.display_name|escape}</a>
+						<a href="{$smarty.const.CONTACT_PKG_URL}view.php?content_id={$elf.content_id}">{$elf.display_name|escape}</a>
 					</td>
 					<td>{$elf.linked_user_login|escape}</td>
 					<td class="text-right">

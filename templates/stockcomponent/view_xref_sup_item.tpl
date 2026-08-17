@@ -2,7 +2,7 @@
 <tr class="{cycle values="even,odd"}">
 	<td>
 		{if $xrefInfo.xref > 0}
-			<a href="{$smarty.const.CONTACT_PKG_URL}display_contact.php?content_id={$xrefInfo.xref|escape}">{$xrefInfo.linked_title|default:$xrefInfo.xref|escape}</a>
+			<a href="{$smarty.const.CONTACT_PKG_URL}view.php?content_id={$xrefInfo.xref|escape}">{$xrefInfo.linked_title|default:$xrefInfo.xref|escape}</a>
 		{else}
 			&nbsp;
 		{/if}
