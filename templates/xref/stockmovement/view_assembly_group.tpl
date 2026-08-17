@@ -10,7 +10,7 @@
 				<th>{tr}Item{/tr}</th>
 				<th>{tr}Type{/tr}</th>
 				<th>{tr}Qty{/tr}</th>
-				{if $xrefAllowEdit}<th></th>{/if}
+				{if $xrefAllowEdit}<th>{tr}Added{/tr}</th><th>{tr}Updated{/tr}</th><th>{tr}Edit{/tr}</th>{/if}
 			</tr>
 		</thead>
 		<tbody>
@@ -22,7 +22,7 @@
 				{/foreach}
 			{else}
 				<tr class="norecords">
-					<td colspan="{if $xrefAllowEdit}4{else}3{/if}">{tr}No items{/tr}</td>
+					<td colspan="{if $xrefAllowEdit}6{else}3{/if}">{tr}No items{/tr}</td>
 				</tr>
 			{/if}
 		</tbody>

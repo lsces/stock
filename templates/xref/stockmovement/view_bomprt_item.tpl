@@ -10,22 +10,7 @@
 	<td>{$xrefInfo.linked_data|escape}</td>
 	<td>{if $xrefInfo.part_size}{math equation="round(x/y,3)" x=$xrefInfo.xkey y=$xrefInfo.part_size} of {$xrefInfo.part_size|escape}{else}{$xrefInfo.xkey|escape}{/if}</td>
 	<td>{$xrefInfo.xkey_ext|escape}</td>
-	{if $xrefAllowEdit}
-		<td>{$xrefInfo.start_date|bit_short_date}</td>
-		<td>{$xrefInfo.last_update_date|bit_short_date}</td>
-		<td>
-			<span class="actionicon">
-				{if $gContent->hasUpdatePermission() && !$isHistory}
-					{smartlink ititle="Edit" ipackage="liberty" ifile="edit_xref.php" biticon="edit" content_id=$gContent->mInfo.content_id xref_id=$xrefInfo.xref_id}
-				{/if}
-				{if $gContent->hasUpdatePermission()}
-					{smartlink ititle="Archive" ipackage="liberty" ifile="edit_xref.php" biticon="archive-insert" content_id=$gContent->mInfo.content_id xref_id=$xrefInfo.xref_id expunge=1}
-				{/if}
-				{if $gContent->hasExpungePermission()}
-					{smartlink ititle="Delete" ipackage="liberty" ifile="edit_xref.php" biticon="user-trash" content_id=$gContent->mInfo.content_id xref_id=$xrefInfo.xref_id expunge=3}
-				{/if}
-			</span>
-		</td>
-	{/if}
+	{include file="bitpackage:liberty/xref/dates_cell.tpl"}
+	{include file="bitpackage:liberty/xref/action_icons.tpl"}
 </tr>
 {/strip}

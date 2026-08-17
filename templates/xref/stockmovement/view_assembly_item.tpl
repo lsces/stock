@@ -27,13 +27,6 @@
 		{$xrefInfo.xkey|escape}
 	{/if}
 </td>
-{if $xrefAllowEdit|default:false}
-<td>
-	<span class="actionicon">
-		{if $gContent->hasExpungePermission()}
-			{smartlink ititle="Remove" ipackage="liberty" ifile="edit_xref.php" biticon="user-trash" content_id=$gContent->mInfo.content_id xref_id=$xrefInfo.xref_id expunge=1}
-		{/if}
-	</span>
-</td>
-{/if}
+{include file="bitpackage:liberty/xref/dates_cell.tpl"}
+{include file="bitpackage:liberty/xref/action_icons.tpl"}
 {/strip}
