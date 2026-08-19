@@ -180,5 +180,5 @@ $gBitInstaller->registerSchemaDefault( STOCK_PKG_NAME, array_merge( $xrefTypes, 
 // ### Requirements
 $gBitInstaller->registerRequirements( STOCK_PKG_NAME, [
 	'liberty' => [ 'min' => '5.0.1' ],
-	'contact' => [ 'min' => '5.0.2' ]
+	'contact' => [ 'min' => '5.0.1' ]
 ] );
