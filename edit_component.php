@@ -44,25 +44,16 @@ if( !empty($_REQUEST['save']) ) {
 		}
 	}
 } elseif( !empty($_REQUEST['delete']) ) {
+	// Confirmation happens client-side (view_component.tpl's onclick="return
+	// confirm(...)" — same lightweight pattern kernel's admin menu/module-config/
+	// layout delete links use, see food package's own delete branches for the
+	// same convention) rather than a server-rendered confirmDialog() round-trip
+	// — no extra choices to offer here, so a second full page load would just
+	// be unnecessary friction.
 	$gContent->verifyUserPermission( KernelTools::tra('You do not have permission to delete this component.') );
-
-	if( !empty( $_REQUEST['cancel'] ) ) {
-		// user cancelled
-	} elseif( empty( $_REQUEST['confirm'] ) ) {
-		$formHash['delete']       = true;
-		$formHash['content_id'] = $gContent->mContentId;
-		$gBitSystem->confirmDialog( $formHash,
-			[
-				'confirm_item' => $gContent->getTitle(),
-				'warning'      => KernelTools::tra('Are you sure you want to delete this component?').' ('.$gContent->getTitle().') '.KernelTools::tra('It will be removed from all assemblies to which it belongs.'),
-				'error'        => KernelTools::tra('This cannot be undone!'),
-			],
-		);
-	} else {
-		if( $gContent->expunge() ) {
-			header( 'Location: '.STOCK_PKG_URL );
-			die;
-		}
+	if( $gContent->expunge() ) {
+		header( 'Location: '.STOCK_PKG_URL );
+		die;
 	}
 }
 

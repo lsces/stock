@@ -5,6 +5,9 @@
 			{if $gContent->hasUpdatePermission()}
 				<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_movement.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit Movement"}</a>
 			{/if}
+			{if $gContent->hasAdminPermission()}
+				<a title="{tr}Delete Movement{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_movement.php?content_id={$gContent->mContentId}&amp;delete=1" onclick="return confirm('{tr}Are you sure you want to delete this movement?{/tr}')">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Movement"}</a>
+			{/if}
 		</div>
 		<h1>{$gContent->getTitle()|escape}</h1>
 		<small>

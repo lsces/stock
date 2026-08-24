@@ -247,24 +247,14 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 	die;
 
 } elseif( !empty( $_REQUEST['delete'] ) ) {
+	// Confirmation happens client-side (view_movement.tpl's onclick="return
+	// confirm(...)" — same lightweight pattern used elsewhere, see
+	// edit_component.php's identical delete branch) rather than a
+	// server-rendered confirmDialog() round-trip — no extra choices to offer.
 	$gBitSystem->verifyPermission( 'p_stock_admin' );
-	if( !empty( $_REQUEST['cancel'] ) ) {
-		header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$gContent->mContentId );
-		die;
-	} elseif( empty( $_REQUEST['confirm'] ) ) {
-		$gBitSystem->confirmDialog(
-			[ 'delete' => true, 'content_id' => $gContent->mContentId ],
-			[
-				'confirm_item' => $gContent->getTitle(),
-				'warning'      => KernelTools::tra( 'Are you sure you want to delete this movement?' ).' ('.$gContent->getTitle().')',
-				'error'        => KernelTools::tra( 'This cannot be undone!' ),
-			]
-		);
-	} else {
-		$gContent->expunge();
-		header( 'Location: '.STOCK_PKG_URL.'list_movements.php' );
-		die;
-	}
+	$gContent->expunge();
+	header( 'Location: '.STOCK_PKG_URL.'list_movements.php' );
+	die;
 }
 
 $assemblyTabs = [];

@@ -6,7 +6,7 @@
 		<div class="floaticon">
 			{if $gContent->hasUpdatePermission()}
 				<a title="{tr}Edit{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit Component"}</a>
-				<a title="{tr}Delete{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$gContent->mContentId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Component"}</a>
+				<a title="{tr}Delete{/tr}" href="{$smarty.const.STOCK_PKG_URL}edit_component.php?content_id={$gContent->mContentId}&amp;delete=1" onclick="return confirm('{tr}Are you sure you want to delete this component? It will be removed from all assemblies to which it belongs.{/tr}')">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Component"}</a>
 			{/if}
 		</div>
 		{/if}
