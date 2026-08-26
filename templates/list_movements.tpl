@@ -84,9 +84,7 @@
 			</tbody>
 		</table>
 
-		<nav>
-			{pagination ref_type=$filterType find=$smarty.request.find|default:'' part_content_id=$partContentId|default:'' user_id=$filterUserId|default:''}
-		</nav>
+		{pagination ref_type=$filterType find=$smarty.request.find|default:'' part_content_id=$partContentId|default:'' user_id=$filterUserId|default:''}
 
 	</section>
 </div>

@@ -66,9 +66,7 @@
 			</tbody>
 		</table>
 
-		<nav>
-			{pagination}
-		</nav>
+		{pagination}
 
 	</section>
 </div>

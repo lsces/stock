@@ -75,9 +75,7 @@
 			{/foreach}
 		</div>
 
-		<nav>
-			{pagination}
-		</nav>
+		{pagination}
 
 	</section>
 </div>

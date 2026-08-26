@@ -61,9 +61,7 @@
 			</tbody>
 		</table>
 
-		<nav>
-			{pagination gallery_id=$smarty.request.gallery_id}
-		</nav>
+		{pagination gallery_id=$smarty.request.gallery_id}
 
 	</section>
 </div>
