@@ -42,14 +42,11 @@ in, a kit being built, a delivery going out) is its own recorded event, not just
 
 ## What's planned
 
-- **A MERG-agnostic build** — dropping the MERG-specific pages (Kitlocker sync, kitelf
-  terminology) for a generic core. Liberty's xref group/item structure is what makes this
-  realistic rather than a rewrite: components/assemblies/movements are already modelled generically,
-  it's specifically the Kitlocker-sync importers and kitelf-flavoured multi-user filtering that
-  would need to become optional rather than assumed. Not scoped yet.
-- Retiring the dead `stock_assembly_map` table's still-live-but-unused code paths (confirmed
-  empty in the real production database, but several methods still read/write it as if it
-  mattered) — not scoped yet, a bigger job than it looks given how many places reference it.
+**A MERG-agnostic build** — dropping the MERG-specific pages (Kitlocker sync, kitelf
+terminology) for a generic core. Liberty's xref group/item structure is what makes this
+realistic rather than a rewrite: components/assemblies/movements are already modelled generically,
+it's specifically the Kitlocker-sync importers and kitelf-flavoured multi-user filtering that
+would need to become optional rather than assumed. Not scoped yet.
 
 See `MANUAL.md` for the full current picture — schema, movement model, and known gotchas
 (particularly around Firebird-specific query pitfalls this package has hit more than once).

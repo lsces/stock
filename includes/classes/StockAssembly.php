@@ -424,33 +424,15 @@ class StockAssembly extends StockBase {
 		}
 
 		if( !@$this->verifyId( $pThumbnailContentId ) ) {
-			if( $this->mDb->isAdvancedPostgresEnabled() ) {
-				$whereSql = '';
-				$bindVars = [ $pContentId ];
-				if( !$gBitUser->isAdmin() ) {
-					$whereSql = " AND (cgm.`security_id` IS null OR lc.`user_id`=?) ";
-					$bindVars[] = $gBitUser->mUserId;
-				}
-				$query = "SELECT lc.`content_id`, lc.`content_type_guid`
-							FROM connectby('`".BIT_DB_PREFIX."stock_assembly_map`', '`item_content_id`', '`assembly_content_id`', ?, 0, '/') AS t(`cb_item_content_id` int, `cb_parent_content_id` int, `level` int, `branch` text)
-							INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id`=cb_item_content_id)
-							LEFT OUTER JOIN `".BIT_DB_PREFIX."gatekeeper_security_map` cgm ON (cgm.`content_id`=lc.`content_id`)
-							WHERE `cb_parent_content_id`=? $whereSql";
-				if( $row = $this->mDb->getRow( $query, $bindVars ) ) {
-					$pThumbnailContentType = $row['content_type_guid'];
-					$pThumbnailContentId   = $row['content_id'];
-				}
-			} else {
-				$query = "SELECT fgim.`item_content_id`, lc.`content_type_guid`
-						FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
-						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( fgim.`item_content_id`=lc.`content_id` )
-						WHERE fgim.`assembly_content_id` = ?
-						ORDER BY ".$this->mDb->convertSortmode('random');
-				$rs = $this->mDb->getRow( $query, [ $pContentId ], 1 );
-				if( !empty( $rs ) ) {
-					$pThumbnailContentId   = $rs['item_content_id'];
-					$pThumbnailContentType = $rs['content_type_guid'];
-				}
+			$query = "SELECT fgim.`item_content_id`, lc.`content_type_guid`
+					FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
+					INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( fgim.`item_content_id`=lc.`content_id` )
+					WHERE fgim.`assembly_content_id` = ?
+					ORDER BY ".$this->mDb->convertSortmode('random');
+			$rs = $this->mDb->getRow( $query, [ $pContentId ], 1 );
+			if( !empty( $rs ) ) {
+				$pThumbnailContentId   = $rs['item_content_id'];
+				$pThumbnailContentType = $rs['content_type_guid'];
 			}
 		}
 
@@ -663,50 +645,7 @@ class StockAssembly extends StockBase {
 		global $gBitDb;
 
 		$ret = [];
-		if( $this->mDb->isAdvancedPostgresEnabled() ) {
-			$bindVars = [];
-			$containVars = [];
-			$selectSql = '';
-			$joinSql = '';
-			$whereSql = '';
-			if( !empty( $pListHash['contain_item'] ) ) {
-				$selectSql = " , tfgim3.`item_content_id` AS `in_gallery` ";
-				$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_map` tfgim3 ON (tfgim3.`assembly_content_id`=lc.`content_id`) AND tfgim3.`item_content_id`=? ";
-				$bindVars[] = $pListHash['contain_item'];
-				$containVars[] = $pListHash['contain_item'];
-			}
-			if( isset( $pListHash['contain_item'] ) ) {
-				// contain item might have squeaked in as 0, clear our from pListHash
-				unset( $pListHash['contain_item'] );
-			}
-			foreach( $pListHash as $key=>$val ) {
-				$whereSql .= " $key=? AND ";
-				$bindVars[] = $val;
-			}
-
-			$query =   "SELECT lc.`content_id` AS `hash_key`, lc.* $selectSql
-						FROM `".BIT_DB_PREFIX."liberty_content` lc
-							$joinSql
-						WHERE lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."' AND $whereSql NOT EXISTS (SELECT assembly_content_id FROM stock_assembly_map tfgim2 WHERE tfgim2.item_content_id=lc.content_id)
-						ORDER BY lc.title";
-			$rootContent = $gBitDb->GetAssoc( $query, $bindVars );
-
-			foreach( array_keys( $rootContent ) as $conId ) {
-				$splitVars = [];
-				$query = "SELECT branch AS hash_key, * $selectSql
-						  FROM connectby('`".BIT_DB_PREFIX."stock_assembly_map`', '`item_content_id`', '`assembly_content_id`', ?, 0, '/') AS t(cb_item_content_id int,cb_assembly_content_id int, level int, branch text)
-							INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=cb_item_content_id AND lc.`content_type_guid`='".STOCKASSEMBLY_CONTENT_TYPE_GUID."')
-							$joinSql
-						  ORDER BY branch, lc.`title`";
-				$splitVars[] = $conId;
-				if( !empty( $containVars ) ) {
-					$splitVars[] = $containVars[0];
-				}
-
-				StockAssembly::splitConnectByTree( $ret, $gBitDb->GetAssoc( $query, $splitVars ) );
-				StockAssembly::getTreeSort( $ret );
-			}
-		} else if ( $this->mDb->mType == 'firebird' || $this->mDb->mType == 'pdo' ) {
+		if ( $this->mDb->mType == 'firebird' || $this->mDb->mType == 'pdo' ) {
 			$bindVars = [];
 			$containVars = [];
 			$selectSql = '';
