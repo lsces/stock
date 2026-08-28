@@ -3,9 +3,8 @@
  * A BOM / kit / assembly — a named group of components with quantities.
  *
  * Stored as a pure liberty_content record (content_type_guid='stockassembly').
- * Components are linked via stock_assembly_map with an item_position for ordering.
- * BOM quantities live in liberty_xref (x_group='quantity', items SGL/PRT/SHT/VOL).
- * Assemblies can be nested; breadcrumb/tree queries use a Firebird recursive CTE.
+ * BOM quantities live in liberty_xref (x_group='quantity', items SGL/PRT/SHT/VOL) —
+ * that's the only component/assembly relationship this class deals with.
  *
  * @package stock
  */
@@ -19,11 +18,6 @@ define('STOCKASSEMBLY_CONTENT_TYPE_GUID', 'stockassembly');
 
 #[\AllowDynamicProperties]
 class StockAssembly extends StockBase {
-	/** @var StockComponent[]  Components belonging to this assembly, keyed by content_id. */
-	public $mItems;
-	public $mPaginationLookup;
-	public $mPreviewImage;
-	public $pRecursiveDelete;
 	protected $mXrefTypeKey = 'stockassembly_types';
 
 	/**
@@ -37,7 +31,6 @@ class StockAssembly extends StockBase {
 		if( $this->verifyId( $pContentId ) ) {
 			$this->mContentId = (int)$pContentId;
 		}
-		$this->mItems = [];					// Assume no images (if $pAutoLoad is true we will populate this array later)
 		// This registers the content type for FishEye galleries
 		// FYI: Any class which uses a table which inherits from liberty_content should create their own content type(s)
 		$this->registerContentType(
@@ -197,179 +190,10 @@ class StockAssembly extends StockBase {
 			$this->mInfo['creator'] = $rs['creator_real_name'] ?? $rs['creator_user'];
 			$this->mInfo['editor']  = $rs['modifier_real_name'] ?? $rs['modifier_user'];
 
-			if( empty( $this->mInfo['thumbnail_size'] ) ) {
-				$this->mInfo['thumbnail_size'] = $this->getPreference( 'stock_gallery_default_thumbnail_size', null );
-			}
 			$this->mInfo['access_answer'] = '';
-			$this->mInfo['num_components'] = $this->getComponentCount();
 		}
 
 		return !empty( $this->mInfo );
-	}
-
-	/**
-	 * Load a page of component items into $this->mItems.
-	 *
-	 * Respects the assembly's pagination layout preference. Pass $pListHash['page'] = -1
-	 * to load all items without paging.
-	 *
-	 * @param  array $pListHash  Pagination params; cant is set from $this->mInfo['num_components'].
-	 * @return bool|null         TRUE if items were loaded, FALSE/null otherwise.
-	 */
-	public function loadComponents( &$pListHash = [] ) {
-		global $gLibertySystem, $gBitSystem, $gBitUser;
-		if( !$this->isValid() ) {
-			return null;
-		}
-
-		$pListHash['cant'] = $this->mInfo['num_components'];
-		LibertyContent::prepGetList( $pListHash );
-
-		if( empty( $this->mItems ) || !empty( $pListHash['refresh'] ) ) {
-			$bindVars = [ $this->mContentId ];
-			$whereSql = $selectSql = $joinSql = $orderSql = '';
-			$offset = $pListHash['offset'];
-			$rowCount = 0;
-			$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
-
-			$orderSql = $gBitSystem->isFeatureActive( 'stock_gallery_default_sort_mode' )
-				? ", ".$this->mDb->convertSortmode( $gBitSystem->getConfig( 'stock_gallery_default_sort_mode' ) )
-				: ", fgim.`item_content_id`";
-
-			// load for just a single page
-			if( $pListHash['page'] != -1 ) {
-				$rowCount = $pListHash['max_records'];
-				$offset = $rowCount * ( (int) $pListHash['page'] - 1);
-			}
-			if( empty($rowCount) ) $rowCount = $pListHash['max_records'] ?? 10;
-			$this->mItems = [];
-
-			$query = "SELECT fgim.*, lc.`user_id`, lct.*, ufm.`favorite_content_id` AS is_favorite $selectSql
-					FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
-						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( lc.`content_id`=fgim.`item_content_id` )
-						INNER JOIN `".BIT_DB_PREFIX."liberty_content_types` lct ON ( lct.`content_type_guid`=lc.`content_type_guid` )
-						$joinSql
-						LEFT OUTER JOIN `".BIT_DB_PREFIX."users_favorites_map` ufm ON ( ufm.`favorite_content_id`=lc.`content_id` AND lc.`user_id`=ufm.`user_id` )
-					WHERE fgim.`assembly_content_id` = ? $whereSql
-					ORDER BY fgim.`item_position` $orderSql";
-			$rows = $this->mDb->query($query, $bindVars, $rowCount, $offset);
-			foreach ($rows as $row) {
-				$pass = true;
-				if( $gBitSystem->isPackageActive( 'gatekeeper' ) ) {
-					$pass = $gBitUser->hasPermission( 'p_stock_admin' ) || !@$this->verifyId( $row['security_id'] ) || ( $row['user_id'] == $gBitUser->mUserId ) || @$this->verifyId( $_SESSION['gatekeeper_security'][$row['security_id']] );
-				}
-				if( $pass ) {
-					if( $item = parent::getLibertyObject( $row['item_content_id'], $row['content_type_guid'], $this->isCacheableObject() ) ) {
-						$item->loadThumbnail( $this->mInfo['thumbnail_size'] ?? 'small' );
-						$item->setGalleryPath( $this->mAssemblyPath.'/'.$this->mContentId );
-						$item->mInfo['item_position'] = $row['item_position'];
-						$this->mItems[$row['item_content_id']] = $item;
-					}
-				}
-			}
-		}
-
-		LibertyContent::postGetList( $pListHash );
-
-		return \count ( $this->mItems ) > 0;
-	}
-
-	/**
-	 * Return all component rows for this assembly without pagination.
-	 *
-	 * @return array|null  content_id-keyed rows, or null if not valid.
-	 */
-	public function getComponentList() {
-		global $gLibertySystem, $gBitSystem, $gBitUser;
-		$ret = null;
-		if( $this->isValid() ) {
-			$bindVars = [ $this->mContentId ];
-			$whereSql = $selectSql = $joinSql = $orderSql = '';
-			$rows = $offset = null;
-			$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
-
-			$orderSql = $gBitSystem->isFeatureActive( 'stock_gallery_default_sort_mode' )
-				? ", ".$this->mDb->convertSortmode( $gBitSystem->getConfig( 'stock_gallery_default_sort_mode' ) )
-				: ", fgim.`item_content_id`";
-
-			$this->mItems = [];
-
-			$query = "SELECT lc.`content_id` AS `has_key`, fgim.*, lc.*, lct.*, ufm.`favorite_content_id` AS is_favorite $selectSql
-					FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
-						INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( lc.`content_id`=fgim.`item_content_id` )
-						INNER JOIN `".BIT_DB_PREFIX."liberty_content_types` lct ON ( lct.`content_type_guid`=lc.`content_type_guid` )
-						$joinSql
-						LEFT OUTER JOIN `".BIT_DB_PREFIX."users_favorites_map` ufm ON ( ufm.`favorite_content_id`=lc.`content_id` AND lc.`user_id`=ufm.`user_id` )
-					WHERE fgim.`assembly_content_id` = ? $whereSql
-					ORDER BY fgim.`item_position` $orderSql";
-			$ret = $this->mDb->getAssoc($query, $bindVars, $rows, $offset);
-		}
-		return $ret;
-	}
-
-	public function exportHash( $pPaginate = false ) {
-		if( $ret = parent::exportHash() ) {
-			$ret['type'] = $this->getContentType();
-			if( $this->loadComponents() ) {
-				foreach( array_keys( $this->mItems ) as $key ) {
-					if( $pPaginate ) {
-						if( $exp = $this->mItems[$key]->exportHash( $pPaginate ) ) {
-							$ret['content']['page'][$this->getItemPage($key)][] = $exp;
-						}
-					} else {
-						$ret['content'][] = $this->mItems[$key]->exportHash( $pPaginate );
-					}
-				}
-			}
-		}
-		return $ret;
-	}
-
-	/**
-	 * Return the page number (floor of item_position) for a given item.
-	 *
-	 * @param  int      $pItemContentId
-	 * @return int|null  Page number, or null if item not in this assembly.
-	 */
-	public function getItemPage( $pItemContentId ) {
-		$ret = null;
-		if( empty( $this->mPaginationLookup ) ) {
-			$this->mPaginationLookup = $this->mDb->getAssoc( "SELECT `item_content_id`, floor(`item_position`) FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE `assembly_content_id`=?", [ $this->mContentId ] );
-		}
-		if( !empty( $this->mPaginationLookup[$pItemContentId] ) ) {
-			$ret = $this->mPaginationLookup[$pItemContentId];
-		}
-		return $ret;
-	}
-
-	public function getPreviewHash() {
-		$ret = [];
-		if( !empty( $this->mInfo['preview_content'] ) ) {
-			$ret =  $this->mInfo['preview_content']->mInfo;
-		}
-		// override  $this->mInfo['preview_content']->mInfo['display_url'] so we don't drive directly to the image
-		$ret['display_url'] = $this->getDisplayUrl();
-		return $ret;
-	}
-
-	/** @return int  Number of items in stock_assembly_map for this assembly. */
-	public function getComponentCount() {
-		$ret = 0;
-
-		if( $this->verifyId( $this->mContentId ) ) {
-			$bindVars = [ $this->mContentId ];
-			$whereSql = $selectSql = $joinSql = $orderSql = '';
-			$rows = $offset = null;
-			$paramHash['no_fatal'] = true;
-			$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, null, $paramHash );
-			$query = 'SELECT COUNT(*) AS "count"
-					FROM `'.BIT_DB_PREFIX."stock_assembly_map` fgim
-					INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( lc.`content_id`=fgim.`item_content_id` )
-					$joinSql WHERE `assembly_content_id` = ? $whereSql";
-			$rs = $this->mDb->getRow($query, $bindVars);
-			$ret = $rs['count'];
-		}
-		return $ret;
 	}
 
 	/**
@@ -384,82 +208,6 @@ class StockAssembly extends StockBase {
 		}
 		$pParamHash['content_type_guid'] = $this->getContentType();
 		return count($this->mErrors) == 0;
-	}
-
-
-	public function getThumbnailContentId() {
-		if( !$this->getField( 'thumbnail_content_id' ) ) {
-			$this->getThumbnailImage();
-		}
-		return $this->getField( 'thumbnail_content_id' );
-	}
-
-	public function getThumbnailUri( $pSize='small', $pInfoHash = null ) {
-		if( empty( $this->mInfo['preview_content'] ) ) {
-			$this->loadThumbnail();
-		}
-
-		if( !empty( $this->mInfo['preview_content'] ) && is_object( $this->mInfo['preview_content'] ) ) {
-			return $this->mInfo['preview_content']->getThumbnailUri( $pSize );
-		}
-	}
-
-	public function getThumbnailUrl( string $pSize = 'small', ?array $pInfoHash = null, ?int $pSecondaryId = null, ?int $pDefault = null ): string|null {
-		if( empty( $this->mInfo['preview_content'] ) ) {
-			$this->loadThumbnail();
-		}
-
-		if( is_object( $this->mInfo['preview_content'] ) ) {
-			return $this->mInfo['preview_content']->getThumbnailUrl( $pSize );
-		}
-		return '';
-	}
-
-	public function getThumbnailImage( $pContentId=null, $pThumbnailContentId=null, $pThumbnailContentType=null ) {
-		global $gLibertySystem, $gBitUser;
-		$ret = null;
-
-		if( !@$this->verifyId( $pContentId ) && !empty( $this->mContentId ) ) {
-			$pContentId = $this->mContentId;
-		}
-
-		if( !@$this->verifyId( $pThumbnailContentId ) ) {
-			$query = "SELECT fgim.`item_content_id`, lc.`content_type_guid`
-					FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
-					INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( fgim.`item_content_id`=lc.`content_id` )
-					WHERE fgim.`assembly_content_id` = ?
-					ORDER BY ".$this->mDb->convertSortmode('random');
-			$rs = $this->mDb->getRow( $query, [ $pContentId ], 1 );
-			if( !empty( $rs ) ) {
-				$pThumbnailContentId   = $rs['item_content_id'];
-				$pThumbnailContentType = $rs['content_type_guid'];
-			}
-		}
-
-		if( @$this->verifyId( $pThumbnailContentId ) ) {
-			$ret = parent::getLibertyObject( $pThumbnailContentId, $pThumbnailContentType, $this->isCacheableObject() );
-			if( is_a( $ret, '\Bitweaver\Stock\StockAssembly' ) ) {
-				//recurse down in to find the first image
-				if( $ret = $ret->getThumbnailImage() ) {
-					$this->mInfo['thumbnail_content_id'] = $ret->getField( 'content_id' );
-				}
-			} else {
-				$this->mInfo['thumbnail_content_id'] = $pThumbnailContentId;
-			}
-		}
-		return $ret;
-	}
-
-	public function loadThumbnail( $pSize='small', $pContentId=null ) {
-		if( $this->mPreviewImage = $this->getThumbnailImage( $pContentId ) ) {
-			$this->mInfo['preview_content'] = &$this->mPreviewImage;
-			$this->mInfo['image_file'] = &$this->mPreviewImage->mInfo['image_file'];
-		}
-	}
-
-	public function storeGalleryThumbnail($pContentId = null) {
-		// Preview image link will be implemented via liberty_xref when assembly images are built
-		return false;
 	}
 
 	/**
@@ -484,108 +232,13 @@ class StockAssembly extends StockBase {
 	}
 
 	/**
-	 * Return all stock_assembly_map rows for this assembly with lc.title included.
-	 *
-	 * @param  string $pSortMode  'item_position_asc' (default), 'item_position_desc', 'title_asc', 'title_desc'.
-	 * @return array              item_content_id-keyed rows.
-	 */
-	public function getComponentMapList( string $pSortMode = 'item_position_asc' ): array {
-		$ret = [];
-		if( $this->verifyId( $this->mContentId ) ) {
-			$orderby = match( $pSortMode ) {
-				'title_asc'          => 'lc.`title` ASC',
-				'title_desc'         => 'lc.`title` DESC',
-				'item_position_desc' => 'fgim.`item_position` DESC, fgim.`item_content_id` DESC',
-				default              => 'fgim.`item_position` ASC, fgim.`item_content_id` ASC',
-			};
-			if( $rows = $this->mDb->query(
-				"SELECT fgim.`item_content_id`, fgim.`item_position`, lc.`title`
-				 FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim
-				 INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id` = fgim.`item_content_id`)
-				 WHERE fgim.`assembly_content_id` = ?
-				 ORDER BY $orderby",
-				[ $this->mContentId ]
-			) ) {
-				foreach( $rows as $row ) {
-					$ret[$row['item_content_id']] = $row;
-				}
-			}
-		}
-		return $ret;
-	}
-
-	/**
-	 * Remove an item from this assembly's stock_assembly_map.
-	 *
-	 * @param  int  $pContentId  item_content_id to remove.
-	 * @return bool TRUE on success, FALSE if not valid or item id invalid.
-	 */
-	public function removeItem( $pContentId ) {
-		$ret = false;
-		if( $this->isValid() && @$this->verifyId( $pContentId ) ) {
-			$query = "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_map`
-					  WHERE `item_content_id`=? AND `assembly_content_id`=?";
-			$rs = $this->mDb->getOne($query, [ $pContentId, $this->mContentId ] );
-			$ret = true;
-		}
-		return $ret;
-	}
-
-	/**
-	 * Add an item to this assembly, guarding against circular membership.
-	 *
-	 * Checks that neither this assembly is already in the item nor the item is
-	 * already in this assembly, to prevent infinite recursion in tree queries.
-	 *
-	 * @param  int      $pContentId  Item content_id to add.
-	 * @param  int|null $pPosition   item_position value; null lets the DB default.
-	 * @return bool     TRUE if added, FALSE if the guard check failed.
-	 */
-	public function addItem( $pContentId, $pPosition=null ) {
-		global $gBitSystem;
-		$ret = false;
-		if( @$this->verifyId( $this->mContentId ) && @$this->verifyId( $pContentId ) && ( $this->mContentId != $pContentId ) && !$this->isInAssembly( $this->mContentId, $pContentId  )  && !$this->isInAssembly( $pContentId, $this->mContentId ) ) {
-			$query = "INSERT INTO `".BIT_DB_PREFIX."stock_assembly_map` (`item_content_id`, `assembly_content_id`, `item_position`) VALUES (?,?,?)";
-			$rs = $this->mDb->getOne($query, [ $pContentId, $this->mContentId, $pPosition ] );
-			$query = "UPDATE `".BIT_DB_PREFIX."liberty_content` SET `last_modified`=? WHERE `content_id`=?";
-			$rs = $this->mDb->getOne( $query, [ $gBitSystem->getUTCTime(), $this->mContentId ] );
-			$ret = true;
-		}
-		return $ret;
-	}
-
-	/**
-	 * Delete this assembly and recursively expunge any child assemblies not
-	 * shared with other parents. Removes all stock_assembly_map rows for this assembly.
+	 * Delete this assembly.
 	 *
 	 * @return bool Always TRUE (errors recorded in $this->mErrors).
 	 */
 	public function expunge(): bool {
 		if( $this->isValid() ) {
 			$this->StartTrans();
-
-			if( $this->loadComponents() ) {
-				foreach( array_keys( $this->mItems ) as $key ) {
-// TODO Recersive delete needs another implementation
-//					if( !empty($pRecursiveDelete) ) {
-//						$this->mItems[$key]->expunge( $pRecursiveDelete );
-//					} else
-					if( is_a( $this->mItems[$key], '\Bitweaver\Stock\StockAssembly' ) ) {
-						// make sure we have a valid content_id before we exec
-						if( is_numeric( $this->mItems[$key]->mContentId ) ) {
-							$query = "SELECT COUNT(`item_content_id`) AS `other_gallery`
-									  FROM `".BIT_DB_PREFIX."stock_assembly_map`
-									  WHERE `item_content_id`=? AND `assembly_content_id`!=?";
-							if( !($inOtherGallery = $this->mDb->getOne($query, [ $this->mItems[$key]->mContentId, $this->mContentId ] )) ) {
-								$this->mItems[$key]->expunge();
-							}
-						}
-					}
-				}
-			}
-
-			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE `assembly_content_id`=?", [ $this->mContentId ] );
-			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE `item_content_id`=?", [ $this->mContentId ] );
 			if( LibertyContent::expunge() ) {
 				$this->CompleteTrans();
 			} else {
@@ -632,230 +285,9 @@ class StockAssembly extends StockBase {
 	}
 
 	/**
-	 * Return the full assembly hierarchy as a nested tree.
-	 *
-	 * On Firebird uses a recursive CTE; falls back to a flat list with
-	 * splitConnectByTree() for other databases. Optionally marks which assemblies
-	 * contain a given item via $pListHash['contain_item'].
-	 *
-	 * @param  array $pListHash  Filter hash; 'contain_item' marks in-gallery status.
-	 * @return array             Nested array: each node has 'content' and 'children'.
-	 */
-	public function getTree( $pListHash ) {
-		global $gBitDb;
-
-		$ret = [];
-		if ( $this->mDb->mType == 'firebird' || $this->mDb->mType == 'pdo' ) {
-			$bindVars = [];
-			$containVars = [];
-			$selectSql = '';
-			$joinSql = '';
-			$whereSql = '';
-
-			if( !empty( $pListHash['contain_item'] ) ) {
-				$selectSql = " , tfgim3.`item_content_id` AS `in_gallery` ";
-				$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_map` tfgim3 ON (tfgim3.`assembly_content_id`=lc.`content_id`) AND tfgim3.`item_content_id`=? ";
-				$bindVars[] = $pListHash['contain_item'];
-				$containVars[] = $pListHash['contain_item'];
-			}
-			$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
-
-			if( isset( $pListHash['contain_item'] ) ) {
-				// contain item might have squeaked in as 0, clear our from pListHash
-				unset( $pListHash['contain_item'] );
-			}
-			foreach( $pListHash as $key=>$val ) {
-				$whereSql .= " AND lc.$key=? ";
-				$bindVars[] = $val;
-			}
-
-			$splitVars = [];
-					$query = "WITH RECURSIVE
-								GALLERY_TREE AS (
-								SELECT lcp.`content_id` AS assembly_content_id, lcp.`content_id` AS item_content_id, 0 AS BLEVEL, CAST( lcp.`title` AS VARCHAR(255) ) AS BRANCH, 0 AS gallery_parent_id
-								FROM `".BIT_DB_PREFIX."liberty_content` lcp
-								WHERE lcp.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."'
-								AND NOT EXISTS (SELECT assembly_content_id FROM `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 WHERE tfgim2.item_content_id=lcp.content_id)
-
-								UNION ALL
-
-								SELECT G1.`item_content_id` AS assembly_content_id, G1.`item_content_id`, G.BLEVEL + 1, G.BRANCH || '/' || G1.`item_content_id` AS BRANCH, G1.`assembly_content_id` AS gallery_parent_id
-								FROM `".BIT_DB_PREFIX."stock_assembly_map` G1
-								JOIN GALLERY_TREE G ON G1.`assembly_content_id` = G.`item_content_id`
-								INNER JOIN `".BIT_DB_PREFIX."liberty_content` lcg1 ON(lcg1.`content_id`=G1.`item_content_id` AND lcg1.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."')
-							)
-							SELECT T.BRANCH AS hash_key, T.BLEVEL, lc.* $selectSql
-							FROM GALLERY_TREE T
-							INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (lc.`content_id`=T.`item_content_id`)
-							LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_map` fgimo ON (fgimo.`assembly_content_id`=T.gallery_parent_id AND fgimo.`item_content_id`=T.assembly_content_id)
-							$joinSql
-							WHERE lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."' $whereSql
-						  ORDER BY T.BRANCH, fgimo.`item_position`";
-
-			if( !empty( $bindVars ) ) {
-				StockAssembly::splitConnectByTree( $ret, $gBitDb->GetAssoc( $query, $bindVars ) );
-			} else {
-				StockAssembly::splitConnectByTree( $ret, $gBitDb->GetAssoc( $query ) );
-			}
-
-		} else {
-// this needs replacing with a more suitable list query ...
-			$pListHash['show_empty'] = true;
-			$galList = $this->getList( $pListHash );
-			// index by content_id
-			foreach( $galList as $galId => $gal ) {
-				$ret[$gal['content_id']] = $gal;
-			}
-			StockAssembly::splitConnectByTree( $ret, $ret );
-			StockAssembly::getTreeSort( $ret );
-		}
-		return $ret;
-	}
-
-	/** Recursively sort a tree array by title using getTreeSortCmp(). */
-	public function getTreeSort( &$pTree ) {
-		if( $pTree ) {
-			foreach( array_keys( $pTree ) as $k ) {
-				if( !empty( $pTree[$k]['children'] ) ) {
-					StockAssembly::getTreeSort( $pTree[$k]['children'] );
-				}
-			}
-			uasort( $pTree, [ '\Bitweaver\Stock\StockAssembly', 'getTreeSortCmp' ] );
-		}
-	}
-
-	public static function getTreeSortCmp( $a, $b ) {
-		return strcmp( $a['content']['title'], $b['content']['title'] );
-	}
-
-	public function splitConnectByTree( &$pRet, $pTreeHash ) {
-		if( $pTreeHash ) {
-			foreach( array_keys( $pTreeHash ) as $conId ) {
-				$path = explode( '/', $conId );
-				StockAssembly::recurseConnectByPath( $pRet, $pTreeHash[$conId], $path );
-			}
-		}
-	}
-
-	public function recurseConnectByPath( &$pRet, $pTreeHash, $pPath ) {
-		$popId = array_shift( $pPath );
-		if( count( $pPath ) > 0 ) {
-			if( empty( $pRet[$popId]['children'] ) ) {
-				$pRet[$popId]['children'] = [];
-			}
-			StockAssembly::recurseConnectByPath( $pRet[$popId]['children'], $pTreeHash, $pPath );
-		} else {
-
-			$pRet[$popId]['content'] = $pTreeHash;
-		}
-	}
-
-	// Generate a nested ul list of listed galleries
-	public function generateList( $pListHash, $pOptions, $pLocate = false ) {
-		$ret = '';
-		if( $hash = StockAssembly::getTree( $pListHash ) ) {
-
-			$class = ' structure-toc';
-			$ret = "<ul ";
-			foreach( [ 'class', 'name', 'id', 'onchange' ] as $key ) {
-				if( !empty( $pOptions[$key] ) ) {
-					if( $key == 'class' ) {
-						$class .= ' '.$pOptions[$key];
-					} else {
-						$ret .= " $key=\"$pOptions[$key]\" ";
-					}
-				}
-			}
-			$ret .= ' class="'.$class.'">';
-			$ret .= self::generateListItems( $hash, $pOptions, $pLocate );
-			$ret .= "</ul>";
-		}
-		return $ret;
-	}
-
-	// Helper method for generateMenu. See that method. Is Recursive
-	public function generateListItems( &$pHash, $pOptions, $pLocate ) {
-		$ret = '';
-		foreach( array_keys( $pHash ) as $conId ) {
-			$class = !empty( $pOptions['radio_checkbox'] ) ? 'checkbox' : '';
-			$ret .= '<li id="stockassembly'.$pHash[$conId]['content']['content_id'].'" content_id="'.$pHash[$conId]['content']['content_id'].'" ';
-			if( !empty( $pOptions['item_attributes'] ) ) {
-				foreach( $pOptions['item_attributes'] as $key=>$value ) {
-					if( $key == 'class' ) {
-						$class .= ' '.$value;
-					} else {
-						$ret .= " $key=\"$value\" ";
-					}
-				}
-			}
-			$ret .= ' class="'.$class.'"><label>';
-			if ( $pLocate || $pHash[$conId]['content']['content_id'] != $this->mContentId ) {
-				if( !empty( $pOptions['radio_checkbox'] ) ) {
-					$ret .= '<input type="checkbox" name="gallery_additions[]" value="'.$pHash[$conId]['content']['content_id'].'" ';
-					if( !empty( $pHash[$conId]['content']['in_gallery'] ) || $pHash[$conId]['content']['content_id'] == $this->mContentId ) {
-						$ret .=	' checked="checked" ';
-					}
-					$ret .= '/>';
-				}
-			}
-			if ( $pHash[$conId]['content']['content_id'] == $this->mContentId
-				or ( isset( $pHash[$conId]['content']['in_gallery'] ) and $pHash[$conId]['content']['in_gallery'] ) ) {
-				$ret .= '<span class="active">'.htmlspecialchars( $pHash[$conId]['content']['title'] ).'</span>';
-			} else {
-				$ret .= htmlspecialchars( $pHash[$conId]['content']['title'] );
-			}
-			$ret .= '</label></li>';
-			if( !empty( $pHash[$conId]['children'] ) ) {
-				$ret .= '<li><ul>'.StockAssembly::generateListItems( $pHash[$conId]['children'], $pOptions, $pLocate ).'</ul></li>';
-			}
-		}
-		return $ret;
-	}
-
-	// Generate a select drop menu of listed galleries
-	public function generateMenu( $pListHash, $pOptions, $pLocate=null ) {
-		$ret = "<select class='form-control' ";
-		foreach( [ 'class', 'name', 'id', 'onchange' ] as $key ) {
-			if( !empty( $pOptions[$key] ) ) {
-				$ret .= " $key=\"$pOptions[$key]\" ";
-			}
-		}
-		$ret .= ">";
-		$ret .= !empty( $pOptions['first_option'] ) ? $pOptions['first_option'] : '';
-		if( $hash = StockAssembly::getTree( $pListHash ) ) {
-			$ret .= StockAssembly::generateMenuOptions( $hash, $pOptions, $pLocate );
-		}
-		$ret .= "</select>";
-		return $ret;
-	}
-
-	// Helper method for generateMenu. See that method. Is Recursive
-	public function generateMenuOptions( &$pHash, $pOptions, $pLocate, $pPrefix='' ) {
-		$ret = '';
-		foreach( array_keys( $pHash ) as $conId ) {
-			$ret .= '<option content_id="'.$pHash[$conId]['content']['content_id'].'" value="'.$pHash[$conId]['content']['content_id'].'"';
-			if( !empty( $pOptions['item_attributes'] ) ) {
-				foreach( $pOptions['item_attributes'] as $key=>$value ) {
-					$ret .= " $key=\"$value\" ";
-				}
-			}
-			if ( $pLocate && $pLocate == $pHash[$conId]['content']['content_id'] ) {
-				$ret .=	' selected="selected" ';
-			}
-			$ret .= ' >'.($pPrefix?$pPrefix.'&raquo; ':'').htmlspecialchars( $pHash[$conId]['content']['title'] ).'</option>';
-
-			if( !empty( $pHash[$conId]['children'] ) ) {
-				$ret .= StockAssembly::generateMenuOptions( $pHash[$conId]['children'], $pOptions, $pLocate, $pPrefix.'-' );
-			}
-		}
-		return $ret;
-	}
-
-	/**
 	 * Return a paged, keyed list of assemblies.
 	 *
-	 * Recognised filter keys: root_only, contain_item, user_id, find, parent_content_id,
-	 * show_public, show_empty, sort_mode, no_thumbnails, thumbnail_size.
+	 * Recognised filter keys: user_id, find, show_public, sort_mode, stgrp.
 	 * Sets $pListHash['cant'] on return.
 	 *
 	 * @param  array $pListHash  Filter and pagination params; modified in place.
@@ -870,20 +302,6 @@ class StockAssembly extends StockBase {
 		$bindVars = [];
 		$selectSql = $joinSql = $whereSql = $sortSql = '';
 
-		if( $gBitDbType == 'mysql' ) {
-			// loser mysql without subselects
-			if( !empty( $pListHash['root_only'] ) ) {
-				$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)";
-				$whereSql .= ' AND tfgim2.`item_content_id` IS null ';
-			}
-		}
-
-		if( !empty( $pListHash['contain_item'] ) ) {
-			$selectSql = " , tfgim3.`item_content_id` AS `in_gallery` ";
-			$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."stock_assembly_map` tfgim3 ON (tfgim3.`assembly_content_id`=lc.`content_id`) AND tfgim3.`item_content_id`=? ";
-			$bindVars[] = $pListHash['contain_item'];
-		}
-
 		if( @$this->verifyId( $pListHash['user_id'] ?? 0 ) ) {
 			$whereSql .= " AND lc.`user_id` = ? ";
 			$bindVars[] = (int)$pListHash['user_id'];
@@ -896,16 +314,6 @@ class StockAssembly extends StockBase {
 			$bindVars[] = $term;
 		}
 
-		if( !empty( $pListHash['parent_content_id'] ) ) {
-			if( $gBitDbType != 'mysql' ) {
-				$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."stock_assembly_map` sacm WHERE sacm.`assembly_content_id`=? AND sacm.`item_content_id`=lc.`content_id`)";
-			} else {
-				$joinSql .= " INNER JOIN `".BIT_DB_PREFIX."stock_assembly_map` sacmp ON sacmp.`item_content_id`=lc.`content_id`";
-				$whereSql .= " AND sacmp.`assembly_content_id`=?";
-			}
-			$bindVars[] = (int)$pListHash['parent_content_id'];
-		}
-
 		if( !empty( $pListHash['show_public'] ) ) {
 			$joinSql .= " LEFT OUTER JOIN  `".BIT_DB_PREFIX."liberty_content_prefs` lcp ON( lcp.`content_id`=lc.`content_id` )";
 			$whereSql .= " OR  ( lcp.`pref_name`=? AND lcp.`pref_value`=? ) ";
@@ -915,36 +323,10 @@ class StockAssembly extends StockBase {
 
 		$whereSql .= " AND lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."'";
 
-		$mapJoin = "";
-		if( $gBitDbType != 'mysql' ) {
-			// weed out empty galleries if we don't need them. DO NOT get clever and change the IN and EXISTS choices here.
-			if( empty( $pListHash['show_empty'] ) ) {
-				$whereSql .= " AND lc.`content_id` IN (SELECT `assembly_content_id` FROM `".BIT_DB_PREFIX."stock_assembly_map` fgim WHERE fgim.`assembly_content_id`=lc.`content_id`)";
-			}
-			if( !empty( $pListHash['root_only'] ) ) {
-				$whereSql .= " AND NOT EXISTS (SELECT `assembly_content_id` FROM `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 WHERE tfgim2.`item_content_id`=lc.`content_id`)";
-			}
-			if( !empty( $pListHash['non_root_only'] ) ) {
-				$whereSql .= " AND EXISTS (SELECT `assembly_content_id` FROM `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 WHERE tfgim2.`item_content_id`=lc.`content_id`)";
-			}
-		} else {
-			// weed out empty galleries if we don't need them
-			if( empty( $pListHash['show_empty'] ) ) {
-				$mapJoin = "INNER JOIN `".BIT_DB_PREFIX."stock_assembly_map` fgim ON (fgim.`assembly_content_id`=lc.`content_id`)";
-			}
-			if( !empty( $pListHash['root_only'] ) ) {
-				// already handled above via LEFT OUTER JOIN + IS NULL
-			}
-			if( !empty( $pListHash['non_root_only'] ) ) {
-				$joinSql .= " INNER JOIN `".BIT_DB_PREFIX."stock_assembly_map` tfgim2nr ON (tfgim2nr.`item_content_id`=lc.`content_id`)";
-			}
-		}
-
 		if ( !empty( $pListHash['sort_mode'] ) ) {
 			//converted in prepGetList()
 			$sortSql .= " ORDER BY ".$this->mDb->convertSortmode( $pListHash['sort_mode'] )." ";
 		}
-		$selectSql .= ", (SELECT COUNT(*) FROM `".BIT_DB_PREFIX."stock_assembly_map` sacmc WHERE sacmc.`assembly_content_id` = lc.`content_id`) AS `child_count`";
 		$X = BIT_DB_PREFIX;
 		$selectSql .= ", (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` = '#SUP' ORDER BY x.`xorder`) AS `part_number`";
 		$selectSql .= ", (SELECT FIRST 1 x.`xkey` FROM `{$X}liberty_xref` x WHERE x.`content_id` = lc.`content_id` AND x.`item` = 'KLID') AS `klid`";
@@ -987,7 +369,7 @@ class StockAssembly extends StockBase {
 				FROM `".BIT_DB_PREFIX."liberty_content` lc
 					INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON (uu.`user_id` = lc.`user_id`)
 					LEFT JOIN `".BIT_DB_PREFIX."liberty_content_hits` lch ON (lch.`content_id` = lc.`content_id`)
-					$mapJoin $joinSql
+					$joinSql
 				$whereSql $sortSql";
 			$data = [];
 			if( $rows = $this->mDb->query( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'] ) ) {
@@ -996,7 +378,6 @@ class StockAssembly extends StockBase {
 				}
 			}
 			if( !empty( $data ) ) {
-				$thumbsize = !empty( $pListHash['thumbnail_size'] ) ? $pListHash['thumbnail_size'] : 'small';
 				foreach( array_keys( $data ) as $assemblyId ) {
 					$data[$assemblyId]['display_url'] = static::getDisplayUrlFromHash( $data[$assemblyId] );
 					$data[$assemblyId]['display_uri'] = static::getDisplayUriFromHash( $data[$assemblyId] );
@@ -1007,16 +388,6 @@ class StockAssembly extends StockBase {
 						];
 						$data[$assemblyId]['parsed_data'] = LibertyContent::parseDataHash( $parseHash );
 					}
-					if( empty( $pListHash['no_thumbnails'] ) ) {
-						if( $thumbImage = $this->getThumbnailImage( $data[$assemblyId]['content_id'] ) ) {
-							$data[$assemblyId]['thumbnail_url'] = $thumbImage->getThumbnailUrl( $thumbsize );
-							$data[$assemblyId]['thumbnail_uri'] = $thumbImage->getThumbnailUri( $thumbsize );
-						} elseif( !empty( $pListHash['show_empty'] ) ) {
-							$data[$assemblyId]['thumbnail_url'] = STOCK_PKG_URL.'image/no_image.png';
-						} else {
-							unset( $data[$assemblyId] );
-						}
-					}
 				}
 			}
 
@@ -1024,7 +395,7 @@ class StockAssembly extends StockBase {
 		$query_c = "SELECT COUNT( lc.`content_id` )
 					FROM `".BIT_DB_PREFIX."liberty_content` lc
 						INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON (uu.`user_id` = lc.`user_id`)
-				$mapJoin $joinSql
+				$joinSql
 				$whereSql";
 		$cant = $this->mDb->getOne( $query_c, $bindVars );
 

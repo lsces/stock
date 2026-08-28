@@ -30,19 +30,9 @@
 			<tbody>
 				{foreach from=$galleryList key=galleryId item=gal}
 					<tr>
+						<td></td>
 						<td>
-							{if $gal.thumbnail_url}
-								<a href="{$gal.display_url|escape}">
-									<img src="{$gal.thumbnail_url|escape}" alt="{$gal.title|escape}" style="max-height:48px;max-width:56px"/>
-								</a>
-							{/if}
-						</td>
-						<td>
-							{if $gal.child_count > 0}
-								<a href="{$smarty.const.STOCK_PKG_URL}list_assemblies.php?gallery_id={$gal.content_id}">{$gal.title|escape}</a>
-							{else}
-								<a href="{$gal.display_url|escape}">{$gal.title|escape}</a>
-							{/if}
+							<a href="{$gal.display_url|escape}">{$gal.title|escape}</a>
 							{if $gal.is_hidden|default:'n' == 'y' || $gal.is_private|default:'n' == 'y' || $gal.access_answer|default:false}
 								{biticon ipackage="icons" iname="lock" iexplain="Restricted"}
 							{/if}

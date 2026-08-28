@@ -11,7 +11,7 @@ use Bitweaver\HttpStatusCodes;
 
 require_once '../kernel/includes/setup_inc.php';
 
-global $gBitSystem, $gBitUser;
+global $gBitSystem;
 
 include_once STOCK_PKG_INCLUDE_PATH.'component_lookup_inc.php';
 
@@ -32,9 +32,6 @@ if( !empty($_REQUEST['save']) ) {
 	$isNew = !$gContent->isValid();
 	if( $gContent->store( $_REQUEST ) ) {
 		$gContent->load();
-		if( !empty( $_REQUEST['gallery_additions'] ) ) {
-			$gContent->addToAssemblies( $_REQUEST['gallery_additions'] );
-		}
 		if( empty( $gContent->mErrors ) ) {
 			$url = $isNew
 				? STOCK_PKG_URL.'edit_component.php?content_id='.$gContent->mContentId
@@ -58,20 +55,6 @@ if( !empty($_REQUEST['save']) ) {
 }
 
 $gBitSmarty->assign( 'errors', $gContent->mErrors );
-
-$gContent->loadParentAssemblies();
-
-$gStockAssembly = new StockAssembly();
-$getHash = [ 'user_id' => $gBitUser->mUserId ];
-if( $gContent->mContentId ) {
-	$getHash['contain_item'] = $gContent->mContentId;
-}
-if( $gBitSystem->isFeatureActive( 'stock_show_all_to_admins' ) && $gBitUser->hasPermission( 'p_stock_admin' ) ) {
-	unset( $getHash['user_id'] );
-}
-$galleryTree = $gStockAssembly->generateList( $getHash, [ 'name' => 'assembly_content_id', 'id' => 'gallerylist', 'item_attributes' => [ 'class' => 'listingtitle' ], 'radio_checkbox' => true ], true );
-$gBitSmarty->assign( 'galleryTree', $galleryTree );
-$gBitSmarty->assign( 'requested_gallery', !empty($_REQUEST['assembly_content_id']) ? $_REQUEST['assembly_content_id'] : null );
 
 if( !$gContent->isValid() && !empty( $_REQUEST['title'] ) ) {
 	$gContent->mInfo['title'] = trim( $_REQUEST['title'] );

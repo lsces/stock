@@ -12,9 +12,5 @@ $gContent = new StockAssembly(
 );
 $gContent->load();
 
-if( !empty( $_REQUEST['gallery_path'] ) ) {
-	$gContent->setGalleryPath( $_REQUEST['gallery_path'] );
-}
-
 $gBitSmarty->assign('gContent', $gContent);
 $gBitSmarty->assign('assemblyContentId', $gContent->mContentId);

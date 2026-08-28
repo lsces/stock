@@ -3,8 +3,8 @@
  * A single stock component — a physical part, material, or consumable.
  *
  * Stored as a pure liberty_content record (content_type_guid='stockcomponent').
- * Components are linked into assemblies via stock_assembly_map and carry quantity
- * type xrefs (SGL/PCK/SHT/VOL) used by BOM and movement calculations.
+ * Assembly membership (which BOMs a component belongs to) lives in liberty_xref
+ * (x_group='quantity', items SGL/PRT/PCK/SHT/VOL) on the owning stockassembly.
  *
  * @package stock
  */
@@ -133,11 +133,6 @@ class StockComponent extends StockBase {
 	}
 
 	/**
-	 * Delete the component, removing it from all assemblies first.
-	 *
-	 * @return bool Always TRUE (errors are recorded in $this->mErrors).
-	 */
-	/**
 	 * @return bool TRUE when mContentId refers to a real liberty_content row of this
 	 *              content type — not just an id that looks syntactically valid.
 	 */
@@ -154,7 +149,6 @@ class StockComponent extends StockBase {
 	public function expunge(): bool {
 		if( $this->isValid() ) {
 			$this->StartTrans();
-			$this->mDb->getOne( "DELETE FROM `".BIT_DB_PREFIX."stock_assembly_map` WHERE `item_content_id` = ?", [ $this->mContentId ] );
 			if( LibertyContent::expunge() ) {
 				$this->CompleteTrans();
 				$this->mContentId = null;
@@ -189,7 +183,10 @@ class StockComponent extends StockBase {
 		}
 
 		if( @$this->verifyId( $pListHash['assembly_content_id'] ?? 0 ) ) {
-			$whereSql .= " AND tfgim2.`assembly_content_id` = ? ";
+			// Assembly membership lives in liberty_xref (x_group='quantity' on the assembly),
+			// not a separate map table — xref holds the component's content_id.
+			$whereSql .= " AND EXISTS (SELECT 1 FROM `".BIT_DB_PREFIX."liberty_xref` bomx
+				WHERE bomx.`content_id` = ? AND bomx.`item` IN ('SGL','PRT','SHT','VOL') AND bomx.`xref` = lc.`content_id`) ";
 			$bindVars[] = (int)$pListHash['assembly_content_id'];
 		}
 
@@ -240,7 +237,6 @@ class StockComponent extends StockBase {
 			"SELECT COUNT(DISTINCT lc.`content_id`)
 			 FROM `".BIT_DB_PREFIX."liberty_content` lc
 				INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON (uu.`user_id` = lc.`user_id`) $joinSql
-				LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)
 			$whereSql",
 			$bindVars
 		);
@@ -248,7 +244,6 @@ class StockComponent extends StockBase {
 		$query = "SELECT lc.`content_id` AS `hash_key`, lc.*, uu.`login`, uu.`real_name` $selectSql
 				FROM `".BIT_DB_PREFIX."liberty_content` lc
 					INNER JOIN `".BIT_DB_PREFIX."users_users` uu ON (uu.`user_id` = lc.`user_id`) $joinSql
-					LEFT OUTER JOIN `".BIT_DB_PREFIX."stock_assembly_map` tfgim2 ON (tfgim2.`item_content_id`=lc.`content_id`)
 				$whereSql $orderby";
 		if( $rows = $this->mDb->query( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'] ) ) {
 			foreach( $rows as $row ) {
@@ -341,21 +336,13 @@ class StockComponent extends StockBase {
 		return $this->isValid() ? static::getTitleFromHash( $this->mInfo ) : null;
 	}
 
-	/** @return bool  TRUE if the first parent assembly allows comments. */
+	/** @return bool  TRUE if the assembly this component is being viewed under allows comments. */
 	public function isCommentable() {
 		global $gGallery;
 		if( is_object( $gGallery ) ) {
 			return $gGallery->isCommentable();
 		}
-		$ret = false;
-		if( $parents = $this->getParentAssemblies() ) {
-			$gal = current( $parents );
-			$ret = $this->mDb->getOne(
-				"SELECT `pref_value` FROM `".BIT_DB_PREFIX."liberty_content_prefs` WHERE `content_id` = ? AND `pref_name` = ?",
-				[ $gal['content_id'], 'allow_comments' ]
-			) == 'y';
-		}
-		return $ret;
+		return false;
 	}
 
 	/** @return string Always 'stock'. */

@@ -46,10 +46,6 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 	} elseif( empty( $_REQUEST['confirm'] ) ) {
 		$formHash['delete'] = true;
 		$formHash['content_id'] = $gContent->mContentId;
-		$formHash['input'] = [
-			'<label><input name="recurse" value="" type="radio" checked="checked" /> '.KernelTools::tra( 'Delete only components in this assembly. Sub-assemblies will not be removed.' ).'</label>',
-			'<label><input name="recurse" value="all" type="radio" /> '.KernelTools::tra( 'Permanently delete all contents, even if they appear in other assemblies.' ).'</label>',
-		];
 		$gBitSystem->confirmDialog( $formHash,
 			[
 				'warning' => KernelTools::tra('Are you sure you want to delete this assembly?') . ' ' . $gContent->getTitle(),
@@ -58,8 +54,6 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 		);
 	} else {
 		$userId = $gContent->getField( 'user_id' );
-
-		$gContent->pRecursiveDelete = !empty( $_REQUEST['recurse'] ) && ($_REQUEST['recurse'] == 'all');
 
 		if( $gContent->expunge() ) {
 			header( "Location: ".STOCK_PKG_URL.'?user_id='.$userId );
@@ -147,25 +141,11 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 	$gBitSmarty->assign( 'csvSkipped', $csvSkipped );
 	$gBitSmarty->assign( 'csvErrors',  $csvErrors );
 
-} elseif( $gContent->isValid() ) {
-	foreach( $_REQUEST as $k => $v ) {
-		if( preg_match( '/^remove_component_(\d+)$/', $k, $m ) ) {
-			$gContent->removeItem( (int)$m[1] );
-			header( 'Location: '.STOCK_PKG_URL.'edit_assembly.php?content_id='.$gContent->mContentId );
-			die();
-		}
-	}
 }
 
 // Initalize the errors list which contains any errors which occured during storage
 $errors = !empty($gContent->mErrors) ? $gContent->mErrors : [];
 $gBitSmarty->assign('errors', $errors);
-
-if( $gContent->isValid() ) {
-	$sortMode = $_REQUEST['sort_mode'] ?? 'item_position_asc';
-	$gBitSmarty->assign( 'componentMap', $gContent->getComponentMapList($sortMode) );
-	$gBitSmarty->assign( 'sortMode', $sortMode );
-}
 
 $gContent->loadXrefInfo();
 if( isset( $gContent->mXrefInfo->mGroups['stgrp'] ) ) {
