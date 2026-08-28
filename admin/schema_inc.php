@@ -2,14 +2,6 @@
 
 $tables = [
 
-'stock_assembly_map' => "
-	assembly_content_id I4 PRIMARY,
-	item_content_id I4 PRIMARY,
-	item_position N(10,3),
-	quantity_value N(10,3) DEFAULT 1,
-	quantity_item C(8) DEFAULT 'SGL'
-",
-
 ];
 
 global $gBitInstaller;
