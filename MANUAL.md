@@ -24,7 +24,8 @@ for Print, CSV export (`?format=csv`, part_number + qty, skips blanks), and Crea
 ## Template structure
 
 - `stock_simple_list_inc.tpl` — assembly view header; includes `assembly_icons_inc.tpl`
-  (floaticons) and `assembly_nav.tpl` (breadcrumb)
+  (floaticons) and `assembly_nav.tpl` (just a link back to `list_assemblies.php` — was a real
+  ancestor breadcrumb trail until 2026-08-28, see "BOM storage" below)
 - `user_galleries.tpl` — kitelf assembly grid (3-col panels, parsed_data, counts)
 - `list_assemblies.tpl` — default flat list (formerly `list_assemblies_simple.tpl`)
 - `view_kitlocker.tpl` — kitlocker group gallery (formerly `stock_fixed_grid_inc.tpl`)
@@ -47,8 +48,6 @@ Every row includes correlated subqueries for:
 - `klid` — first `KLID` xref xkey
 - `component_count` — count of BOM quantity xrefs (SGL/PRT/SHT/VOL)
 - `prebuild_count` — sum of PBLD kit counts for assembly owner (`mc.user_id = lc.user_id`)
-- `child_count` — child assembly count from `stock_assembly_map` (see "BOM storage" below —
-  this count is currently always 0, `stock_assembly_map` has no live rows)
 
 ## Movement model
 
@@ -146,19 +145,20 @@ blank/broken page or silently falling into create-new mode. A `LibertyContent`-w
 this fix was tried and reverted — see `liberty/CLAUDE.md` for why; `contact` uses the same
 per-package pattern.
 
-## BOM storage — `liberty_xref`, not `stock_assembly_map`
+## BOM storage — `liberty_xref` only
 
 BOM data lives entirely as `liberty_xref` rows under the `quantity`/`bom` group
 (`sort_order=4`, items `SGL`/`PRT`/`PCK`/`SHT`/`VOL`) — same no-map-table pattern Food's own
 `FoodAssembly` uses. `import/load_merg_bom.php` (the actual, currently-used BOM import tool)
-writes straight to `liberty_xref`, never touches `stock_assembly_map`.
+writes straight to `liberty_xref`.
 
-**`stock_assembly_map` itself is a real schema table, confirmed always empty in the live `merg`
-DB** (checked directly, not assumed) — but still has real, live PHP code reading/writing it
-(`StockAssembly::addItem()`/`getComponentMapList()`, hierarchy `connectby()` walks and
-`child_count` in `StockBase.php`/`StockAssembly.php`, `StockComponent`'s reverse-lookup joins).
-Every one of those queries runs fine, just against a permanently-empty table — not yet retired,
-see `CLAUDE.md`'s 2026-08-16 entry for the investigation that confirmed this.
+**No other component/assembly relationship table exists.** A separate `stock_assembly_map`
+table — a leftover fisheye-gallery-hierarchy relic from the package's original port, never
+actually used (confirmed permanently empty against 122 real assemblies / months of live
+`merg.rdm1.uk` data) — was fully removed 2026-08-28: every method that read/wrote it
+(ancestor breadcrumbs, the nested gallery-hierarchy tree/checkbox picker, thumbnail picking,
+the flat BOM checkbox list, `child_count`) is gone, and the table itself was dropped via the
+`5.0.2` upgrade. See `CLAUDE.md`'s 2026-08-28 entry for the full investigation and removal.
 
 ## Firebird gotchas specific to this package
 

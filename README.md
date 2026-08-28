@@ -58,7 +58,6 @@ See `MANUAL.md` for the full current picture — schema, movement model, and kno
   content/xref framework, same foundation [`food`](https://github.com/lsces/food) uses (Food's
   own design deliberately mirrors this package throughout)
 
-Since this package isn't through a stable install/upgrade cycle yet, see `MANUAL.md` in this repo
-for the current schema-deployment approach if you're installing it fresh (`CLAUDE.md` is a dated
-development log, not a reference — useful for *why* something's built the way it is, not *how*
-to set it up).
+See `MANUAL.md` in this repo for the current schema/BOM-storage detail if you're installing it
+fresh (`CLAUDE.md` is a dated development log, not a reference — useful for *why* something's
+built the way it is, not *how* to set it up).
