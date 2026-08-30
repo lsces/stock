@@ -167,24 +167,6 @@ class StockMovement extends LibertyContent {
 	}
 
 	/**
-	 * Delete this movement. LibertyContent::expunge() handles xref cleanup.
-	 *
-	 * @return bool Always TRUE (errors recorded in $this->mErrors).
-	 */
-	public function expunge(): bool {
-		if( $this->isValid() ) {
-			$this->StartTrans();
-			if( LibertyContent::expunge() ) {
-				$this->CompleteTrans();
-				$this->mContentId = null;
-			} else {
-				$this->mDb->RollbackTrans();
-			}
-		}
-		return true;
-	}
-
-	/**
 	 * Enrich the quantity group with part_size/part_size_ext from the PRT xref.
 	 * linked_title and linked_data come from the lc_linked JOIN in loadContent().
 	 */

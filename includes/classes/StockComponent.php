@@ -146,19 +146,6 @@ class StockComponent extends StockBase {
 		);
 	}
 
-	public function expunge(): bool {
-		if( $this->isValid() ) {
-			$this->StartTrans();
-			if( LibertyContent::expunge() ) {
-				$this->CompleteTrans();
-				$this->mContentId = null;
-			} else {
-				$this->mDb->RollbackTrans();
-			}
-		}
-		return true;
-	}
-
 	/**
 	 * Return a paged, keyed list of components.
 	 *
