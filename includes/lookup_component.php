@@ -8,9 +8,11 @@
 
 namespace Bitweaver\Stock;
 
+use Bitweaver\Liberty\LibertyContent;
+
 require_once '../../kernel/includes/setup_inc.php';
 
-global $gBitDb, $gBitUser;
+global $gBitUser;
 
 if( !$gBitUser->hasPermission( 'p_stock_view' ) ) {
 	header( 'Content-Type: application/json' );
@@ -25,14 +27,6 @@ if( strlen( $q ) < 2 ) {
 	exit;
 }
 
-$rows = $gBitDb->getArray(
-	"SELECT FIRST 30 lc.content_id, lc.title
-	 FROM liberty_content lc
-	 WHERE lc.content_type_guid=? AND LOWER(lc.title) LIKE ?
-	 ORDER BY lc.title",
-	[ 'stockcomponent', '%'.strtolower( $q ).'%' ]
-);
-
 header( 'Content-Type: application/json' );
-echo json_encode( array_values( $rows ?? [] ) );
+echo json_encode( LibertyContent::lookupTitles( [ 'stockcomponent' ], $q ) );
 exit;
