@@ -59,8 +59,8 @@
 						<td>{$sr.code|escape}</td>
 						<td>{$sr.name|escape}</td>
 						<td>
-							<a class="btn btn-default btn-xs" href="?create={$sr.code|escape}:A">{tr}Add as Assembly{/tr}</a>
-							<a class="btn btn-default btn-xs" href="?create={$sr.code|escape}:C">{tr}Add as Component{/tr}</a>
+							<a class="btn btn-default btn-xs" href="?create={$sr.code|escape:"url"}:A&amp;name={$sr.name|escape:"url"}&amp;klsgl={$sr.klsgl|escape:"url"}&amp;kl3m={$sr.kl3m|escape:"url"}">{tr}Add as Assembly{/tr}</a>
+							<a class="btn btn-default btn-xs" href="?create={$sr.code|escape:"url"}:C&amp;name={$sr.name|escape:"url"}&amp;klsgl={$sr.klsgl|escape:"url"}&amp;kl3m={$sr.kl3m|escape:"url"}">{tr}Add as Component{/tr}</a>
 						</td>
 					</tr>
 					{/foreach}

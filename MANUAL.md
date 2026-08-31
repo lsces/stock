@@ -203,13 +203,21 @@ part of the package's core code path):
 - `ImportKitlockerStockPredict.php` / `load_kitlocker_stock_predict.php` — parses the raw
   "MERG Kitlocker - Stock predict" HTML export directly (DOMDocument, no CSV conversion
   needed), matches by KLID, upserts KLSGL/KL3M only. Unmatched codes are reported, not
-  silently created — pass `?create=CODE:A,CODE:C` to create them (the export has no
-  assembly/component column, so type must be given explicitly). Doesn't set `KLGxx` group —
-  derivable from each row's enclosing `<h2>` section heading if this ever needs revisiting
-  (section order/names match `KitlockerGroups.csv`), but not built. Reachable from the Stock
-  admin menu ("Sync Kitlocker Stock Predict") — the page has a browser upload form (`html_file`)
-  writing straight to `storage/stock/KitlockerStockPredict.html`, no manual file copy needed.
-  Only processes on a fresh upload or an explicit `?create=` retry, never on a bare page visit.
+  silently created — each has an "Add as Assembly/Component" link
+  (`?create=CODE:A`/`?create=CODE:C`) since the export has no assembly/component column so
+  type must be given explicitly. Doesn't set `KLGxx` group — derivable from each row's
+  enclosing `<h2>` section heading if this ever needs revisiting (section order/names match
+  `KitlockerGroups.csv`), but not built. Reachable from the Stock admin menu ("Sync Kitlocker
+  Stock Predict") — the page has a browser upload form (`html_file`) that always writes to a
+  fixed working path (`storage/stock/KitlockerStockPredict.html`), parsed from there same as
+  before. Once parsed, that working file is archived to `storage/stock/archive/` under its own
+  original uploaded filename (sanitized) — same convention health's importers use, so
+  successive dated exports don't overwrite each other in the archive — and the working copy is
+  then deleted; the next upload recreates it fresh. Only processes on a fresh upload or an
+  explicit `?create=` retry, never on a bare page visit. Since the working file is already gone
+  by the time a skipped row's link is clicked, each "Add as Assembly/Component" link also
+  carries that row's own name/KLSGL/KL3M through as query params — retry never needs to reopen
+  any file.
 
 **Not a pattern to extend**: the CSV/HTML importers are a stopgap — the stated direction is
 adding new kitlocker items through the normal `edit_assembly.php`/`edit_component.php` UI flow
