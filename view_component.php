@@ -10,6 +10,7 @@
 
 use Bitweaver\KernelTools;
 use Bitweaver\HttpStatusCodes;
+use Bitweaver\Liberty\LibertyContent;
 
 require_once '../kernel/includes/setup_inc.php';
 global $gBitSystem, $gDebug;
@@ -57,10 +58,7 @@ if( isset( $gContent->mXrefInfo->mGroups['stgrp'] ) ) {
 }
 $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 
-$isKitlocker = (bool)$gBitDb->getOne(
-	"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id`=? AND `item`='KLID'",
-	[ $gContent->mContentId ]
-);
+$isKitlocker = LibertyContent::hasXrefItem( $gContent->mContentId, 'KLID' );
 $gBitSmarty->assign( 'isKitlocker', $isKitlocker );
 
 // Stock levels for this component, calculated from movement xrefs

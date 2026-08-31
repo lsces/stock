@@ -8,6 +8,7 @@ namespace Bitweaver\Stock;
 
 use Bitweaver\KernelTools;
 use Bitweaver\HttpStatusCodes;
+use Bitweaver\Liberty\LibertyContent;
 
 require_once '../kernel/includes/setup_inc.php';
 
@@ -72,10 +73,7 @@ if( isset( $gContent->mXrefInfo->mGroups['stgrp'] ) ) {
 }
 $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 
-$isKitlocker = $gContent->mContentId ? (bool)$gBitDb->getOne(
-	"SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id`=? AND `item`='KLID'",
-	[ $gContent->mContentId ]
-) : false;
+$isKitlocker = $gContent->mContentId ? LibertyContent::hasXrefItem( $gContent->mContentId, 'KLID' ) : false;
 $gBitSmarty->assign( 'isKitlocker', $isKitlocker );
 
 $gContent->invokeServices( 'content_edit_function' );
