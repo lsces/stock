@@ -107,6 +107,5 @@ $gBitSmarty->assign( 'created', $created );
 $gBitSmarty->assign( 'skipped', $skipped );
 $gBitSmarty->assign( 'errors',      $errors );
 $gBitSmarty->assign( 'skippedRows', $skippedRows );
-$gBitSmarty->assign( 'csvFile',     $displayFile ?? $htmlFile );
 
 $gBitSystem->display( 'bitpackage:stock/import_results.tpl', 'Sync Kitlocker Stock Predict' );

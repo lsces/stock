@@ -5,15 +5,20 @@
 	</div>
 	<div class="body">
 		{if $uploadForm}
-			<form method="post" enctype="multipart/form-data">
-				<div class="form-inline">
-					<input type="file" name="html_file" accept=".html,.htm,text/html" />
-					<input type="submit" class="btn btn-default btn-sm" value="{tr}Upload &amp; Run{/tr}" />
-				</div>
-			</form>
+			<div class="bitnav">
+				<ul class="pagination">
+					<li class="bitnav-picker">
+						<form method="post" enctype="multipart/form-data" id="kitlockerUploadForm">
+							<input type="file" name="html_file" accept=".html,.htm,text/html" />
+						</form>
+					</li>
+					<li class="bitnav-gap"><button type="submit" form="kitlockerUploadForm">{tr}Upload &amp; Run{/tr}</button></li>
+				</ul>
+			</div>
 			<hr />
+		{else}
+			<p>{tr}File{/tr}: <code>{$csvFile|escape}</code></p>
 		{/if}
-		<p>{tr}File{/tr}: <code>{$csvFile|escape}</code></p>
 
 		<p>
 			<strong>{$loaded}</strong> {tr}records imported{/tr}.
