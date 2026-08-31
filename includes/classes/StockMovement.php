@@ -666,12 +666,9 @@ class StockMovement extends LibertyContent {
 						$year = (int)$parts[2] < 100 ? 2000 + (int)$parts[2] : (int)$parts[2];
 						$ts   = mktime( 0, 0, 0, (int)$parts[1], (int)$parts[0], $year );
 						if( $ts ) {
-							$this->mDb->query(
-								"UPDATE `".BIT_DB_PREFIX."liberty_xref`
-								 SET `start_date` = ?
-								 WHERE `content_id` = ? AND `item` IN ('REQN','TRANS','ORDER','PBLD')",
-								[ date( 'Y-m-d H:i:s', $ts ), $this->mContentId ]
-							);
+							LibertyContent::upsertXrefByContentId( $this->mContentId, [ 'REQN', 'TRANS', 'ORDER', 'PBLD' ], [
+								'start_date' => date( 'Y-m-d H:i:s', $ts ),
+							] );
 						}
 					}
 				}

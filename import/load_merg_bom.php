@@ -22,6 +22,7 @@ namespace Bitweaver\Stock;
 
 require_once '../../kernel/includes/setup_inc.php';
 
+use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\Liberty\LibertyXref;
 
 global $gBitSystem, $gBitDb;
@@ -76,12 +77,9 @@ if( empty( $group ) ) {
 						$assemblies[$asmId] = [ 'title' => $asmTitle, 'loaded' => 0, 'skipped' => 0, 'cleared' => 0 ];
 
 						if( $doClear && !$dryRun ) {
-							$cleared = $gBitDb->query(
-								"DELETE FROM `".BIT_DB_PREFIX."liberty_xref`
-								 WHERE `content_id` = ? AND `item` IN ('SGL','PRT','PCK','SHT','VOL')",
-								[ $asmId ]
+							$assemblies[$asmId]['cleared'] = LibertyContent::deleteXrefByItem(
+								$asmId, [ 'SGL', 'PRT', 'PCK', 'SHT', 'VOL' ]
 							);
-							$assemblies[$asmId]['cleared'] = $gBitDb->Affected_Rows();
 						}
 					}
 				}

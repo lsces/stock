@@ -8,6 +8,7 @@ namespace Bitweaver\Stock;
 
 use Bitweaver\KernelTools;
 use Bitweaver\HttpStatusCodes;
+use Bitweaver\Liberty\LibertyContent;
 
 require_once '../kernel/includes/setup_inc.php';
 
@@ -73,11 +74,9 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 		}
 		// Ordered date → xref.start_date
 		if( !empty( $_REQUEST['ordered_date'] ) && ($ts = parseMovementDate( $_REQUEST['ordered_date'] )) ) {
-			$gBitDb->query(
-				"UPDATE `".BIT_DB_PREFIX."liberty_xref` SET `start_date`=?
-				 WHERE `content_id`=? AND `item` IN ('REQN','TRANS','ORDER','PBLD')",
-				[ date( 'Y-m-d H:i:s', $ts ), $gContent->mContentId ]
-			);
+			LibertyContent::upsertXrefByContentId( $gContent->mContentId, [ 'REQN', 'TRANS', 'ORDER', 'PBLD' ], [
+				'start_date' => date( 'Y-m-d H:i:s', $ts ),
+			] );
 		}
 		// Received date → lc.event_time
 		if( !empty( $_REQUEST['received_date'] ) && ($ts = parseMovementDate( $_REQUEST['received_date'] )) ) {
