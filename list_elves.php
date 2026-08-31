@@ -2,6 +2,17 @@
 /**
  * List kit elves — contact persons with a linked user account.
  * Shows assembly and movement counts with links to filtered stock views.
+ *
+ * Filter is deliberately just "has a linked user account" — no contact
+ * 'type' tag involved. Only actual kit elves are expected to be registered
+ * site users for the foreseeable future, so this is enough on its own; if
+ * that stops being true, don't hardcode a specific item code (e.g. 'P02')
+ * here to narrow it further — that's a per-site value (label AND meaning
+ * both vary by install, see contact/admin/schema_inc.php's own P01/P02
+ * comment), it'd need a kernel_config setting exposed on stock's own admin
+ * page (see admin_stock.tpl's existing settings for the convention), not a
+ * literal in this query.
+ *
  * @package stock
  */
 
@@ -18,8 +29,7 @@ $X = BIT_DB_PREFIX;
 
 $rs = $gBitDb->query(
 	"SELECT con.`content_id`, con.`role_id` AS user_id,
-		lc.`title`,
-		x00.`xkey_ext` AS name_parts,
+		lc.`title` AS display_name,
 		uu.`login` AS linked_user_login,
 		uu.`real_name` AS linked_user_name,
 		(SELECT COUNT(*) FROM `{$X}liberty_content` ac
@@ -29,20 +39,12 @@ $rs = $gBitDb->query(
 	 FROM `{$X}contact` con
 	 INNER JOIN `{$X}liberty_content` lc ON lc.`content_id` = con.`content_id`
 	 INNER JOIN `{$X}users_users` uu ON uu.`user_id` = con.`role_id`
-	 LEFT JOIN `{$X}liberty_xref` x00 ON x00.`content_id` = con.`content_id` AND x00.`item` = 'P01'
 	 WHERE con.`role_id` IS NOT NULL
 	 ORDER BY lc.`title`"
 );
 
 $elves = [];
 while( $row = $rs->fetchRow() ) {
-	$parts = explode( '|', $row['name_parts'] ?? '' );
-	$row['display_name'] = trim( implode( ' ', array_filter( [
-		$parts[0] ?? '',
-		$parts[1] ?? '',
-		$parts[2] ?? '',
-		$parts[3] ?? '',
-	] ) ) ) ?: $row['linked_user_name'] ?: $row['title'];
 	$elves[] = $row;
 }
 
