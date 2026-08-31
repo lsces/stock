@@ -14,6 +14,7 @@
  * @package stock
  */
 
+use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\Stock\StockAssembly;
 
 /**
@@ -24,7 +25,7 @@ function stockExpungeAssemblyByTitle( string $title ): bool {
 
 	$contentId = $gBitDb->getOne(
 		"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
-		 WHERE lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
+		 WHERE lc.`content_type_guid` = '".'stockassembly'."' AND lc.`title` = ?",
 		[ $title ]
 	);
 	if( !$contentId ) {
@@ -51,7 +52,7 @@ function stockImportSimpleAssembly( array $data, int $rowNum ): array {
 	// Skip if already exists
 	$exists = $gBitDb->getOne(
 		"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
-		 WHERE lc.`content_type_guid` = '".STOCKASSEMBLY_CONTENT_TYPE_GUID."' AND lc.`title` = ?",
+		 WHERE lc.`content_type_guid` = '".'stockassembly'."' AND lc.`title` = ?",
 		[ $title ]
 	);
 	if( $exists ) {
@@ -79,26 +80,16 @@ function stockImportSimpleAssembly( array $data, int $rowNum ): array {
 	$contentId = $assembly->mContentId;
 
 	if( !empty( $klpr ) ) {
-		$xrefId = $gBitDb->GenID( 'liberty_xref_seq' );
-		$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-			'xref_id'          => $xrefId,
-			'content_id'       => $contentId,
-			'item'             => 'KLPR',
-			'xorder'           => 0,
-			'xkey'             => substr( $klpr, 0, 32 ),
-			'last_update_date' => $gBitDb->NOW(),
+		LibertyContent::upsertXrefByContentId( $contentId, 'KLPR', [
+			'xorder' => 0,
+			'xkey'   => substr( $klpr, 0, 32 ),
 		] );
 	}
 
 	if( !empty( $klurl ) ) {
-		$xrefId = $gBitDb->GenID( 'liberty_xref_seq' );
-		$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-			'xref_id'          => $xrefId,
-			'content_id'       => $contentId,
-			'item'             => 'KLURL',
-			'xorder'           => 0,
-			'xkey_ext'         => substr( $klurl, 0, 250 ),
-			'last_update_date' => $gBitDb->NOW(),
+		LibertyContent::upsertXrefByContentId( $contentId, 'KLURL', [
+			'xorder'   => 0,
+			'xkey_ext' => substr( $klurl, 0, 250 ),
 		] );
 	}
 

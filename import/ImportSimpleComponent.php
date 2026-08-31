@@ -24,6 +24,7 @@
  * @package stock
  */
 
+use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\Stock\StockComponent;
 
 // Cache supplier lookups — only 4 or so suppliers in the CSV
@@ -116,17 +117,12 @@ function stockImportSimpleComponent( array $data, int $rowNum ): array {
 		if( !$supplierContentId ) {
 			$result['errors'][] = "Row $rowNum: '$title' — supplier '$supplierName' not found in contacts, xrefs skipped.";
 		} else {
-			$xrefId = $gBitDb->GenID( 'liberty_xref_seq' );
-			$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-				'xref_id'          => $xrefId,
-				'content_id'       => $contentId,
-				'item'             => '#SUP',
-				'xorder'           => 1,
-				'xref'             => $supplierContentId,
-				'xkey'             => substr( $supplierPn,    0, 32  ),
-				'xkey_ext'         => substr( $supplierPrice, 0, 250 ),
-				'data'             => $supplierUrl ?: null,
-				'last_update_date' => $gBitDb->NOW(),
+			LibertyContent::upsertXrefByContentId( $contentId, '#SUP', [
+				'xorder'   => 1,
+				'xref'     => $supplierContentId,
+				'xkey'     => substr( $supplierPn,    0, 32  ),
+				'xkey_ext' => substr( $supplierPrice, 0, 250 ),
+				'data'     => $supplierUrl ?: null,
 			] );
 		}
 	}
@@ -134,13 +130,9 @@ function stockImportSimpleComponent( array $data, int $rowNum ): array {
 	// Quantity type xref — sets the default qty type used by movement CSV imports
 	// and the pack size shown in BOM displays (PRT/PCK xref xkey = pieces per pack)
 	if( in_array( $qtyType, [ 'PRT', 'PCK', 'SHT', 'VOL' ] ) ) {
-		$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-			'xref_id'          => $gBitDb->GenID( 'liberty_xref_seq' ),
-			'content_id'       => $contentId,
-			'item'             => $qtyType,
-			'xkey'             => substr( $qtyValue, 0, 32 ),
-			'xorder'           => 0,
-			'last_update_date' => $gBitDb->NOW(),
+		LibertyContent::upsertXrefByContentId( $contentId, $qtyType, [
+			'xkey'   => substr( $qtyValue, 0, 32 ),
+			'xorder' => 0,
 		] );
 	}
 
