@@ -18,6 +18,8 @@
  * @package stock
  */
 
+use Bitweaver\Liberty\LibertyContent;
+
 require_once __DIR__.'/ImportKitlockerAssemblies.php';
 
 /**
@@ -97,8 +99,8 @@ function stockImportKitlockerStockPredictRow( array $row, ?string $pCreateType =
 	}
 
 	$contentId = (int)$contentId;
-	stockKitlockerXrefUpsert( $contentId, 'KLSGL', $row['klsgl'] );
-	stockKitlockerXrefUpsert( $contentId, 'KL3M',  $row['kl3m'] );
+	LibertyContent::upsertXrefByContentId( $contentId, 'KLSGL', [ 'xkey' => substr( $row['klsgl'], 0, 32 ), 'xorder' => 0 ] );
+	LibertyContent::upsertXrefByContentId( $contentId, 'KL3M',  [ 'xkey' => substr( $row['kl3m'],  0, 32 ), 'xorder' => 0 ] );
 
 	return [ 'matched' => true, 'created' => false, 'content_id' => $contentId ];
 }

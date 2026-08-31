@@ -17,33 +17,9 @@
  * @package stock
  */
 
+use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\Stock\StockAssembly;
 use Bitweaver\Stock\StockComponent;
-
-function stockKitlockerXrefUpsert( int $contentId, string $item, string $value ): void {
-	global $gBitDb;
-	$existingId = $gBitDb->getOne(
-		"SELECT `xref_id` FROM `".BIT_DB_PREFIX."liberty_xref`
-		 WHERE `content_id` = ? AND `item` = ?",
-		[ $contentId, $item ]
-	);
-	if( $existingId ) {
-		$gBitDb->associateUpdate(
-			BIT_DB_PREFIX.'liberty_xref',
-			[ 'xkey' => substr( $value, 0, 32 ), 'last_update_date' => $gBitDb->NOW() ],
-			[ 'xref_id' => $existingId ]
-		);
-	} else {
-		$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-			'xref_id'          => $gBitDb->GenID( 'liberty_xref_seq' ),
-			'content_id'       => $contentId,
-			'item'             => $item,
-			'xkey'             => substr( $value, 0, 32 ),
-			'xorder'           => 0,
-			'last_update_date' => $gBitDb->NOW(),
-		] );
-	}
-}
 
 function stockExpungeKitlockerItemByTitle( string $title, string $type ): bool {
 	global $gBitDb;
@@ -111,13 +87,19 @@ function stockImportKitlockerItem( array $data, int $rowNum ): array {
 
 	// Group tag — both types
 	if( $group >= 1 && $group <= 99 ) {
-		stockKitlockerXrefUpsert( $contentId, sprintf( 'KLG%02d', $group ), '' );
+		LibertyContent::upsertXrefByContentId( $contentId, sprintf( 'KLG%02d', $group ), [
+			'xkey'   => '',
+			'xorder' => 0,
+		] );
 	}
 
 	// Kitlocker xrefs — same set for assemblies and components
 	foreach( [ 'KLID' => $klid, 'KLSGL' => $klsgl, 'KL3M' => $kl3m ] as $item => $value ) {
 		if( $value !== '' ) {
-			stockKitlockerXrefUpsert( $contentId, $item, $value );
+			LibertyContent::upsertXrefByContentId( $contentId, $item, [
+				'xkey'   => substr( $value, 0, 32 ),
+				'xorder' => 0,
+			] );
 		}
 	}
 
