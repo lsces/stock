@@ -15,6 +15,8 @@
 
 namespace Bitweaver\Stock;
 
+use Bitweaver\Liberty\LibertyContent;
+
 require_once '../../kernel/includes/setup_inc.php';
 
 global $gBitSystem, $gBitDb;
@@ -115,14 +117,10 @@ if( empty( $group ) ) {
 
 				$newContentId = $stockComponent->mContentId;
 
-				$gBitDb->associateInsert( BIT_DB_PREFIX.'liberty_xref', [
-					'xref_id'          => $gBitDb->GenID( 'liberty_xref_seq' ),
-					'content_id'       => $newContentId,
-					'item'             => '#SUP',
-					'xorder'           => 1,
-					'xref'             => RAPID_CONTENT_ID,
-					'xkey'             => substr( $orderCode, 0, 32 ),
-					'last_update_date' => $gBitDb->NOW(),
+				LibertyContent::upsertXrefByContentId( $newContentId, '#SUP', [
+					'xorder' => 1,
+					'xref'   => RAPID_CONTENT_ID,
+					'xkey'   => substr( $orderCode, 0, 32 ),
 				] );
 
 				$created++;
