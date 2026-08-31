@@ -31,20 +31,14 @@ use Bitweaver\Stock\StockComponent;
 $_stockSupplierCache = [];
 
 function stockImportFindSupplier( string $name ): ?int {
-	global $gBitDb, $_stockSupplierCache;
+	global $_stockSupplierCache;
 
 	$key = strtolower( trim( $name ) );
 	if( array_key_exists( $key, $_stockSupplierCache ) ) {
 		return $_stockSupplierCache[$key];
 	}
 
-	$contentId = $gBitDb->getOne(
-		"SELECT `content_id` FROM `".BIT_DB_PREFIX."liberty_xref`
-		 WHERE `item` = 'SCREF' AND UPPER( `xkey` ) = UPPER( ? )",
-		[ trim( $name ) ]
-	);
-
-	$_stockSupplierCache[$key] = $contentId ? (int)$contentId : null;
+	$_stockSupplierCache[$key] = LibertyContent::lookupContentIdByXrefValue( 'SCREF', trim( $name ), true );
 	return $_stockSupplierCache[$key];
 }
 

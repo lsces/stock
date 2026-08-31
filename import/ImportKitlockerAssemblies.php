@@ -104,5 +104,6 @@ function stockImportKitlockerItem( array $data, int $rowNum ): array {
 	}
 
 	$result['loaded']++;
+	$result['content_id'] = $contentId;
 	return $result;
 }

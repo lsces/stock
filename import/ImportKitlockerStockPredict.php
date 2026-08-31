@@ -75,10 +75,7 @@ function stockParseKitlockerStockPredictHtml( string $html ): array {
 function stockImportKitlockerStockPredictRow( array $row, ?string $pCreateType = null ): array {
 	global $gBitDb;
 
-	$contentId = $gBitDb->getOne(
-		"SELECT `content_id` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `item` = 'KLID' AND `xkey` = ?",
-		[ $row['code'] ]
-	);
+	$contentId = LibertyContent::lookupContentIdByXrefValue( 'KLID', $row['code'] );
 
 	if( !$contentId ) {
 		if( !in_array( $pCreateType, [ 'A', 'C' ], true ) ) {
@@ -91,11 +88,7 @@ function stockImportKitlockerStockPredictRow( array $row, ?string $pCreateType =
 		if( !$result['loaded'] ) {
 			return [ 'matched' => false, 'created' => false, 'content_id' => null ];
 		}
-		$contentId = $gBitDb->getOne(
-			"SELECT `content_id` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `item` = 'KLID' AND `xkey` = ?",
-			[ $row['code'] ]
-		);
-		return [ 'matched' => true, 'created' => true, 'content_id' => (int)$contentId ];
+		return [ 'matched' => true, 'created' => true, 'content_id' => (int)$result['content_id'] ];
 	}
 
 	$contentId = (int)$contentId;
