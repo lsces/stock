@@ -24,8 +24,8 @@ for Print, CSV export (`?format=csv`, part_number + qty, skips blanks), and Crea
 ## Template structure
 
 - `stock_simple_list_inc.tpl` — assembly view header; includes `assembly_icons_inc.tpl`
-  (floaticons) and `assembly_nav.tpl` (just a link back to `list_assemblies.php` — was a real
-  ancestor breadcrumb trail until 2026-08-28, see "BOM storage" below)
+  (floaticons) and `assembly_nav.tpl` (just a link back to `list_assemblies.php` — see "BOM
+  storage" below for why there's no ancestor breadcrumb trail)
 - `user_galleries.tpl` — kitelf assembly grid (3-col panels, parsed_data, counts)
 - `list_assemblies.tpl` — default flat list (formerly `list_assemblies_simple.tpl`)
 - `view_kitlocker.tpl` — kitlocker group gallery (formerly `stock_fixed_grid_inc.tpl`)
@@ -141,9 +141,8 @@ tab, CSV upload suppression).
 directly for a matching `content_id` + `content_type_guid`, not just `verifyId($mContentId)` —
 so a syntactically-valid-but-nonexistent `content_id` correctly 404s ("No X exists with the
 given ID") on all six `view_*.php`/`edit_*.php` entry points, rather than rendering a
-blank/broken page or silently falling into create-new mode. A `LibertyContent`-wide version of
-this fix was tried and reverted — see `liberty/CLAUDE.md` for why; `contact` uses the same
-per-package pattern.
+blank/broken page or silently falling into create-new mode. This is implemented per-package
+rather than once on the shared `LibertyContent` base — `contact` uses the same pattern.
 
 ## BOM storage — `liberty_xref` only
 
@@ -154,11 +153,10 @@ writes straight to `liberty_xref`.
 
 **No other component/assembly relationship table exists.** A separate `stock_assembly_map`
 table — a leftover fisheye-gallery-hierarchy relic from the package's original port, never
-actually used (confirmed permanently empty against 122 real assemblies / months of live
-`merg.rdm1.uk` data) — was fully removed 2026-08-28: every method that read/wrote it
-(ancestor breadcrumbs, the nested gallery-hierarchy tree/checkbox picker, thumbnail picking,
-the flat BOM checkbox list, `child_count`) is gone, and the table itself was dropped via the
-`5.0.2` upgrade. See `CLAUDE.md`'s 2026-08-28 entry for the full investigation and removal.
+actually used for real BOM data — has been dropped from the schema (via the `5.0.2` upgrade).
+None of the package's code reads or writes it any more — no ancestor breadcrumbs, no nested
+gallery-hierarchy tree/checkbox picker, no thumbnail picking via this path, no flat BOM checkbox
+list, no `child_count`. BOM/assembly relationships are entirely `liberty_xref`-based, per above.
 
 ## Firebird gotchas specific to this package
 
