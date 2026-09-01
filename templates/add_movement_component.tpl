@@ -13,7 +13,7 @@
 			<div class="form-group">
 				{formlabel label="Component" for="component_title" mandatory="y"}
 				{forminput}
-					<input type="hidden" id="component_id_unused" />
+					<input type="hidden" name="component_id" id="component_id" value="" />
 					<div style="position:relative">
 						<input type="text" class="form-control" name="component_title" id="component_title"
 							autocomplete="off"
@@ -71,43 +71,11 @@
 {/strip}
 <script>
 (function($) {
-	var timer;
-	var $input = $('#component_title');
-	var $dd    = $('#comp_dropdown');
-
-	$input.on('input', function() {
-		var q = $(this).val();
-		clearTimeout(timer);
-		$dd.hide().empty();
-		if (q.length < 2) return;
-		timer = setTimeout(function() {
-			$.getJSON('{$lookupUrl}', {ldelim}q: q{rdelim}, function(data) {
-				if (!data.length) return;
-				$.each(data, function(i, row) {
-					$dd.append($('<li>').append(
-						$('<a>').attr('href','#').data('title', row.title).text(row.title)
-					));
-				});
-				$dd.show();
-			});
-		}, 250);
-	});
-
-	$(document).on('mousedown', '#comp_dropdown a', function(e) {
-		e.preventDefault();
-		$input.val($(this).data('title'));
-		$dd.hide().empty();
-	});
-
-	$input.on('blur', function() { setTimeout(function() { $dd.hide(); }, 150); });
-
-	$input.on('keydown', function(e) {
-		if (!$dd.is(':visible')) return;
-		var $links = $dd.find('a'), idx = $links.index($dd.find('li.active a'));
-		if (e.key === 'ArrowDown') { e.preventDefault(); $links.parent().removeClass('active'); $links.eq(idx + 1 < $links.length ? idx + 1 : 0).parent().addClass('active'); }
-		else if (e.key === 'ArrowUp') { e.preventDefault(); $links.parent().removeClass('active'); $links.eq(idx > 0 ? idx - 1 : $links.length - 1).parent().addClass('active'); }
-		else if (e.key === 'Enter') { var $a = $dd.find('li.active a'); if ($a.length) { e.preventDefault(); $a.trigger('mousedown'); } }
-		else if (e.key === 'Escape') { $dd.hide(); }
+	BitComponentTypeahead({
+		input:     '#component_title',
+		dropdown:  '#comp_dropdown',
+		idField:   '#component_id',
+		lookupUrl: '{$lookupUrl}'
 	});
 }(jQuery));
 </script>

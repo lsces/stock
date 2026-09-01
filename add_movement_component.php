@@ -9,11 +9,12 @@
 namespace Bitweaver\Stock;
 
 use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\Liberty\LibertyXref;
 
 require_once '../kernel/includes/setup_inc.php';
 
-global $gBitSystem, $gBitSmarty, $gBitDb;
+global $gBitSystem, $gBitSmarty, $gBitDb, $gBitThemes;
 
 include_once STOCK_PKG_INCLUDE_PATH.'movement_lookup_inc.php';
 
@@ -42,11 +43,10 @@ if( !empty( $_REQUEST['fAddComponent'] ) ) {
 	if( $title === '' ) {
 		$errors[] = KernelTools::tra( 'Component title is required.' );
 	} else {
-		$compId = (int)$gBitDb->getOne(
-			"SELECT lc.`content_id` FROM `".BIT_DB_PREFIX."liberty_content` lc
-			 WHERE lc.`content_type_guid` = 'stockcomponent' AND lc.`title` = ?",
-			[ $title ]
-		);
+		// component_id is only populated once a suggestion is actually picked
+		// (BitComponentTypeahead.js) — falls back to an exact-title match
+		// otherwise, same as before this used the shared resolver.
+		$compId = LibertyContent::resolveContentIdByTitle( (int)( $_REQUEST['component_id'] ?? 0 ), $title, 'stockcomponent' );
 
 		if( !$compId ) {
 			header( 'Location: '.STOCK_PKG_URL.'edit_component.php?title='.urlencode( $title ) );
@@ -81,5 +81,7 @@ if( !empty( $_REQUEST['fAddComponent'] ) ) {
 $gBitSmarty->assign( 'validItems', $validItems );
 $gBitSmarty->assign( 'errors',     $errors );
 $gBitSmarty->assign( 'lookupUrl',  STOCK_PKG_URL.'includes/lookup_component.php' );
+
+$gBitThemes->loadJavascript( KERNEL_PKG_PATH.'scripts/BitComponentTypeahead.js', true );
 
 $gBitSystem->display( 'bitpackage:stock/add_movement_component.tpl', KernelTools::tra( 'Add Component' ).': '.$gContent->getTitle(), [ 'display_mode' => 'edit' ] );
