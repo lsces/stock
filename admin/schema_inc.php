@@ -83,23 +83,15 @@ $xrefItems = [];
 $xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('stgrp',   'stock','Stock Groups', 1,3,'','')";
 $xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('supplier', 'stock','Supplier',     3,3,'','sup')";
 
-// KLG01–KLG28 — Kitlocker group tags (multiple=0 per item; multiple items per record = multi-group tagging)
-$klGroups = [
-	'KLG01'=>'General Kits',       'KLG02'=>'DCC Kits',            'KLG03'=>'CBUS Explorer',
-	'KLG04'=>'Tools',               'KLG05'=>'Miscellaneous',       'KLG06'=>'ICs',
-	'KLG07'=>'General Kit PCBs',    'KLG08'=>'Clearance',           'KLG09'=>'Power Supplies',
-	'KLG10'=>'CBUS PCBs',           'KLG11'=>'SMD Starter Kits',    'KLG12'=>'Servo Mounts',
-	'KLG13'=>'Pocket Money Projects','KLG14'=>'DCC PCBs',           'KLG15'=>'PICs',
-	'KLG16'=>'CBUS Advanced',       'KLG17'=>'Test Modules',        'KLG18'=>'Test Module PCBs',
-	'KLG19'=>'PMK PCBs',            'KLG20'=>"CBUS Beginner's Packs",'KLG21'=>'Pocket Money Kits',
-	'KLG22'=>'EzyBus',              'KLG23'=>'DCC Traction',        'KLG24'=>'Bitz-in-Bag kits',
-	'KLG25'=>'Connector Boards',    'KLG26'=>'CBUS Basic',          'KLG27'=>'ATC',
-	'KLG28'=>'POSTAGE',
-];
-foreach( $klGroups as $item => $title ) {
-	$safeTitle = str_replace( "'", "''", $title );
-	$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('{$item}','stock','stgrp','{$safeTitle}',0,3,'','',NULL)";
-}
+// KLG01-KLG28 (Kitlocker group tags) and the whole 'kitlocker' x_group/items below were retracted
+// 2026-09-02 - Kitlocker-supplier vocabulary is merg-specific (one supplier merg imports from),
+// not generic to every stock install ('stock' is also active on rdmcloud, which never touches
+// Kitlocker at all and was carrying this vocabulary for nothing). Now lives privately at
+// /etc/webstack/domains/merg/config/local/xref_schemes/stock.php, applied via liberty's
+// LibertyXrefScheme::apply() - not run against merg's live DB (which already has every one of
+// these rows from before this retraction), only for a future fresh install/rebuild. The 'stgrp'
+// group itself stays here (generic "Stock Groups" container, any site can register its own tags
+// under it) - only the specific KLGxx tag values were Kitlocker-only.
 
 // Supplier items — defined once at package level (identical templates for SA and SC)
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#SUP','stock','supplier','Supplier',    1,3,'../contact/?content_id=','sup', NULL)";
@@ -116,8 +108,8 @@ $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('SHT','stockcomponent','quantity','Sheet', 0,3,'','text', NULL)";
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('VOL','stockcomponent','quantity','Volume',        0,3,'','text', NULL)";
 
-// ── 'stock' package-level kitlocker group (sort_order=2) — shared across SA and SC ───
-$xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('kitlocker','stock','KitLocker Details',2,3,'','')";
+// The 'kitlocker' x_group/items (sort_order=2) that used to live here were retracted 2026-09-02 -
+// see the KLG01-28 comment above for why. Same private merg scheme covers both.
 
 // ── stockassembly-specific group (sort_order=4: BOM) ────────────────────────────────
 $xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('quantity','stockassembly','Bill of Material',4,3,'','bom')";
@@ -139,13 +131,6 @@ $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('IND','stockcomponent','values','Inductance',       0,3,'','text',NULL)";
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('TMP','stockcomponent','values','Temperature',      0,3,'','text',NULL)";
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('PKG','stockcomponent','values','Package/Footprint', 0,3,'','text',NULL)";
-
-// kitlocker items — package-level ('stock'), shared across SA and SC; all multiple=0 (one value per record)
-$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('KLID', 'stock','kitlocker','Kitlocker ID Code',       0,3,'','text',NULL)";
-$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('KLPR', 'stock','kitlocker','Kitlocker Price',         0,3,'','text',NULL)";
-$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('KL3M', 'stock','kitlocker','Kitlocker 3 Month Sales', 0,3,'','text',NULL)";
-$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('KLURL','stock','kitlocker','Details URL',             0,3,'','text',NULL)";
-$xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('KLSGL','stock','kitlocker','Kitlocker Stock',         0,3,'','text',NULL)";
 
 // stockmovement xref groups
 $xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`) VALUES ('reference','stockmovement','Reference',1,3,'')";
