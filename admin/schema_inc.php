@@ -78,20 +78,10 @@ $xrefTypes = [];
 $xrefItems = [];
 
 // ── 'stock' package-level groups — shared across stockassembly and stockcomponent ──
-// sort_order=1: stgrp (group tags, multi-valued KLGnn items)
+// sort_order=1: stgrp (site-defined group tags - no default items, add your own via admin)
 // sort_order=3: supplier (replaces per-type duplicates)
 $xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('stgrp',   'stock','Stock Groups', 1,3,'','')";
 $xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('supplier', 'stock','Supplier',     3,3,'','sup')";
-
-// KLG01-KLG28 (Kitlocker group tags) and the whole 'kitlocker' x_group/items below were retracted
-// 2026-09-02 - Kitlocker-supplier vocabulary is merg-specific (one supplier merg imports from),
-// not generic to every stock install ('stock' is also active on rdmcloud, which never touches
-// Kitlocker at all and was carrying this vocabulary for nothing). Now lives privately at
-// /etc/webstack/domains/merg/config/local/xref_schemes/stock.php, applied via liberty's
-// LibertyXrefScheme::apply() - not run against merg's live DB (which already has every one of
-// these rows from before this retraction), only for a future fresh install/rebuild. The 'stgrp'
-// group itself stays here (generic "Stock Groups" container, any site can register its own tags
-// under it) - only the specific KLGxx tag values were Kitlocker-only.
 
 // Supplier items — defined once at package level (identical templates for SA and SC)
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('#SUP','stock','supplier','Supplier',    1,3,'../contact/?content_id=','sup', NULL)";
@@ -107,9 +97,6 @@ $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('PCK','stockcomponent','quantity','Pack size',     0,3,'','value',NULL)";
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('SHT','stockcomponent','quantity','Sheet', 0,3,'','text', NULL)";
 $xrefItems[] = "INSERT INTO `{$X}liberty_xref_item` (`item`,`content_type_guid`,`x_group`,`cross_ref_title`,`multiple`,`role_id`,`cross_ref_href`,`template`,`data`) VALUES ('VOL','stockcomponent','quantity','Volume',        0,3,'','text', NULL)";
-
-// The 'kitlocker' x_group/items (sort_order=2) that used to live here were retracted 2026-09-02 -
-// see the KLG01-28 comment above for why. Same private merg scheme covers both.
 
 // ── stockassembly-specific group (sort_order=4: BOM) ────────────────────────────────
 $xrefTypes[] = "INSERT INTO `{$X}liberty_xref_group` (`x_group`,`content_type_guid`,`title`,`sort_order`,`role_id`,`type_href`,`template`) VALUES ('quantity','stockassembly','Bill of Material',4,3,'','bom')";
