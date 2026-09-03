@@ -149,7 +149,9 @@ rather than once on the shared `LibertyContent` base — `contact` uses the same
 BOM data lives entirely as `liberty_xref` rows under the `quantity`/`bom` group
 (`sort_order=4`, items `SGL`/`PRT`/`PCK`/`SHT`/`VOL`) — same no-map-table pattern Food's own
 `FoodAssembly` uses. `import/load_merg_bom.php` (the actual, currently-used BOM import tool)
-writes straight to `liberty_xref`.
+clears and rebuilds a component's lines via `LibertyContent::deleteXrefByItem()` — see "Xref
+writes" below; raw `SELECT`s against `liberty_xref` for its own lookups are fine, only writes go
+through the generic helpers.
 
 **No other component/assembly relationship table exists.** A separate `stock_assembly_map`
 table — a leftover fisheye-gallery-hierarchy relic from the package's original port, never
@@ -157,6 +159,35 @@ actually used for real BOM data — has been dropped from the schema (via the `5
 None of the package's code reads or writes it any more — no ancestor breadcrumbs, no nested
 gallery-hierarchy tree/checkbox picker, no thumbnail picking via this path, no flat BOM checkbox
 list, no `child_count`. BOM/assembly relationships are entirely `liberty_xref`-based, per above.
+
+## Xref writes — the generic content_id+item helper family, not raw SQL
+
+Stock used to hand-roll `INSERT`/`UPDATE`/`DELETE` (and a couple of existence-check/reverse-lookup
+`SELECT`s) directly against `liberty_xref` across its import scripts and movement editing — real,
+messy duplication across several files (a stopgap from the package's original port, not a
+deliberate design). All of it has been converted to `LibertyContent`'s generic content_id+item
+helper family instead — see `liberty/MANUAL.md`'s "Access boundaries" section for the full helper
+list (`upsertXrefByContentId()`, `deleteXrefByItem()`, `hasXrefItem()`, `lookupXrefByItem()`,
+`lookupContentIdByXrefValue()`); Stock is that family's heaviest real-world consumer. Current
+call sites: `view_component.php`/`edit_component.php` (KLID existence check via `hasXrefItem()`),
+`edit_movement.php`/`StockMovement.php` (reference-row updates via `upsertXrefByContentId()`),
+`import/load_merg_bom.php`/`ImportSimpleAssembly.php`/`ImportSimpleComponent.php`/
+`load_merg_stubs.php`/`ImportKitlockerAssemblies.php`/`ImportKitlockerStockPredict.php` (BOM/stub/
+Kitlocker upsert-or-insert and delete, plus `ImportSimpleComponent.php`'s and
+`ImportKitlockerStockPredict.php`'s supplier/KLID reverse lookups via
+`lookupContentIdByXrefValue()`).
+
+**One known exception, not yet converted**: `edit_stgrp_item.php` still queries and updates
+`liberty_xref_item` (the *structure* table — a group-tag description field, not `liberty_xref`
+data) directly with raw SQL, which the same access-boundary rule also covers ("only
+`LibertyXrefType` queries these"). Flagged, not fixed — this thread was deliberately stopped after
+covering every `liberty_xref` (data-table) site; re-opening it for the structure table is a
+separate, fresh decision, not an automatic continuation.
+
+**Known pre-existing risk carried over, not introduced by this conversion**: the case-insensitive
+`lookupContentIdByXrefValue()` lookup used for supplier matching (`SCREF`) means two real
+suppliers differing only by letter case would silently collapse to whichever the DB happens to
+return first — flagged in the helper's own docblock, not fixed.
 
 ## Firebird gotchas specific to this package
 

@@ -54,9 +54,10 @@ See `MANUAL.md` for the full current picture — schema, movement model, and kno
 ## Requirements
 
 - [Bitweaver](https://github.com/lsces/bitweaver) 5.x
-- [`liberty`](https://github.com/lsces/liberty) package — built entirely on Liberty's generic
-  content/xref framework, same foundation [`food`](https://github.com/lsces/food) uses (Food's
-  own design deliberately mirrors this package throughout)
+- [`liberty`](https://github.com/lsces/liberty) package (≥ 5.0.4) — built entirely on Liberty's
+  generic content/xref framework, same foundation [`food`](https://github.com/lsces/food) uses
+  (Food's own design deliberately mirrors this package throughout); Stock is the heaviest current
+  consumer of Liberty's generic content_id+item xref-helper family (see `MANUAL.md`)
 
 See `MANUAL.md` in this repo for the current schema/BOM-storage detail if you're installing it
 fresh (`CLAUDE.md` is a dated development log, not a reference — useful for *why* something's
