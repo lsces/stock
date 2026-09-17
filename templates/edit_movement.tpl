@@ -67,16 +67,16 @@
 			<div class="form-group">
 				{formlabel label="{if $isPbld}Build Date{else}Ordered{/if}" for="ordered_date"}
 				{forminput}
-					<input type="text" class="form-control input-small" name="ordered_date" id="ordered_date"
-						placeholder="dd/mm/yyyy" value="{$orderedDateVal|escape}" maxlength="10" />
+					<input type="date" class="form-control input-small" name="ordered_date" id="ordered_date"
+						value="{$orderedDateVal|escape}" />
 				{/forminput}
 			</div>
 
 			<div class="form-group">
 				{formlabel label="{if $isPbld}Completed{else}Received{/if}" for="received_date"}
 				{forminput}
-					<input type="text" class="form-control input-small" name="received_date" id="received_date"
-						placeholder="dd/mm/yyyy" value="{$receivedDateVal|escape}" maxlength="10" />
+					<input type="date" class="form-control input-small" name="received_date" id="received_date"
+						value="{$receivedDateVal|escape}" />
 				{/forminput}
 			</div>
 

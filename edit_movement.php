@@ -42,12 +42,12 @@ $refTypes = $gBitDb->getAssoc(
 	 ORDER BY xi.`item`"
 );
 
-// Helper: parse dd/mm/yy or dd/mm/yyyy → Unix timestamp, or 0
+// Parses an <input type="date"> value (ISO Y-m-d) to a UTC-midnight epoch for that calendar
+// date - a pure date, not an instant, so no display-timezone conversion belongs here (matches
+// FoodDay::getContentList()'s own gmmktime(0,0,0,...) day-bucket convention).
 function parseMovementDate( string $s ): int {
-	$parts = explode( '/', trim( $s ) );
-	if( count( $parts ) !== 3 ) return 0;
-	$year = (int)$parts[2] < 100 ? 2000 + (int)$parts[2] : (int)$parts[2];
-	return (int)mktime( 0, 0, 0, (int)$parts[1], (int)$parts[0], $year );
+	$parts = array_map( 'intval', explode( '-', trim( $s ) ) );
+	return count( $parts ) === 3 ? gmmktime( 0, 0, 0, $parts[1], $parts[2], $parts[0] ) : 0;
 }
 
 if( !empty( $_REQUEST['fSave'] ) ) {
@@ -72,10 +72,13 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 			$existingRef ? $refHash['xref_id'] = $existingRef['xref_id'] : $refHash['fAddXref'] = 1;
 			$gContent->storeXref( $refHash );
 		}
-		// Ordered date → xref.start_date
+		// Ordered date → xref.start_date. $ts is already true UTC (parseMovementDate() above) -
+		// pass the int straight through; LibertyXref::verify() only re-runs its own
+		// getUTCFromDisplayDate() conversion for a non-int value, so a formatted string here
+		// would double-convert it.
 		if( !empty( $_REQUEST['ordered_date'] ) && ($ts = parseMovementDate( $_REQUEST['ordered_date'] )) ) {
 			LibertyContent::upsertXrefByContentId( $gContent->mContentId, [ 'REQN', 'TRANS', 'ORDER', 'PBLD' ], [
-				'start_date' => date( 'Y-m-d H:i:s', $ts ),
+				'start_date' => $ts,
 			] );
 		}
 		// Received date → lc.event_time
@@ -299,17 +302,10 @@ if( $gContent->isValid() ) {
 }
 $gBitSmarty->assign( 'assemblyTabs', $assemblyTabs );
 
-// Pre-format dates as dd/mm/yyyy for form fields
-// ref_start_date is already a raw UTC epoch int (liberty_xref.start_date - see
-// LibertyXref::verify()'s own getUTCFromDisplayDate() handling), not a date string -
-// strtotime() on a bare epoch-looking numeric string returns false, not the epoch itself,
-// which date() then silently casts to 0 (01/01/1970). Same fix received_date already has below.
-$orderedDateVal  = !empty( $gContent->mInfo['ref_start_date'] )
-	? date( 'd/m/Y', (int)$gContent->mInfo['ref_start_date'] ) : '';
-$receivedDateVal = !empty( $gContent->mInfo['event_time'] ) && $gContent->mInfo['event_time'] > 0
-	? date( 'd/m/Y', (int)$gContent->mInfo['event_time'] ) : '';
-$gBitSmarty->assign( 'orderedDateVal',   $orderedDateVal );
-$gBitSmarty->assign( 'receivedDateVal',  $receivedDateVal );
+// ref_start_date/event_time are UTC-midnight epochs for a calendar date (see
+// parseMovementDate() above) - gmdate() straight back to Y-m-d, no BitDate involved.
+$gBitSmarty->assign( 'orderedDateVal',  !empty( $gContent->mInfo['ref_start_date'] ) ? gmdate( 'Y-m-d', $gContent->mInfo['ref_start_date'] ) : '' );
+$gBitSmarty->assign( 'receivedDateVal', !empty( $gContent->mInfo['event_time'] ) ? gmdate( 'Y-m-d', $gContent->mInfo['event_time'] ) : '' );
 $gBitSmarty->assign( 'contactLookupUrl', CONTACT_PKG_URL.'includes/lookup_contact.php' );
 
 $refType = $gContent->mInfo['ref_type'] ?? '';
