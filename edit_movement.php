@@ -300,8 +300,12 @@ if( $gContent->isValid() ) {
 $gBitSmarty->assign( 'assemblyTabs', $assemblyTabs );
 
 // Pre-format dates as dd/mm/yyyy for form fields
+// ref_start_date is already a raw UTC epoch int (liberty_xref.start_date - see
+// LibertyXref::verify()'s own getUTCFromDisplayDate() handling), not a date string -
+// strtotime() on a bare epoch-looking numeric string returns false, not the epoch itself,
+// which date() then silently casts to 0 (01/01/1970). Same fix received_date already has below.
 $orderedDateVal  = !empty( $gContent->mInfo['ref_start_date'] )
-	? date( 'd/m/Y', strtotime( $gContent->mInfo['ref_start_date'] ) ) : '';
+	? date( 'd/m/Y', (int)$gContent->mInfo['ref_start_date'] ) : '';
 $receivedDateVal = !empty( $gContent->mInfo['event_time'] ) && $gContent->mInfo['event_time'] > 0
 	? date( 'd/m/Y', (int)$gContent->mInfo['event_time'] ) : '';
 $gBitSmarty->assign( 'orderedDateVal',   $orderedDateVal );
