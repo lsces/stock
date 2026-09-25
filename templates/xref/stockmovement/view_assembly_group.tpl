@@ -4,7 +4,7 @@
 {jstab title="{tr}Assembly{/tr} ({$xrefGroup->mXrefs|@count})"}
 {legend legend="Assembly"}
 <div class="form-group table-responsive">
-	<table class="table">
+	<table class="table table-condensed">
 		<thead>
 			<tr>
 				<th>{tr}Item{/tr}</th>
