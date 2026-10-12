@@ -36,7 +36,7 @@ in, a kit being built, a delivery going out) is its own recorded event, not just
   drives order creation directly
 - **Kitlocker sync** — CSV/HTML importers matching kit stock/sales counts against an external
   kitlocker export by ID (a stopgap; the direction is moving new kitlocker items through the
-  normal edit UI instead, see `MANUAL.md`)
+  normal edit UI instead, see `DEVELOPER.md`)
 - **Multi-user filtering** — every list can be scoped to one kit-holder's own components/
   assemblies/movements, with creator names as clickable filter links
 
@@ -48,7 +48,7 @@ realistic rather than a rewrite: components/assemblies/movements are already mod
 it's specifically the Kitlocker-sync importers and kitelf-flavoured multi-user filtering that
 would need to become optional rather than assumed. Not scoped yet.
 
-See `MANUAL.md` for the full current picture — schema, movement model, and known gotchas
+See `DEVELOPER.md` for the full current picture — schema, movement model, and known gotchas
 (particularly around Firebird-specific query pitfalls this package has hit more than once).
 
 ## Requirements
@@ -57,8 +57,8 @@ See `MANUAL.md` for the full current picture — schema, movement model, and kno
 - [`liberty`](https://github.com/lsces/liberty) package (≥ 5.0.4) — built entirely on Liberty's
   generic content/xref framework, same foundation [`food`](https://github.com/lsces/food) uses
   (Food's own design deliberately mirrors this package throughout); Stock is the heaviest current
-  consumer of Liberty's generic content_id+item xref-helper family (see `MANUAL.md`)
+  consumer of Liberty's generic content_id+item xref-helper family (see `DEVELOPER.md`)
 
-See `MANUAL.md` in this repo for the current schema/BOM-storage detail if you're installing it
+See `DEVELOPER.md` in this repo for the current schema/BOM-storage detail if you're installing it
 fresh (`CLAUDE.md` is a dated development log, not a reference — useful for *why* something's
 built the way it is, not *how* to set it up).

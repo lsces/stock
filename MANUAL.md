@@ -1,265 +1,195 @@
-# Stock Package — Reference Manual
+# Stock — User Manual
 
-How the package actually works today. For the history of *why* — decisions, bugs found, wrong
-turns — see `CLAUDE.md`'s dated session log instead; this file only tracks current behaviour.
+How to use the stock system: components, kits (assemblies), the movements that change stock levels,
+and keeping stock counts in step with Kitlocker. For how it works inside (classes, data shapes,
+Firebird gotchas), see [`DEVELOPER.md`](DEVELOPER.md).
 
-See also: `liberty/MANUAL.md` for the xref machinery underpinning this package.
+## The idea
 
-## File naming convention
+Stock keeps track of what a kit-builder (a "kitelf") has in hand and what it takes to build a kit.
 
-Entry points follow `verb_contenttype.php`:
-- `view_assembly.php`, `edit_assembly.php`
-- `view_component.php`, `edit_component.php`
-- `view_movement.php`, `edit_movement.php`
-- `list_assemblies.php`, `list_components.php`, `list_movements.php`
-- `add_supplier.php` — specialist add page
-- `add_order.php` — draft ORDER movement from shortages list; pre-populates lines with
-  shortage qty, supplier autocomplete, editable qty/delete per line before creating movement
-- `add_prebuild.php` — creates PBLD movement (assembly-only, BOM exploded, optional note)
+- A **component** is a single part: a resistor, a PCB, a bag of screws.
+- An **assembly** is a kit. Its **parts list** (bill of materials, BOM) says which components go in
+  it and how many of each.
+- A **movement** is anything that changes stock: an order arriving, a kit being built, a kit being
+  delivered to the Kitlocker.
 
-`list_stock.php` — stock levels from movement xrefs. Shortages filter (`?shortages=1`) works
-on both main list (level < 0) and BOM view (remaining < 0). Shortages view has floaticon icons
-for Print, CSV export (`?format=csv`, part_number + qty, skips blanks), and Create Order.
+Stock levels are never typed in by hand. They are worked out from the movements, so the level you
+see is always the sum of what came in less what went out, and you can see which movement caused it.
 
-## Template structure
+## The menu
 
-- `stock_simple_list_inc.tpl` — assembly view header; includes `assembly_icons_inc.tpl`
-  (floaticons) and `assembly_nav.tpl` (just a link back to `list_assemblies.php` — see "BOM
-  storage" below for why there's no ancestor breadcrumb trail)
-- `user_galleries.tpl` — kitelf assembly grid (3-col panels, parsed_data, counts)
-- `list_assemblies.tpl` — default flat list (formerly `list_assemblies_simple.tpl`)
-- `view_kitlocker.tpl` — kitlocker group gallery (formerly `stock_fixed_grid_inc.tpl`)
+Stock appears in the main menu as a set of icons. What you see depends on your permissions.
 
-## Multi-user (kitelf) filtering
+| Icon / name | Takes you to |
+|---|---|
+| Kitlocker | The Kitlocker groups (see below) |
+| List Assemblies | Every kit |
+| Kit Elves | Each kitelf, with their kit and movement counts (needs permission to view contacts) |
+| List Components | Every component |
+| List Movements | Every movement, newest first |
+| Stock Levels | Current stock of every component |
+| Create a Component / Create an Assembly / Add Movement / Create Prebuild | Forms to add new records (needs permission to create) |
 
-`list_movements.php`, `list_stock.php`, `list_assemblies.php` all accept `?user_id=X`.
-- Creator names in `list_movements` are clickable filter links
-- `list_assemblies.php?user_id=X` → `user_galleries.tpl` grid; else → `list_assemblies.tpl`
-- Breadcrumb shows kitelf name linking to their filtered list
+## Components
 
-`list_movements.php` uses `part_content_id` (replaces separate `assembly_content_id` /
-`component_content_id`); looks up `content_type_guid` and routes to the right `getList()` key.
+**List Components** shows every component with a search box (by name) and a **Hide kitlocker**
+tickbox, which drops the Kitlocker-only items so you only see real parts. Click a column heading to
+sort. If you can edit, each row has an edit icon.
 
-## `StockAssembly::getList()` enriched fields
+Click a component's name to see its page. The **Stock** tab shows its level for each quantity type,
+and **Stock history** lists every movement that touched it.
 
-Every row includes correlated subqueries for:
-- `parsed_data` — via `LibertyContent::parseDataHash()` on `lc.data`
-- `part_number` — first `#SUP` xref xkey
-- `klid` — first `KLID` xref xkey
-- `component_count` — count of BOM quantity xrefs (SGL/PRT/SHT/VOL)
-- `prebuild_count` — sum of PBLD kit counts for assembly owner (`mc.user_id = lc.user_id`)
+**Create a Component** (or the edit icon on an existing one): give it a name and description, then
+use the tabs for its other details such as supplier and part number. Save with **Save Component**.
+Deleting a component also removes it from every kit it was part of, so you are asked to confirm.
 
-## Movement model
+### Quantity types
 
-Movement = pure `liberty_content` record (`content_type_guid='stockmovement'`). No
-`stock_movement` table.
+A component is counted in one of four ways. You pick the type when you add it to a parts list or a
+movement.
 
-**Direction** inferred from `reference` xref group (`x_group='reference'`, `sort_order=1`):
-- `REQN` = outbound (kit delivered to kitlocker)
-- `PBLD` = outbound (prebuild — assembly built from components, stays with kitelf)
-- `TRANS` = inbound from another elf
-- `ORDER` = inbound from supplier
+| Type | Use for |
+|---|---|
+| Single unit | Things counted one by one |
+| Part | Things bought as a pack or length where you use part of one |
+| Sheet | Sheet material |
+| Volume | Liquids, glue, paint |
 
-**PBLD workflow**: kitelf creates via `add_prebuild.php`. `edit_movement.php`'s
-`fConvertToRequisition` action (button only shown when `$isPbld`) converts PBLD → REQN on
-delivery to the kitlocker: changes the reference xref's `item` from `PBLD` to `REQN` and its
-`xkey` from the prebuild name to the real RQ number, syncs `lc.title` to match. Deliberately
-does **not** touch `user_id`/ownership — the stock-total implications of reassigning ownership
-on delivery haven't been worked out, left as-is.
+## Assemblies (kits)
 
-**Status** = `lc.event_time` (BIGINT, Unix seconds) — `0` = placed/open, positive =
-received/fulfilled. `StockMovement::markReceived()` sets it to `time()`. `isReceived()` uses
-`!empty()` so 0 = not received. PBLD uses "Completed"/"In progress" labels; other types use
-"Received"/"Pending".
+**List Assemblies** shows every kit. With the kitelf filter on (see below) it shows one person's kits
+as a grid of pictures instead.
 
-**Reference xref** (`x_group='reference'`, `sort_order=1`), one row per movement:
-- `item` = REQN/PBLD/TRANS/ORDER
-- `xkey` = reference number/key
-- `data` = free-text "from" (fallback if no contact linked); for PBLD holds optional RQ note
-- `xref` = contact content_id (linked supplier/source — looked up via SCREF xkey)
-- `start_date` (TIMESTAMP) = order/build date
+Click a kit to see it. **Create an Assembly** (or edit) has tabs for the kit's details; save with
+**Save Assembly**.
 
-**`ASSEMBLY` xref** (`x_group='assembly'`, `item='ASSEMBLY'`, `multiple=1`) on REQN and PBLD
-movements:
-- `xref` = assembly content_id
-- `xkey` = kit count (number of assemblies built/requested)
-- `xkey_ext` = assembly title
+### The parts list
 
-**Items = `quantity` xref group** (`x_group='quantity'`, `sort_order=2`), `multiple=1`:
-- `item` = SGL/PCK/SHT/VOL
-- `xref` = component content_id
-- `xkey` = quantity value
-- `xorder` = line sequence (managed explicitly)
+The kit's parts list is the list of components and the quantity of each that go into one kit.
 
-**Multi-assembly movements, `entry_date` batching**: `ASSEMBLY` being `multiple=1` allows more
-than one assembly per movement — quantity xrefs need a back-reference to which `ASSEMBLY` xref
-produced them, or two assemblies sharing a component would clobber each other's line on adjust.
-Solved by repurposing `liberty_xref.entry_date` as a batch marker: every quantity line
-`explodeFromAssembly()`/`fAddAssembly`'s component branch inserts gets stamped with the *same*
-`entry_date` as its source `ASSEMBLY` xref (or `null`, preserved consistently, for
-pre-migration rows that never got one). `rescaleFromAssembly()` and `syncComponentQuantity()`
-match existing lines by component id **scoped to that entry_date**, keeping two assemblies
-sharing a component correctly isolated.
+- **Adding one part at a time:** use the edit tabs on the assembly.
+- **Loading a whole list:** on the edit page use **Upload BOM** with a CSV whose columns are
+  *Component, Order, Quantity, Size (SGL/PRT/SHT/VOL), Ref designators*. The page reports how many
+  lines were loaded and how many skipped.
+- **Order:** the Order number sets the line's position and group. The thousands digit is the group
+  (so `1005` is group 1, position 5), and groups show as headings on the printed list.
+- **Printing:** the **Print Parts List** icon on the kit's page opens a print-friendly list:
+  position, component, description, quantity and reference designators. The print dialog opens
+  automatically.
+- **Re-ordering:** the **Component Order** icon (editors only) lets you change the order numbers and
+  save them. This page also appears after you add a component to the kit.
+- **Other icons on a kit's page:** **View Stock** shows the stock levels for just this kit's parts,
+  **View Movements** lists the movements that involve it.
 
-**Per-assembly BOM tabs**: `edit_movement.php`/`view_movement.php` build one `{jstab}` per real
-assembly (`ASSEMBLY` xref with `data='stockassembly'`) on the movement, via
-`templates/view_assembly_bom_tab.tpl`, showing only that assembly's own `entry_date`-matched
-quantity lines — same matching mechanism as above. Line-level edit/delete on these tabs is
-gated to `p_stock_admin` (stricter than the general `allow_edit` used elsewhere); ordinary
-editors only get the whole-kit-count control. Standalone components (`data='stockcomponent'`)
-stay on the main "Assembly" tab, not split into their own tab.
+## Movements
 
-**CSV format** (one movement per file): line 1 = `from(SCREF), ref, order_date(dd/mm/yy),
-received_date(dd/mm/yy optional)`; lines 2+ = `component_title, quantity, [optional qty
-type]`. Uploaded CSVs saved to `STOCK_IMPORT_PATH` (`storage/stock/`) as
-`<origname>_move_<content_id>.csv`.
+A movement is one event that changes stock. Open **List Movements** to see them. You can filter by
+type and search by reference; the columns show the reference, the type, when it was ordered, when
+it was received, who created it and when.
 
-**Standalone component quantity sync**: a directly-added component (`fAddAssembly`'s
-non-assembly branch) is represented by a single SGL quantity line, not a BOM.
-`StockMovement::syncComponentQuantity()` keeps that line's `xkey` matching the `ASSEMBLY`
-item's own kit-count field on adjust — `list_stock.php` reads the SGL/PRT/SHT/VOL xrefs
-directly, not the `ASSEMBLY` xref's `xkey`, so letting the two drift apart silently breaks
-stock totals. Only handles `item='SGL'` today — components using other quantity item types
-(PRT/SHT/VOL) aren't supported by the standalone-add path.
+There are four types:
 
-**Tab visibility by movement type** (`edit_movement.tpl`/`view_movement.tpl`): the `assembly`
-and `quantity` (flat "Items") xref-group tabs are mutually exclusive on `$isBuild` —
-REQN/PBLD get the Assembly tab (+ per-assembly BOM tabs above), ORDER/TRANS get the flat Items
-tab instead (no BOM to break out). The `supplier`/`stgrp`/`kitlocker` xref groups are always
-hidden on a movement regardless of type — they're package-level assembly/component catalogue
-metadata (dual-guid xref schema, see `liberty/MANUAL.md`), not something a movement itself has.
-A movement's own supplier/contact link is the `reference` xref's `ref_contact_id` (the "From"
-field), a completely separate thing from the `supplier` xref group.
+| Type | Direction | What it is |
+|---|---|---|
+| **Order** | In | Parts ordered from a supplier |
+| **Transfer** | In | Parts received from another kitelf |
+| **Prebuild** | Out | A kit you have built from components and are holding |
+| **Requisition** | Out | A kit delivered to the Kitlocker |
 
-**`edit_movement.php` flags**: `$isReqn` (`ref_type === 'REQN'`), `$isPbld`
-(`ref_type === 'PBLD'`), `$isBuild` (REQN or PBLD — controls assembly picker visibility, xref
-tab, CSV upload suppression).
+A new movement starts as **Pending** (or **In progress** for a prebuild). When the goods arrive, or
+the build is finished, mark it received (**Completed** for a prebuild) and the stock levels move.
 
-## `isValid()` — checks for a real record, not just a valid-looking id
+### Ordering what you are short of
 
-`StockMovement`/`StockAssembly`/`StockComponent::isValid()` all query `liberty_content`
-directly for a matching `content_id` + `content_type_guid`, not just `verifyId($mContentId)` —
-so a syntactically-valid-but-nonexistent `content_id` correctly 404s ("No X exists with the
-given ID") on all six `view_*.php`/`edit_*.php` entry points, rather than rendering a
-blank/broken page or silently falling into create-new mode. This is implemented per-package
-rather than once on the shared `LibertyContent` base — `contact` uses the same pattern.
+**Stock Levels** is the starting point.
 
-## BOM storage — `liberty_xref` only
+1. Open **Stock Levels**. Optionally pick a kit in the box at the top and a number of kits, to see
+   what building that many would need.
+2. Tick **Shortages only** and press **Go**. You now see just the components that are short, with the
+   BOM quantity, current stock and what would remain.
+3. Use the **Download CSV** icon if you want the list in a spreadsheet.
+4. Use **Create Order**. The shortages become the lines of a new order, which you complete with a
+   supplier (start typing a contact's name), an ordered date and any quantities you want to change.
+   The cross at the end of a line removes it. Press **Create Order**.
 
-BOM data lives entirely as `liberty_xref` rows under the `quantity`/`bom` group
-(`sort_order=4`, items `SGL`/`PRT`/`PCK`/`SHT`/`VOL`) — same no-map-table pattern Food's own
-`FoodAssembly` uses. `import/load_merg_bom.php` (the actual, currently-used BOM import tool)
-clears and rebuilds a component's lines via `LibertyContent::deleteXrefByItem()` — see "Xref
-writes" below; raw `SELECT`s against `liberty_xref` for its own lookups are fine, only writes go
-through the generic helpers.
+### Building a kit (prebuild)
 
-**No other component/assembly relationship table exists.** A separate `stock_assembly_map`
-table — a leftover fisheye-gallery-hierarchy relic from the package's original port, never
-actually used for real BOM data — has been dropped from the schema (via the `5.0.2` upgrade).
-None of the package's code reads or writes it any more — no ancestor breadcrumbs, no nested
-gallery-hierarchy tree/checkbox picker, no thumbnail picking via this path, no flat BOM checkbox
-list, no `child_count`. BOM/assembly relationships are entirely `liberty_xref`-based, per above.
+1. From Stock Levels with a kit chosen, press **Create Prebuild** (or use the menu icon).
+2. Give it a reference (for example `BUILD-2026-001`), choose the kit and how many, and add an RQ
+   number in the note if you are building against a requisition. **Create Prebuild**.
+3. The kit's components are listed under the movement. When the kits are built and checked, mark the
+   prebuild completed.
 
-## Xref writes — the generic content_id+item helper family, not raw SQL
+### Delivering to the Kitlocker (requisition)
 
-Stock used to hand-roll `INSERT`/`UPDATE`/`DELETE` (and a couple of existence-check/reverse-lookup
-`SELECT`s) directly against `liberty_xref` across its import scripts and movement editing — real,
-messy duplication across several files (a stopgap from the package's original port, not a
-deliberate design). All of it has been converted to `LibertyContent`'s generic content_id+item
-helper family instead — see `liberty/MANUAL.md`'s "Access boundaries" section for the full helper
-list (`upsertXrefByContentId()`, `deleteXrefByItem()`, `hasXrefItem()`, `lookupXrefByItem()`,
-`lookupContentIdByXrefValue()`); Stock is that family's heaviest real-world consumer. Current
-call sites: `view_component.php`/`edit_component.php` (KLID existence check via `hasXrefItem()`),
-`edit_movement.php`/`StockMovement.php` (reference-row updates via `upsertXrefByContentId()`),
-`import/load_merg_bom.php`/`ImportSimpleAssembly.php`/`ImportSimpleComponent.php`/
-`load_merg_stubs.php`/`ImportKitlockerAssemblies.php`/`ImportKitlockerStockPredict.php` (BOM/stub/
-Kitlocker upsert-or-insert and delete, plus `ImportSimpleComponent.php`'s and
-`ImportKitlockerStockPredict.php`'s supplier/KLID reverse lookups via
-`lookupContentIdByXrefValue()`).
+If you have already built the kits as a prebuild, don't re-enter anything: open the prebuild, edit
+it, type the RQ number in the **Convert to Requisition** box and press **Convert**. It is one-way:
+the kits stay as they are and the RQ number replaces the prebuild's name. It stays recorded against
+the person who built it.
 
-**One known exception, not yet converted**: `edit_stgrp_item.php` still queries and updates
-`liberty_xref_item` (the *structure* table — a group-tag description field, not `liberty_xref`
-data) directly with raw SQL, which the same access-boundary rule also covers ("only
-`LibertyXrefType` queries these"). Flagged, not fixed — this thread was deliberately stopped after
-covering every `liberty_xref` (data-table) site; re-opening it for the structure table is a
-separate, fresh decision, not an automatic continuation.
+A requisition can also be created directly with a reference, date and kit; there is no menu icon for
+that yet, so it is reached as `add_requisition.php` in the Stock folder.
 
-**Known pre-existing risk carried over, not introduced by this conversion**: the case-insensitive
-`lookupContentIdByXrefValue()` lookup used for supplier matching (`SCREF`) means two real
-suppliers differing only by letter case would silently collapse to whichever the DB happens to
-return first — flagged in the helper's own docblock, not fixed.
+### Other movements
 
-## Firebird gotchas specific to this package
+**Add Movement** is the general form: choose the type, give a reference and, for an order or
+transfer, who it is from. Add lines by component, or add a whole kit and it adds that kit's parts for
+you. You can also upload one movement as a CSV file: first line is *supplier, reference, order date,
+received date (optional)*, then one line per component: *name, quantity, optional quantity type*.
 
-**`SIMILAR TO` has no implicit backslash escape** — `\.` in a pattern matches a literal
-backslash-then-dot, not an escaped dot (needs an explicit `ESCAPE` clause to work that way).
-Use `[.]` for a literal dot instead (bracket expression, no `ESCAPE` needed). Any numeric-xkey
-filter pattern in this package (`explodeFromAssembly()`, `view_component.php`,
-`list_stock.php`, `add_order.php`) should read `'[0-9]+([.][0-9]+)?'`, not
-`'[0-9]+(\.[0-9]+)?'` — the latter silently drops every decimal-valued `xkey` (fractional SHT
-quantities) while passing whole-number values.
+On a build movement (prebuild or requisition) each kit has its own tab showing just its parts, with a
+whole-kit count you can change. Changing the count rescales the parts. Deleting or editing single
+lines on those tabs is for stock administrators only.
 
-**`{smartlink isort="..."}` needs the bare field name** — `function.smartlink.php` appends
-`_asc`/`_desc` itself to build the toggle link; passing a pre-suffixed value (e.g.
-`isort="created_desc"`) produces `sort_mode=created_desc_asc`, and `BitDb::
-convertSortmodeOneItem()` only strips the *trailing* `_asc`/`_desc`, leaving an unknown column
-name and a Firebird error. Any sortable `list_movements.tpl` column must use the bare name.
+## Kitelves
 
-**Single-input forms need an explicit hidden action field, not a submit-button name** —
-`edit_movement.php`-style handlers that branch on `!empty($_REQUEST['fSomeAction'])` where
-`fSomeAction` is a submit button's `name` break silently on Enter-to-submit (Firefox omits the
-button's name/value when the form has only one text/number input and Enter triggers the
-submit, not a click). Carry the action flag as `<input type="hidden" name="fSomeAction"
-value="1" />` instead — used by the per-row adjust form (`view_xref_assembly_item.tpl`) and the
-"Add item" form (`view_xref_assembly_group.tpl`). Any new single-input stock form should follow
-this from the start.
+**Kit Elves** lists each kitelf with the number of kits and movements they hold, and a link to their
+own stock levels. Clicking a name in **List Movements** (the creator column) does the same
+filtering, and the page heading tells you whose list you are looking at. Use this when you only want
+to see one person's work.
 
-## Kitlocker items and sync tooling
+## Kitlocker
 
-Kitlocker-specific xref items (`role_id 3`, `x_group='kitlocker'`), defined in
-`admin/schema_inc.php`, set on both `StockAssembly` and `StockComponent`:
-- `KLID` — Kitlocker ID code (e.g. `36A`) — the match key against the live site's exports
-- `KLPR` — Kitlocker Price (currently unused/empty in `merg` — don't confuse with KLID)
-- `KL3M` — 3-month sales count
-- `KLSGL` — current stock count
-- `KLG01`–`KLG99` — group tag (`stgrp` group), one per product section; name↔number map
-  lives in `storage/stock/KitlockerGroups.csv` (28 groups, `G1`=General Kits...`G28`=POSTAGE)
+The Kitlocker is the shop where finished kits are sold. Stock keeps a record of each Kitlocker item
+so its counts can be compared with yours.
 
-`stock/import/` holds one-off/repeatable CSV and HTML importers (ad hoc data-loading tools, not
-part of the package's core code path):
-- `ImportKitlockerAssemblies.php` / `load_kitlocker_assemblies.php` — full catalogue CSV
-  import (title, KLID, description, KLSGL, KL3M, group, type A/C), creates records if missing
-- `ImportKitlockerStockPredict.php` / `load_kitlocker_stock_predict.php` — parses the raw
-  "MERG Kitlocker - Stock predict" HTML export directly (DOMDocument, no CSV conversion
-  needed), matches by KLID, upserts KLSGL/KL3M only. Unmatched codes are reported, not
-  silently created — each has an "Add as Assembly/Component" link
-  (`?create=CODE:A`/`?create=CODE:C`) since the export has no assembly/component column so
-  type must be given explicitly. Doesn't set `KLGxx` group — derivable from each row's
-  enclosing `<h2>` section heading if this ever needs revisiting (section order/names match
-  `KitlockerGroups.csv`), but not built. Reachable from the Stock admin menu ("Sync Kitlocker
-  Stock Predict") — the page has a browser upload form (`html_file`) that always writes to a
-  fixed working path (`storage/stock/KitlockerStockPredict.html`), parsed from there same as
-  before. Once parsed, that working file is archived to `storage/stock/archive/` under its own
-  original uploaded filename (sanitized) — same convention health's importers use, so
-  successive dated exports don't overwrite each other in the archive — and the working copy is
-  then deleted; the next upload recreates it fresh. Only processes on a fresh upload or an
-  explicit `?create=` retry, never on a bare page visit. Since the working file is already gone
-  by the time a skipped row's link is clicked, each "Add as Assembly/Component" link also
-  carries that row's own name/KLSGL/KL3M through as query params — retry never needs to reopen
-  any file.
+**Kitlocker** in the menu shows the Kitlocker groups (General Kits, Postage and so on) as panels
+with the number of items in each. Click a group's name to list its items with their Kitlocker ID, price
+and a link to the kit or component. Administrators have an edit icon on each group.
 
-**Not a pattern to extend**: the CSV/HTML importers are a stopgap — the stated direction is
-adding new kitlocker items through the normal `edit_assembly.php`/`edit_component.php` UI flow
-instead and retiring the import scripts. Don't build more import tooling proactively.
+Each Kitlocker item carries:
 
-## Xref display notes
+- **KLID** — its Kitlocker ID code, such as `36A`. This is how an item is matched.
+- **KL3M** — how many were sold in the last three months.
+- **KLSGL** — how many are in stock at the Kitlocker.
 
-**Floaticon placement** — floaticons for assembly views live in `assembly_icons_inc.tpl`,
-included from `stock_simple_list_inc.tpl`. Forms in floaticon use `class="minifind"`.
+### Syncing the Kitlocker stock counts
 
-**Kitlocker tab visibility** — `edit_component.php` and `view_component.php` detect kitlocker
-components via KLID xref and assign `$isKitlocker`. Stash `kitlocker` and `stgrp` groups
-during the normal foreach and render at the end only when `$isKitlocker` is true.
+You don't need to type any of those counts. The **Sync Kitlocker Stock Predict** page reads the
+Kitlocker's own "Stock predict" report and updates every matching item in one go.
 
-**`edit_movement.php`** filters the 'reference' group in template:
-`{if $xrefGroup->mXGroup neq 'reference'}` — reference is rendered directly in the form.
+1. Save the Kitlocker **Stock predict** page as an HTML file from your browser.
+2. In the admin menu choose **Sync Kitlocker Stock Predict**.
+3. Choose the saved file and upload it.
+4. The page reports how many records were updated. Items are matched by KLID; only the stock and
+   three-month sales counts change, nothing else on the item.
+5. Any code in the report that Stock doesn't know yet is listed under **Unmatched codes**. Each has
+   **Add as Assembly** and **Add as Component** buttons: choose which it is (the report doesn't say)
+   and the item is created with its stock and sales counts filled in.
+
+Your uploaded file is kept in an archive under its own name, so one upload never overwrites an
+earlier one, and the page only does anything when you upload or press one of the Add buttons, so
+looking at the page doesn't change anything.
+
+## Permissions
+
+| Permission | What it lets you do |
+|---|---|
+| View | See kits, components, movements and stock levels |
+| Create | Add components, assemblies, movements, prebuilds, orders |
+| Update | Edit existing records |
+| Delete | Delete stock records |
+| Admin | Everything above, plus edit parts-list lines on build movements, edit Kitlocker groups and run the sync |
+
+By default registered users can view, editors can create and update, and administrators do the rest.
