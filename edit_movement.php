@@ -144,12 +144,12 @@ if( !empty( $_REQUEST['fSave'] ) ) {
 				// Stamp every exploded BOM line with the ASSEMBLY xref's own entry_date so
 				// rescaleFromAssembly() can later tell this assembly's lines apart from
 				// another assembly's, should the movement ever gain a second one.
-				$assemblyEntryDate = $gContent->mInfo['xref_store']['entry_date'] ?? null;
+				$assemblyEntryDate = array_column( $gContent->mXrefInfo->mGroups['assembly']->mXrefs ?? [], 'entry_date', 'xref_id' )[ $assemblyHash['xref_id'] ] ?? null;
 				$gContent->explodeFromAssembly( $targetContentId, $kitCount, $assemblyEntryDate );
 			} else {
 				// Same entry_date stamp as the assembly branch — keeps this component's own
 				// SGL line correctly scoped for syncComponentQuantity() to find later.
-				$componentEntryDate = $gContent->mInfo['xref_store']['entry_date'] ?? null;
+				$componentEntryDate = array_column( $gContent->mXrefInfo->mGroups['assembly']->mXrefs ?? [], 'entry_date', 'xref_id' )[ $assemblyHash['xref_id'] ] ?? null;
 				$nextXorder = (int)$gBitDb->getOne(
 					"SELECT COALESCE( MAX(x.`xorder`) + 1, 1 ) FROM `".BIT_DB_PREFIX."liberty_xref` x
 					 WHERE x.`content_id` = ? AND x.`item` IN ('SGL','PRT','SHT','VOL')",

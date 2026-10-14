@@ -76,7 +76,7 @@ if( !empty( $_REQUEST['fCreate'] ) ) {
 				$movement->storeXref( $assemblyHash );
 				if( $targetGuid === 'stockassembly' ) {
 					// Lines carry the ASSEMBLY row's own entry_date (see add_prebuild.php).
-					$movement->explodeFromAssembly( $targetContentId, $kitCount, (int)$movement->mDb->getOne( "SELECT `entry_date` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `xref_id` = ?", [ $assemblyHash['xref_id'] ] ) ?: null );
+					$movement->explodeFromAssembly( $targetContentId, $kitCount, array_column( $movement->mXrefInfo->mGroups['assembly']->mXrefs ?? [], 'entry_date', 'xref_id' )[ $assemblyHash['xref_id'] ] ?? null );
 				} else {
 					// Single component — one SGL quantity row
 					$qtyHash = [
@@ -87,7 +87,7 @@ if( !empty( $_REQUEST['fCreate'] ) ) {
 						'xorder'     => 1,
 						'fAddXref'   => 1,
 					];
-					$qtyHash['entry_date'] = (int)$movement->mDb->getOne( "SELECT `entry_date` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `xref_id` = ?", [ $assemblyHash['xref_id'] ] ) ?: null;
+					$qtyHash['entry_date'] = array_column( $movement->mXrefInfo->mGroups['assembly']->mXrefs ?? [], 'entry_date', 'xref_id' )[ $assemblyHash['xref_id'] ] ?? null;
 					$movement->storeXref( $qtyHash );
 				}
 				header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$movement->mContentId );
