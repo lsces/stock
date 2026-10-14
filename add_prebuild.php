@@ -64,7 +64,9 @@ if( !empty( $_REQUEST['fCreate'] ) ) {
 					'fAddXref'   => 1,
 				];
 				$movement->storeXref( $assemblyHash );
-				$movement->explodeFromAssembly( $targetContentId, $kitCount );
+				// Every exploded line carries the ASSEMBLY row's own entry_date - the BOM tab and
+				// rescaleFromAssembly() match on it, and a per-line auto-stamp splits across seconds.
+				$movement->explodeFromAssembly( $targetContentId, $kitCount, (int)$movement->mDb->getOne( "SELECT `entry_date` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `xref_id` = ?", [ $assemblyHash['xref_id'] ] ) ?: null );
 				header( 'Location: '.STOCK_PKG_URL.'edit_movement.php?content_id='.$movement->mContentId );
 				die;
 			}
