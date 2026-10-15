@@ -27,6 +27,10 @@ if( !isset( $_REQUEST['hide_kitlocker'] ) && empty( $_REQUEST['filter_submitted'
 	$_REQUEST['hide_kitlocker'] = 1;
 }
 
+if( empty( $_REQUEST['sort_mode'] ) ) {
+	$_REQUEST['sort_mode'] = 'title_asc';
+}
+
 $componentList = $component->getList( $_REQUEST );
 $component->invokeServices( 'content_list_function', $_REQUEST );
 $_REQUEST['listInfo']['parameters'] = array_filter( [
